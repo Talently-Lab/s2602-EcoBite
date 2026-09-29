@@ -1,0 +1,12 @@
+{
+  "name": "ecobite",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm --filter frontend lint"
+  }
+}
