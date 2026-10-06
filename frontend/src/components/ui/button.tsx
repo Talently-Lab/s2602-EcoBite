@@ -7,16 +7,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        default:
+          "bg-primary text-primary-foreground hover:bg-[#0e7a4a] hover:text-white aria-expanded:bg-[#0e7a4a] aria-expanded:text-white",
         outline:
-          "border-border bg-background shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-primary/60 bg-[#dff1e8] text-black shadow-xs hover:bg-[#bfe8d1] hover:text-black aria-expanded:bg-[#bfe8d1] aria-expanded:text-black dark:border-[#4de384]/40 dark:bg-input/30 dark:text-white dark:hover:bg-input/50 dark:hover:text-white",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-[#3ddc74] aria-expanded:bg-[#3ddc74] aria-expanded:text-black",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "text-black hover:bg-[#dff1e8] hover:text-black aria-expanded:bg-[#dff1e8] aria-expanded:text-black dark:text-white dark:hover:bg-white/10 dark:hover:text-white",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-[#0a5c36] underline-offset-4 hover:underline hover:text-black dark:text-[#4de384] dark:hover:text-white",
       },
       size: {
         default:
