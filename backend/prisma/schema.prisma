@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RolUsuario {
+  CLIENTE
+  ADMIN
+
+  @@map("rol")
+}
+
+enum TipoTransporte {
+  BICICLETA
+  VEHICULO_ELECTRICO
+
+  @@map("tipo_transporte")
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+
+  @@map("pedido_estado")
+}
+
+model Usuario {
+  id                String     @id @default(uuid()) @map("id_usuario") @db.Uuid
+  nombreCompleto    String     @map("nombre_completo")
+  email             String     @unique
+  telefono          String?
+  direccionHabitual String?    @map("direccion_habitual")
+  fechaRegistro     DateTime   @default(now()) @map("fecha_registro")
+  fechaEdicion      DateTime   @updatedAt @map("fecha_edicion")
+  activo            Boolean    @default(true) @map("activo_usuario")
+  passwordHash      String     @map("password_hash")
+  rol               RolUsuario @default(CLIENTE)
+  zonaHabitualId    String?    @map("id_zona_habitual") @db.Uuid
+  zonaHabitual      Zona?      @relation("ZonaHabitual", fields: [zonaHabitualId], references: [id])
+  pedidos           Pedido[]
+
+  @@index([zonaHabitualId])
+  @@map("usuario")
+}
+
+model Zona {
+  id                  String        @id @default(uuid()) @map("id_zona") @db.Uuid
+  nombreBarrio        String        @unique @map("nombre_barrio") @db.VarChar(100)
+  comuna              Int
+  codigoPostal        String        @map("codigo_postal") @db.VarChar(10)
+  activo              Boolean       @default(true) @map("activo_zona")
+  distanciaPromedioKm Decimal       @map("distancia_promedio_km") @db.Decimal(5, 2)
+  usuarios            Usuario[]     @relation("ZonaHabitual")
+  restaurantes        Restaurante[]
+  pedidosDestino      Pedido[]      @relation("ZonaDestino")
+
+  @@map("zona")
+}
+
+model Restaurante {
+  id            String     @id @default(uuid()) @map("id_restaurante") @db.Uuid
+  nombre        String     @map("nombre_restaurante")
+  categoria     String?
+  esEco         Boolean    @default(true) @map("es_100_eco")
+  activo        Boolean    @default(true) @map("activo_restaurante")
+  zonaId        String     @map("id_zona") @db.Uuid
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  fechaCreacion DateTime   @default(now()) @map("fecha_creacion")
+  fechaEdicion  DateTime   @updatedAt @map("fecha_edicion")
+  zona          Zona       @relation(fields: [zonaId], references: [id])
+  productos     Producto[]
+  pedidos       Pedido[]
+
+  @@index([zonaId])
+  @@index([activo, esEco])
+  @@map("restaurantes")
+}
+
+model Producto {
+  id             String            @id @default(uuid()) @map("id_producto") @db.Uuid
+  restauranteId  String            @map("id_restaurante") @db.Uuid
+  nombre         String            @map("nombre_producto")
+  categoriaComida String           @map("categoria_comida")
+  precio         Decimal           @db.Decimal(10, 2)
+  disponible     Boolean           @default(true)
+  fechaCreacion  DateTime          @default(now()) @map("fecha_creacion")
+  fechaEdicion   DateTime          @updatedAt @map("fecha_edicion")
+  restaurante    Restaurante       @relation(fields: [restauranteId], references: [id])
+  detalles       Detalle[]
+  empaques       ProductoEmpaque[]
+
+  @@index([restauranteId])
+  @@index([disponible])
+  @@map("producto")
+}
+
+model Pedido {
+  id                          String         @id @default(uuid()) @map("id_pedido") @db.Uuid
+  usuarioId                   String         @map("id_usuario") @db.Uuid
+  restauranteId               String         @map("id_restaurante") @db.Uuid
+  direccionEntrega            String         @map("direccion_entrega")
+  montoTotal                  Decimal        @map("monto_total") @db.Decimal(10, 2)
+  distanciaEstimadaKm         Decimal        @map("distancia_estimada_km") @db.Decimal(5, 2)
+  tipoTransporte              TipoTransporte @map("tipo_transporte")
+  totalEnvasesEvitados        Int            @default(0) @map("total_envases_evitados")
+  co2AhorradoKg               Decimal        @default(0) @map("co2_ahorrado_kg") @db.Decimal(6, 3)
+  gramosPlasticoEvitadosTotal Decimal        @default(0) @map("gramos_plastico_evitados_total") @db.Decimal(8, 2)
+  estado                      EstadoPedido   @default(PENDIENTE) @map("pedido_estado")
+  fechaCreacion               DateTime       @default(now()) @map("fecha_creacion")
+  fechaEdicion                DateTime       @updatedAt @map("fecha_edicion")
+  zonaDestinoId               String         @map("id_zona_destino") @db.Uuid
+  usuario                     Usuario        @relation(fields: [usuarioId], references: [id])
+  restaurante                 Restaurante    @relation(fields: [restauranteId], references: [id])
+  zonaDestino                 Zona           @relation("ZonaDestino", fields: [zonaDestinoId], references: [id])
+  detalles                    Detalle[]
+
+  @@index([usuarioId])
+  @@index([restauranteId])
+  @@index([zonaDestinoId])
+  @@index([estado])
+  @@map("pedidos")
+}
+
+model Detalle {
+  id                         String   @id @default(uuid()) @map("id_detalle") @db.Uuid
+  pedidoId                   String   @map("id_pedido") @db.Uuid
+  productoNombre             String   @map("producto_nombre")
+  cantidad                   Int
+  precioUnitario             Decimal  @map("precio_unitario") @db.Decimal(10, 2)
+  gramosPlasticoEvitadosItem Decimal  @map("gramos_plastico_evitados_item") @db.Decimal(8, 2)
+  envasesItem                Int      @map("envases_item")
+  productoId                 String   @map("id_producto") @db.Uuid
+  pedido                     Pedido   @relation(fields: [pedidoId], references: [id])
+  producto                   Producto @relation(fields: [productoId], references: [id])
+
+  @@index([pedidoId])
+  @@index([productoId])
+  @@map("detalle")
+}
+
+model Empaque {
+  id                     String            @id @default(uuid()) @map("id_empaque") @db.Uuid
+  nombreEnvase           String            @unique @map("nombre_envase") @db.VarChar(100)
+  materialTradicional    String            @map("material_tradicional") @db.VarChar(100)
+  pesoBaseG              Decimal           @map("peso_base_g") @db.Decimal(8, 2)
+  materialEcobite        String            @map("material_ecobite") @db.VarChar(100)
+  pesoEcobiteG           Decimal           @map("peso_ecobite_g") @db.Decimal(8, 2)
+  gramosPlasticoEvitados Decimal           @map("gramos_plastico_evitados") @db.Decimal(8, 2)
+  usoHabitual            String?           @map("uso_habitual") @db.VarChar(100)
+  productos              ProductoEmpaque[]
+
+  @@map("empaques")
+}
+
+model ProductoEmpaque {
+  productoId       String   @map("id_producto") @db.Uuid
+  empaqueId        String   @map("id_empaque") @db.Uuid
+  envasesPorUnidad Int      @map("envases_por_unidad")
+  producto         Producto @relation(fields: [productoId], references: [id])
+  empaque          Empaque  @relation(fields: [empaqueId], references: [id])
+
+  @@id([productoId, empaqueId])
+  @@map("producto_empaque")
+}
