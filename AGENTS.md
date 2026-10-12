@@ -1,8 +1,8 @@
 # AGENTS.md
 
 ## Monorepo (pnpm only)
-- `pnpm-workspace.yaml` packages: `frontend`, `backend`. Single root `pnpm-lock.yaml`, `packageManager: pnpm@10.34.5`, Node 22+.
-- Root scripts (from repo root): `pnpm dev:frontend` / `pnpm dev:backend` (`--filter`), `pnpm build` (`pnpm -r build`), `pnpm lint` (frontend only). Or `cd frontend|backend` and run package scripts directly. Never `npm`/`yarn`.
+- `pnpm-workspace.yaml` packages: `frontend`, `backend`, `api-portal`. Single root `pnpm-lock.yaml`, `packageManager: pnpm@10.34.5`, Node 22+.
+- Root scripts (from repo root): `pnpm dev:frontend` / `pnpm dev:backend` / `pnpm dev:portal` (`--filter`), `pnpm build` (`pnpm -r build`), `pnpm build:portal` (portal only), `pnpm lint` (frontend only). Or `cd frontend|backend|api-portal` and run package scripts directly. Never `npm`/`yarn`.
 
 ## Backend (`backend/`, Express 5 + TS)
 - `pnpm dev` = `tsx watch src/index.ts` · `pnpm build` = `prisma generate && tsc` (out `dist/`, `rootDir: src`, `module/nodeResolution: NodeNext`) · `pnpm start` = `node dist/index.js` · `pnpm prisma:migrate|prisma:generate|prisma:seed|prisma:studio`. No lint/test scripts.
@@ -23,3 +23,8 @@
 - Dark mode is dual: `dark:` utilities are **class-based** (`@custom-variant dark (&:is(.dark *))`) while tokens switch via **both** `@media (prefers-color-scheme: dark)` and `.dark`. The `.dark` class is synced from the OS by the inline script in `index.html` + the `matchMedia` listener in `main.tsx` — keep both, or `dark:*` utilities silently stop working. Light mode is source of truth for contrast; verify dark ratios (AA 4.5:1) after token changes.
 - shadcn (`components.json`): style `base-vega`, `rsc: false`, css `src/index.css`, `baseColor: neutral`, `cssVariables: true`, icon `lucide`. `cn()` is a re-export from the `cn` package in `src/lib/utils.ts` — import via `@/lib/utils`, UI via `@/components/ui/<name>`. Add components with `pnpm dlx shadcn@latest add <name>` from `frontend/`.
 - Lint is `oxlint` (`.oxlintrc.json`, react+typescript plugins, `rules-of-hooks: error`), not ESLint. No tests, no CI — don't invent a test runner.
+
+## API portal (`api-portal/`, Next.js App Router + React + Tailwind 4)
+- Backend-owned workspace, separate from the customer `frontend/`. Root `pnpm dev:portal` uses port 3001 with hot reload; `pnpm build:portal` builds only the portal. After building, `pnpm --filter api-portal start` serves the production build on port 3001.
+- `app/layout.tsx` is the root document; `app/page.tsx` is an intentionally empty overview. Tailwind compiles via `@tailwindcss/postcss` and `app/globals.css`; no browser CDN. No auth, API calls, Scalar, or monitoring is implemented yet.
+- Verification: `pnpm --filter api-portal lint`, `pnpm --filter api-portal typecheck` (`next typegen && tsc --noEmit`), and `pnpm --filter api-portal build`. No test runner. Builds require no API, database, or OAuth credentials.
