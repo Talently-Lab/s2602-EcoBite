@@ -5,11 +5,13 @@
 - Root scripts (from repo root): `pnpm dev:frontend` / `pnpm dev:backend` (`--filter`), `pnpm build` (`pnpm -r build`), `pnpm lint` (frontend only). Or `cd frontend|backend` and run package scripts directly. Never `npm`/`yarn`.
 
 ## Backend (`backend/`, Express 5 + TS)
-- `pnpm dev` = `tsx watch src/index.ts` · `pnpm build` = `tsc` (out `dist/`, `rootDir: src`, `module/nodeResolution: NodeNext`) · `pnpm start` = `node dist/index.js`. No lint/test scripts.
-- Env: copy `backend/.env.example` → `backend/.env` (currently only `PORT`, default 3000). Loaded via `import 'dotenv/config'` in `src/index.ts` — keep that import first.
-- Entrypoint `src/index.ts` mounts `src/routes/index.route.ts` at `/api`. Only route is a health-check stub; `controllers/`, `services/`, `middlewares/` are empty `.keep` scaffolds, `utils/` is empty. Follow that split when adding features.
+- `pnpm dev` = `tsx watch src/index.ts` · `pnpm build` = `prisma generate && tsc` (out `dist/`, `rootDir: src`, `module/nodeResolution: NodeNext`) · `pnpm start` = `node dist/index.js` · `pnpm prisma:migrate|prisma:generate|prisma:seed|prisma:studio`. No lint/test scripts.
+- Env: copy `backend/.env.example` → `backend/.env` (`PORT`, `DATABASE_URL`). Loaded via `import 'dotenv/config'` in `src/index.ts` — keep that import first. `src/lib/prisma.ts` also loads dotenv and throws if `DATABASE_URL` is missing.
+- Entrypoint `src/index.ts` runs `SELECT 1` via Prisma before `listen` and exits if the DB is unreachable, then mounts `src/routes/index.route.ts` at `/api`. Only route is a health-check stub; `controllers/`, `services/`, `middlewares/` are empty `.keep` scaffolds, `utils/` is empty. Follow that split when adding features.
 - Gotcha: `index.route.ts` uses `apiRouter.use('/', …)` which matches every path/method — register new routes **before** that line (or narrow it to `.get('/')`), otherwise they never run.
-- No DB wired yet. Target schema is `docs/database/DER.md` (Usuario/Comercio/Producto/Pedido/Detalle, roles `CLIENTE|COMERCIO|ADMIN`) — don't assume tables/ORM exist.
+- DB: PostgreSQL 16 via `backend/docker-compose.yml` (`docker compose up -d`, named volume `ecobite-pgdata`). Prisma 7: connection URL lives in `prisma.config.ts` (not the schema), client uses `@prisma/adapter-pg` and is generated to `src/generated/prisma` (gitignored) — always import the singleton from `src/lib/prisma.ts`. Prisma 7 `migrate dev` does **not** run `generate` or the seed; run them explicitly.
+- Source of truth: `prisma/schema.prisma` (mirrored in `docs/database/DER.md`, from the Data Analyst's Excel V3 Alternativa B). camelCase models mapped to Spanish snake_case tables/columns via `@map`/`@@map`. Enums: `rol` `CLIENTE|ADMIN` (restaurants log in via their own table), `tipo_transporte` `BICICLETA|VEHICULO_ELECTRICO`, `pedido_estado` `PENDIENTE|COMPLETADO|CANCELADO`. `producto_empaque.envases_por_unidad >= 1` is a raw SQL CHECK in the init migration (Prisma can't declare it) — keep it when editing migrations. Never return `password_hash` from the API.
+- Seed (`prisma/seed.ts`, idempotent upserts): 48 CABA `zona` rows + 8 `empaques`. Restaurants/products come later from the Data Analyst — don't invent them.
 
 ## Frontend (`frontend/`, Vite 8 + React 19 + Tailwind 4)
 - `pnpm dev|build|lint|preview`; `build` = `tsc -b && vite build` (project references `tsconfig.json` → `tsconfig.app.json` + `tsconfig.node.json`, typecheck runs first).
