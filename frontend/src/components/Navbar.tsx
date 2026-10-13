@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { ChevronDown, MapPin, Menu, User, X } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { ChevronDown, Menu, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
@@ -12,19 +12,20 @@ const links = [
 ];
 
 export const Navbar = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState<boolean>(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-primary">
       <nav
         aria-label="Navegación principal"
-        className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
+        className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
       >
         {/* Izquierda: logo + links desktop */}
         <div className="flex min-w-0 items-center gap-8">
           <NavLink to="/dashboard" className="flex shrink-0 items-center" aria-label="EcoBite - inicio">
             <img
-              src="/images/logo-eco-01.png"
+              src="/images/logo-eco-02.png"
               alt="EcoBite"
               width={454}
               height={115}
@@ -40,8 +41,8 @@ export const Navbar = () => {
                   to={link.to}
                   className={({ isActive }) =>
                     cn(
-                      "relative pb-1 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground",
-                      isActive && "text-foreground after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:bg-foreground"
+                      "relative pb-1 text-sm font-medium text-white transition-colors hover:text-white",
+                      isActive && "text-white after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-white"
                     )
                   }
                 >
@@ -53,21 +54,21 @@ export const Navbar = () => {
         </div>
 
         {/* Derecha desktop */}
-        <div className="hidden items-center gap-5 lg:flex">
+        <div className="hidden items-center gap-5 lg:flex text-white">
           <button
             type="button"
-            className="flex items-center gap-1.5 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className="flex items-center gap-1.5 text-sm text-foreground/70 transition-colors hover:text-foreground"
           >
-            <MapPin className="size-4" aria-hidden="true" />
-            <span>Ubicación</span>
-            <ChevronDown className="size-4" aria-hidden="true" />
+            <span className="text-white">Ubicación</span>
+            <ChevronDown className="size-3.5" color="white" aria-hidden="true" />
           </button>
           <button
             type="button"
             aria-label="Mi cuenta"
-            className="grid size-8 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+            onClick={() => navigate('/auth')}
+            className="grid size-9 place-items-center rounded-full transition-colors hover:bg-muted/50 cursor-pointer"
           >
-            <User className="size-5" aria-hidden="true" />
+            <User className="size-6 font-bold" color="white" aria-hidden="true" />
           </button>
         </div>
 
@@ -77,7 +78,7 @@ export const Navbar = () => {
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          className="cursor-pointer grid size-10 place-items-center rounded-md text-foreground transition-colors hover:bg-muted lg:hidden"
+          className="cursor-pointer grid size-10 place-items-center rounded-md text-white transition-colors hover:bg-muted/50 lg:hidden"
         >
           {open ? <X className="size-6" aria-hidden="true" /> : <Menu className="size-6" aria-hidden="true" />}
         </Button>
@@ -99,8 +100,8 @@ export const Navbar = () => {
                   onClick={() => setOpen(false)}
                   className={({ isActive }) =>
                     cn(
-                      "block rounded-md px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted hover:text-foreground",
-                      isActive && "bg-muted text-foreground underline underline-offset-4"
+                      "block rounded-md px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-muted/50",
+                      isActive && "bg-muted/50 text-white"
                     )
                   }
                 >
@@ -111,18 +112,18 @@ export const Navbar = () => {
             <li className="flex items-center gap-3 px-3 pt-3">
               <button
                 type="button"
-                className="flex flex-1 items-center gap-1.5 text-sm font-medium text-foreground/70 hover:text-foreground"
+                className="flex flex-1 items-center gap-1.5 text-sm text-white hover:text-foreground"
               >
-                <MapPin className="size-4" aria-hidden="true" />
-                <span>Ubicación</span>
-                <ChevronDown className="size-4" aria-hidden="true" />
+                <span className="text-white">Ubicación</span>
+                <ChevronDown className="size-3.5" color="white" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 aria-label="Mi cuenta"
-                className="grid size-9 place-items-center rounded-full border border-border text-foreground/70 hover:bg-muted hover:text-foreground"
+                onClick={() => navigate('/auth')}
+                className="grid size-9 place-items-center rounded-full transition-colors hover:bg-muted/50 cursor-pointer"
               >
-                <User className="size-5" aria-hidden="true" />
+                <User className="size-6 font-bold" color="white" aria-hidden="true" />
               </button>
             </li>
           </ul>

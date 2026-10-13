@@ -10,7 +10,7 @@ const Orders = lazy(() => import('./pages/Orders'));
 const MyImpact = lazy(() => import('./pages/MyImpact'));
 
 export const mainRouter = createBrowserRouter([
-  { path: "/", element: <Navigate to="/auth" replace /> },
+  { path: "/", element: <Navigate to="/dashboard" replace /> },
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/catalog", element: <Catalog /> },
   { path: "/detail-product", element: <DetailProduct /> },

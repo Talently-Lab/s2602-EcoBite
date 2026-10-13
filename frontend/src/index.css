@@ -15,7 +15,7 @@
   --card-foreground: oklch(0 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0 0 0);
-  --primary: #14a267;
+  --primary: #009951;
   --primary-foreground: #000000;
   --secondary: #4de384;
   --secondary-foreground: #000000;
@@ -25,8 +25,8 @@
   --accent-foreground: #000000;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #bfe8d1;
-  --input: #bfe8d1;
-  --ring: #0e7a4a;
+  --input: #545454;
+  --ring: #009951;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -40,7 +40,7 @@
   --sidebar-accent: #d7f7e0;
   --sidebar-accent-foreground: #000000;
   --sidebar-border: #bfe8d1;
-  --sidebar-ring: #0e7a4a
+  --sidebar-ring: #0e7a4a;
 }
 
 /* MODO OSCURO  */
@@ -64,7 +64,7 @@
     --accent-foreground: #c9f2d8;
     --destructive: oklch(0.704 0.191 22.216);
     --border: #2b3f34;
-    --input: #2b3f34;
+    --input: #5b7466;
     --ring: #4de384;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
