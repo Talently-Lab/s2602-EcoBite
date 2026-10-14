@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { BookIcon, ChevronIcon, HistoryIcon, OverviewIcon, PanelIcon, StatusIcon } from './PortalIcons';
+import { BookOpen, ChevronDown, CircleCheck, History, House, PanelLeft } from 'lucide-react';
 
 const navigation = [
-  { label: 'Overview', href: '/', icon: OverviewIcon },
-  { label: 'API Docs', href: '/docs', icon: BookIcon },
-  { label: 'Status', href: '/status', icon: StatusIcon },
-  { label: 'Changelog', href: '/changelog', icon: HistoryIcon },
+  { label: 'Home', href: '/', icon: House },
+  { label: 'API Docs', href: '/docs', icon: BookOpen },
+  { label: 'Status', href: '/status', icon: CircleCheck },
+  { label: 'Changelog', href: '/changelog', icon: History },
 ] as const;
 
 export function AppSidebar() {
@@ -39,7 +39,7 @@ export function AppSidebar() {
           onClick={() => setCollapsed((value) => !value)}
           className="hidden size-9 shrink-0 items-center justify-center rounded-lg hover:bg-sidebar-hover md:flex"
         >
-          <PanelIcon className="size-4" />
+          <PanelLeft className="size-4" strokeWidth={1.75} />
         </button>
         <Link href="/" aria-label="EcoBite overview" className="font-bold text-brand-dark md:hidden">
           e<span className="text-brand">.</span>
@@ -61,7 +61,7 @@ export function AppSidebar() {
                     collapsed ? 'justify-center px-0' : 'justify-center px-0 md:justify-start md:px-3'
                   } ${active ? 'bg-brand-soft text-brand-dark' : 'hover:bg-sidebar-hover'}`}
                 >
-                  <Icon className="size-[18px] shrink-0" />
+                  <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />
                   {!collapsed && <span className="hidden md:inline">{label}</span>}
                 </Link>
               </li>
@@ -113,7 +113,7 @@ export function AppSidebar() {
                 <span className="block truncate text-sm font-semibold">NaferJ</span>
                 <span className="block text-xs text-muted">Account preview</span>
               </span>
-              <ChevronIcon className={`hidden size-3 shrink-0 md:block ${profileOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`hidden size-3 shrink-0 md:block ${profileOpen ? 'rotate-180' : ''}`} strokeWidth={1.75} />
             </>
           )}
         </button>

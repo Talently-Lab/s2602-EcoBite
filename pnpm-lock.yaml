@@ -19,6 +19,9 @@ importers:
       '@paper-design/shaders-react':
         specifier: ^0.0.81
         version: 0.0.81(@types/react@19.3.0)(react@19.3.0)
+      lucide-react:
+        specifier: ^1.48.0
+        version: 1.48.0(react@19.3.0)
       next:
         specifier: 16.3.8
         version: 16.3.8(@types/node@24.13.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
