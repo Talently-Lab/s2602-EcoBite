@@ -25,7 +25,11 @@ export function AppSidebar() {
         collapsed ? 'w-16' : 'w-16 md:w-64'
       }`}
     >
-      <header className="flex h-20 shrink-0 items-center justify-center border-b border-sidebar-border px-2 md:justify-between md:px-5">
+      <header
+        className={`flex h-20 shrink-0 items-center border-b border-sidebar-border px-2 md:px-5 ${
+          collapsed ? 'justify-center' : 'justify-between'
+        }`}
+      >
         {!collapsed && (
           <Link href="/" className="hidden text-2xl font-bold tracking-tight text-brand-dark md:block">
             ecobite<span className="text-brand">.</span>
