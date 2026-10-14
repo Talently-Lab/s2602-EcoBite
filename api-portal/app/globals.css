@@ -1,1 +1,41 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/roboto-mono';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans Variable', sans-serif;
+  --font-mono: 'Roboto Mono Variable', monospace;
+  --color-brand: #14ae5c;
+  --color-brand-dark: #024023;
+  --color-brand-soft: #dcffcf;
+  --color-brand-hover: #009951;
+  --color-brand-vivid: #04e762;
+  --color-cream: #ffebc6;
+  --color-warning: #ff7009;
+  --color-sidebar: #fafafa;
+  --color-sidebar-hover: #f0f0ee;
+  --color-sidebar-border: #e8e8e8;
+  --color-ink: #333333;
+  --color-heading: #3a3a3a;
+  --color-muted: #626262;
+}
+
+@layer base {
+  body {
+    @apply bg-white font-sans text-ink antialiased;
+  }
+
+  a, button {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-dark;
+  }
+}
+
+@media (max-height: 720px) {
+  .overview-column[data-offset='large'] {
+    grid-template-rows: minmax(0, 10fr) minmax(0, 44fr) minmax(0, 44fr) minmax(0, 2fr) !important;
+  }
+
+  .overview-column[data-offset='small'] {
+    grid-template-rows: minmax(0, 5fr) minmax(0, 44fr) minmax(0, 44fr) minmax(0, 7fr) !important;
+  }
+}
