@@ -1,6 +1,7 @@
 node_modules/
 agents/
 .vscode
+.idea/
 
 # Local workspace
 /.devin/

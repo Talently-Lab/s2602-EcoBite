@@ -1,15 +1,12 @@
 import 'dotenv/config'
-import express from 'express'
+import { createApp } from './app'
+import { ConfigError, readConfig } from './lib/config'
 import { prisma } from './lib/prisma'
-import apiRouter from './routes/index.route'
 
-const app = express()
 const PORT = process.env.PORT || 3000
 
-app.use(express.json())
-app.use('/api', apiRouter);
-
 async function start() {
+  const app = createApp(prisma, readConfig(process.env))
   await prisma.$queryRaw`SELECT 1`
   app.listen(PORT, () => {
     console.log(`API is running on: http://localhost:${PORT}/api`);
@@ -17,7 +14,8 @@ async function start() {
 }
 
 start().catch(async (error) => {
-  console.error('No se pudo conectar a la base de datos:', error)
+  const detail = error instanceof ConfigError ? error.message : error instanceof Error ? error.name : 'UnknownError'
+  console.error('No se pudo iniciar la API:', detail)
   await prisma.$disconnect()
   process.exit(1)
 })
