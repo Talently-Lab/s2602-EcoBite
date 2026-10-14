@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
+    "lint": "oxlint",
+    "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
@@ -26,6 +28,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/pg": "^8.23.1",
+    "oxlint": "1.86.0",
     "prisma": "7.10.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
