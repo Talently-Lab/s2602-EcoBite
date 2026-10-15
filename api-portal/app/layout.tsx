@@ -17,7 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         </a>
         <div className="flex min-h-dvh">
           <AppSidebar />
-          <main id="portal-main" tabIndex={-1} className="min-w-0 flex-1">
+          <main id="portal-main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
             {children}
           </main>
         </div>

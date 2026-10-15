@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { promisify } from 'node:util';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { checkDeployment } from '../scripts/check-deployed.mjs';
 import { createApp } from '../src/app';
 import type { PrismaClient } from '../src/generated/prisma/client';
 import { readConfig } from '../src/lib/config';
@@ -55,9 +59,9 @@ function fixture() {
   };
 }
 
-async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Promise<void>) {
+async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Promise<void>, trustProxyHops: 0 | 1 = 0) {
   const data = fixture();
-  const server: Server = createApp(data.db, { jwtSecret: secret, corsOrigins: ['http://localhost:5173'] })
+  const server: Server = createApp(data.db, { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops })
     .listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();
@@ -83,6 +87,14 @@ test('configuration rejects missing/short secrets and wildcard or path origins',
   }
   assert.deepEqual(readConfig({ JWT_SECRET: secret, NODE_ENV: 'production' }).corsOrigins, []);
   assert.deepEqual(readConfig({ JWT_SECRET: secret }).corsOrigins, ['http://localhost:5173']);
+});
+
+test('proxy trust is disabled by default and only allows direct or one controlled proxy', () => {
+  assert.equal(readConfig({ JWT_SECRET: secret }).trustProxyHops, 0);
+  assert.equal(readConfig({ JWT_SECRET: secret, TRUST_PROXY_HOPS: '1' }).trustProxyHops, 1);
+  for (const value of ['true', '-1', '2', '1.5', 'loopback', '']) {
+    assert.throws(() => readConfig({ JWT_SECRET: secret, TRUST_PROXY_HOPS: value }));
+  }
 });
 
 test('root is exact; unknown routes and unsupported methods return 404', async () => {
@@ -192,6 +204,8 @@ test('OpenAPI spec and Scalar docs are served', async () => {
     const specBody = await spec.text();
     assert.match(specBody, /^openapi: 3\.1/m);
     assert.match(specBody, /\/users\/register:/);
+    assert.match(specBody, /- url: \/api\s*$/m);
+    assert.doesNotMatch(specBody, /localhost/);
     const docs = await fetch(new URL('/docs', url));
     assert.equal(docs.status, 200);
     assert.match(docs.headers.get('content-type') ?? '', /text\/html/);
@@ -244,5 +258,65 @@ test('registration and login share an IP rate limit', async () => {
     assert.equal(response.status, 429);
     assert.ok(response.headers.get('retry-after'));
     assert.equal((await fetch(`${url}/restaurants`)).status, 200);
+  });
+});
+
+test('one trusted proxy isolates client limits and ignores spoofed earlier forwarded addresses', async () => {
+  await serve(async (url) => {
+    async function login(forwarded: string) {
+      return fetch(`${url}/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': forwarded },
+        body: '{}',
+      });
+    }
+    for (let index = 0; index < 20; index++) {
+      assert.equal((await login('198.51.100.10')).status, 400);
+    }
+    const limited = await login('203.0.113.99, 198.51.100.10');
+    assert.equal(limited.status, 429);
+    assert.ok(limited.headers.get('retry-after'));
+    assert.equal((await login('198.51.100.11')).status, 400);
+  }, 1);
+});
+
+test('deployment smoke checks cover docs, data and optional auth without logging credentials', async () => {
+  await serve(async (url) => {
+    const logs: string[] = [];
+    await checkDeployment(new URL(url).origin, { auth: true, requireData: true, log: (line: string) => logs.push(line) });
+    const output = logs.join('\n');
+    assert.match(output, /GET \/api\/users\/me \(401\)/);
+    assert.match(output, /GET \/api\/users\/me \(200\)/);
+    assert.doesNotMatch(output, /eyJ|smoke-[a-f0-9-]+@|passwordHash/);
+  });
+});
+
+test('deployment smoke checks reject empty analyst data, unavailable DB and unsafe origins', async () => {
+  await serve(async (url, data) => {
+    const origin = new URL(url).origin;
+    await assert.rejects(checkDeployment(`${origin}/api`), /only the API origin/);
+    await assert.rejects(checkDeployment('http://example.test'), /HTTPS/);
+    await assert.rejects(checkDeployment('https://user:password@example.test'), /without credentials/);
+    data.db.restaurante.findMany = async () => [];
+    await assert.rejects(checkDeployment(origin, { requireData: true, log: () => {} }), /No visible restaurants/);
+  });
+  await serve(async (url, data) => {
+    data.fail({ code: 'P1001' });
+    await assert.rejects(checkDeployment(new URL(url).origin, { log: () => {} }), /expected 200, got 503/);
+  });
+});
+
+test('native deployment CLI is read-only by default and rejects unknown flags before requests', async () => {
+  await serve(async (url, data) => {
+    const run = promisify(execFile);
+    const script = join(__dirname, '..', 'scripts', 'check-deployed.mjs');
+    const origin = new URL(url).origin;
+    const result = await run(process.execPath, [script, origin, '--require-data']);
+    assert.match(result.stdout, /PASS GET \/api\/restaurants \(200\)/);
+    assert.ok(data.calls.every((call) => call.method === 'findMany'));
+    const count = data.calls.length;
+    await assert.rejects(run(process.execPath, [script, origin, '--unsupported']),
+      (error: any) => error.code === 1 && error.stderr.includes('Usage:'));
+    assert.equal(data.calls.length, count);
   });
 });

@@ -19,6 +19,12 @@ const rowTemplates = {
   small: 'minmax(0,12fr) minmax(0,35fr) minmax(0,35fr) minmax(0,25fr)',
 } as const;
 
+// Content scrolls inside its block when the viewport is short, so the action
+// link below it is always visible instead of being clipped by overflow-hidden.
+const contentClassName =
+  'relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]';
+const actionClassName = 'relative z-10 flex shrink-0 justify-end pt-3';
+
 export function OverviewColumn({
   topSpace,
   topDecoration,
@@ -45,15 +51,15 @@ export function OverviewColumn({
         className={`relative flex min-h-0 min-w-0 flex-col break-words overflow-hidden border-b border-overview-border p-[clamp(0.375rem,1.4vw,1.5rem)] ${upperContent || upperDecoration ? '' : 'bg-sidebar-hover'}`}
       >
         {upperDecoration}
-        <div className={upperDecoration ? 'relative z-10 h-full' : ''}>{upperContent}</div>
-        {upperAction && <div className="relative z-10 mt-auto flex justify-end pt-3">{upperAction}</div>}
+        <div className={contentClassName}>{upperContent}</div>
+        {upperAction && <div className={actionClassName}>{upperAction}</div>}
       </div>
       <div
         className={`relative flex min-h-0 min-w-0 flex-col break-words overflow-hidden border-b border-overview-border p-[clamp(0.375rem,1.4vw,1.5rem)] ${lowerContent || lowerDecoration ? '' : 'bg-sidebar-hover'}`}
       >
         {lowerDecoration}
-        <div className={lowerDecoration ? 'relative z-10 h-full' : ''}>{lowerContent}</div>
-        {lowerAction && <div className="relative z-10 mt-auto flex justify-end pt-3">{lowerAction}</div>}
+        <div className={contentClassName}>{lowerContent}</div>
+        {lowerAction && <div className={actionClassName}>{lowerAction}</div>}
       </div>
       <div
         className={`relative overflow-hidden ${bottomDecoration ? '' : 'bg-sidebar-hover'}`}

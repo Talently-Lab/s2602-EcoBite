@@ -8,24 +8,17 @@ const pastIncidents = [
 export function StatusSummary() {
   return (
     <div className="mt-4">
-      <section aria-labelledby="past-incidents-title">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <h3 id="past-incidents-title" className="font-semibold">
-            Incidentes anteriores
-          </h3>
-          <span className="text-muted">Diseño de muestra — monitoreo no conectado</span>
-        </div>
-        <ul className="mt-3 space-y-2">
-          {pastIncidents.map((date) => (
-            <li key={date.dateTime} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <time dateTime={date.dateTime} className="font-mono text-muted">
-                {date.label}
-              </time>
-              <span className="text-muted">Sin incidentes reportados.</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <h3 className="font-semibold">Incidentes anteriores</h3>
+      <ul className="mt-3 space-y-2">
+        {pastIncidents.map((date) => (
+          <li key={date.dateTime} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <time dateTime={date.dateTime} className="font-mono text-muted">
+              {date.label}
+            </time>
+            <span className="text-muted">Sin incidentes reportados.</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

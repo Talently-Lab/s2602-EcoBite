@@ -31,8 +31,8 @@ info:
     - No hay paginación en esta versión: las colecciones se devuelven completas.
 
 servers:
-  - url: http://localhost:3000/api
-    description: Servidor local de desarrollo
+  - url: /api
+    description: API del mismo servidor que publica esta referencia
 
 tags:
   - name: restaurants

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: ecobite-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter backend build
+    # Free services have no pre-deploy command. Pending migrations block startup;
+    # this never resets the database and deliberately does not run the seed.
+    startCommand: corepack pnpm --filter backend prisma:deploy && corepack pnpm --filter backend start
+    healthCheckPath: /api
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://ecobite-api-portal.vercel.app
+      - key: TRUST_PROXY_HOPS
+        value: "1"

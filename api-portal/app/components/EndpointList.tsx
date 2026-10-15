@@ -14,7 +14,7 @@ export function EndpointList() {
     <ul aria-label="Endpoints principales" className="mt-4">
       {endpoints.map(({ method, path, description }) => (
         <li key={`${method}-${path}`} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2 py-2 first:pt-0 last:pb-0">
-          <span className={`h-fit self-center rounded border border-current/15 px-2 py-1 font-mono text-[0.7em] font-semibold ${methodStyles[method]}`}>
+          <span className={`h-fit min-w-[7ch] self-center rounded border border-current/15 px-2 py-1 text-center font-mono text-[0.7em] font-semibold ${methodStyles[method]}`}>
             {method}
           </span>
           <div className="min-w-0">

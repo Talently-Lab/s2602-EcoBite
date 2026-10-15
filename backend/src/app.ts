@@ -10,6 +10,7 @@ import { createApiRouter } from './routes/index.route';
 export function createApp(db: PrismaClient, config: ApiConfig) {
   const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', config.trustProxyHops);
   app.use(cors({
     origin: config.corsOrigins,
     methods: ['GET', 'POST'],
