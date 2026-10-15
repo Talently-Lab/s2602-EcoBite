@@ -31,7 +31,3 @@
 - No auth, API calls, Scalar, or monitoring is implemented yet. The account panel is explicitly a preview and logout is disabled. Portal Google OAuth must remain separate from customer API JWT authentication.
 - `app/components/PortalIcons.tsx` contains temporary prototype icons, not Nucleo exports. Replace only with authorized assets; do not install account/editor integrations or claim licensed assets are available without confirmation.
 - Verification: `pnpm --filter api-portal lint`, `pnpm --filter api-portal typecheck` (`next typegen && tsc --noEmit`), and `pnpm --filter api-portal build`. No test runner. Builds require no API, database, or OAuth credentials.
-
-## Issue workflow
-- Reusable project skill: `.agents/skills/ecobite-issue/SKILL.md`. Read current templates from `.github/ISSUE_TEMPLATE/`, verify the source remote and duplicates, and use `gh --body-file` only when creation is authorized.
-- Discover EcoBite's team board independently; never reuse another project's board IDs or policies. No commits, pushes, or PR creation without explicit authorization.
