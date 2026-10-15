@@ -2,59 +2,52 @@ name: Backend CI
 
 on:
   push:
-    branches: [main, feat/api-portal]
-    paths:
-      - "backend/**"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/backend-ci.yml"
+    branches: [main]
+  # Always report a result on PRs so this can be a required check.
   pull_request:
     branches: [main]
-    paths:
-      - "backend/**"
-      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Prisma generation loads DATABASE_URL but does not connect to a database.
+env:
+  DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/ecobite?schema=public
 
 jobs:
-  lint:
-    name: Lint
+  ci:
+    name: Backend checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          version: 10.34.5
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter backend lint
 
-  typecheck:
-    name: TypeCheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 10.34.5
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter backend typecheck
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 10.34.5
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter backend build
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=moderate
+
+      - name: Lint
+        run: pnpm --filter backend lint
+
+      # Build generates Prisma once, before typecheck and API tests need it.
+      - name: Build
+        run: pnpm --filter backend build
+
+      - name: Typecheck
+        run: pnpm --filter backend typecheck
+
+      - name: API tests
+        run: pnpm --filter backend check:api

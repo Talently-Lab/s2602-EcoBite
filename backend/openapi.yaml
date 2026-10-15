@@ -1,0 +1,586 @@
+openapi: 3.1.0
+
+info:
+  title: EcoBite API
+  version: 1.0.0
+  description: |
+    API de clientes de **EcoBite**, delivery de comida de restaurantes eco-friendly.
+    Los clientes se registran y obtienen un JWT de sesión para consultar su perfil.
+
+    ## Autenticación
+
+    `POST /users/login` devuelve un `accessToken` JWT HS256 (duración: 1 hora,
+    `expiresIn: 3600`). Enviarlo como `Authorization: Bearer <accessToken>` en los
+    endpoints protegidos. Claims: `sub` = UUID del usuario, `iss` = `ecobite-api`,
+    `aud` = `ecobite-customer`. El token no contiene email ni datos personales.
+
+    No hay refresh tokens ni endpoint de logout: el cliente debe desechar el token
+    al cerrar sesión. Un token robado sigue siendo válido hasta su vencimiento,
+    salvo que la cuenta se desactive o se rote el secreto.
+
+    ## Convenciones
+
+    - Todas las respuestas incluyen `Cache-Control: no-store` y
+      `X-Content-Type-Options: nosniff`.
+    - Los `POST` exigen `Content-Type: application/json`; otro media type responde
+      `415`. El cuerpo de las solicitudes está limitado a 16 KiB (`413` si se excede).
+    - Los errores usan el formato `{"error": "mensaje"}`, sin stack traces ni datos
+      internos. Los mensajes están en español.
+    - Registro y login comparten un límite de 20 intentos por IP cada 15 minutos.
+      Al agotarse, responden `429` con el encabezado `Retry-After`.
+    - No hay paginación en esta versión: las colecciones se devuelven completas.
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor local de desarrollo
+
+tags:
+  - name: restaurants
+    description: Catálogo público de restaurantes eco-friendly.
+  - name: auth
+    description: Registro e inicio de sesión de clientes.
+  - name: users
+    description: Perfil del cliente autenticado.
+
+paths:
+  /restaurants:
+    get:
+      tags:
+        - restaurants
+      summary: Listar restaurantes activos y eco-friendly
+      description: |
+        Público. Devuelve un array con únicamente los restaurantes activos y
+        eco-friendly, ordenados por nombre e ID. No incluye email ni credenciales
+        del restaurante. En una base recién inicializada puede devolver `[]`.
+      operationId: listRestaurants
+      responses:
+        '200':
+          description: Lista de restaurantes activos y eco-friendly.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Restaurant'
+              example:
+                - id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                  name: Verde Bistró
+                  category: Comida saludable
+                  isEco: true
+                  zone:
+                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                    name: Palermo
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/register:
+    post:
+      tags:
+        - auth
+      summary: Registrar una cuenta de cliente
+      description: |
+        Público. Crea un usuario con rol `CLIENTE`; no existe registro público de
+        administradores. La contraseña se almacena con bcrypt (costo 12) y nunca
+        se devuelve.
+
+        Validaciones del cuerpo (se rechazan campos adicionales):
+
+        - `name`: obligatorio; se recorta; 1–120 caracteres sin caracteres de control.
+        - `email`: obligatorio; se recorta y convierte a minúsculas; máximo 254
+          caracteres; debe ser único.
+        - `password`: obligatorio; al menos 8 caracteres y máximo **72 bytes UTF-8**
+          (límite de bcrypt); no se recorta ni modifica.
+
+        Requiere `Content-Type: application/json` (`415` en caso contrario) y un
+        cuerpo de hasta 16 KiB (`413` si se excede). Limitado a 20 intentos por IP
+        cada 15 minutos, compartido con `POST /users/login` (`429`).
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: María Fernández
+              email: maria.fernandez@ecobite.test
+              password: clave-segura-123
+      responses:
+        '201':
+          description: Cuenta creada. El rol siempre es `CLIENTE`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+              example:
+                user:
+                  id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  name: María Fernández
+                  email: maria.fernandez@ecobite.test
+                  role: CLIENTE
+                  createdAt: '2026-02-10T15:30:00.000Z'
+        '400':
+          description: Datos inválidos, campos adicionales o JSON malformado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                contrasenaCorta:
+                  summary: Contraseña menor a 8 caracteres
+                  value:
+                    error: La contraseña debe tener al menos 8 caracteres.
+                nombreInvalido:
+                  summary: Nombre vacío o demasiado largo
+                  value:
+                    error: El nombre es obligatorio y debe tener como máximo 120 caracteres.
+                credencialesInvalidas:
+                  summary: Email inválido o contraseña mayor a 72 bytes
+                  value:
+                    error: Email y contraseña válidos son obligatorios (máximo 72 bytes para la contraseña).
+                camposAdicionales:
+                  summary: Se enviaron campos no permitidos
+                  value:
+                    error: Solo se permiten los campos name, email y password.
+                jsonInvalido:
+                  summary: Cuerpo que no es JSON válido
+                  value:
+                    error: JSON inválido.
+        '409':
+          description: El email ya está registrado (incluye registros concurrentes).
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No se pudo registrar ese email.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/login:
+    post:
+      tags:
+        - auth
+      summary: Iniciar sesión y obtener el token de acceso
+      description: |
+        Público. Verifica las credenciales y devuelve un JWT de sesión junto con el
+        perfil público del usuario. El `email` se recorta y convierte a minúsculas;
+        la `password` admite como máximo 72 bytes UTF-8. Los campos adicionales en
+        el cuerpo se ignoran.
+
+        Email desconocido, contraseña incorrecta y cuenta inactiva responden el
+        mismo `401`, sin revelar cuál falló; también se ejecuta trabajo bcrypt para
+        emails desconocidos para no filtrar información por tiempo de respuesta.
+
+        Requiere `Content-Type: application/json` (`415`) y un cuerpo de hasta
+        16 KiB (`413`). Limitado a 20 intentos por IP cada 15 minutos, compartido
+        con `POST /users/register` (`429` con `Retry-After`).
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: maria.fernandez@ecobite.test
+              password: clave-segura-123
+      responses:
+        '200':
+          description: Sesión iniciada. `accessToken` es válido por 1 hora.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5YjFkZWI0ZC0zYjdkLTRiYWQtOWJkZC0yYjBkN2IzZGNiNmQiLCJpc3MiOiJlY29iaXRlLWFwaSIsImF1ZCI6ImVjb2JpdGUtY3VzdG9tZXIiLCJpYXQiOjE3NzA3NDY0MDAsImV4cCI6MTc3MDc1MDAwMH0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                tokenType: Bearer
+                expiresIn: 3600
+                user:
+                  id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                  name: María Fernández
+                  email: maria.fernandez@ecobite.test
+                  role: CLIENTE
+                  createdAt: '2026-02-10T15:30:00.000Z'
+        '400':
+          description: Datos faltantes o inválidos, o JSON malformado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                credencialesInvalidas:
+                  summary: Email inválido o contraseña ausente o mayor a 72 bytes
+                  value:
+                    error: Email y contraseña válidos son obligatorios (máximo 72 bytes para la contraseña).
+                jsonInvalido:
+                  summary: Cuerpo que no es JSON válido
+                  value:
+                    error: JSON inválido.
+        '401':
+          description: |
+            Credenciales incorrectas o cuenta inactiva. La respuesta es idéntica
+            para email desconocido y contraseña incorrecta.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Email o contraseña incorrectos.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/me:
+    get:
+      tags:
+        - users
+      summary: Obtener el perfil del cliente autenticado
+      description: |
+        Protegido. Requiere `Authorization: Bearer <accessToken>`. La cuenta se
+        consulta en cada llamada: si el usuario fue eliminado o desactivado, el
+        acceso se invalida de inmediato aunque el token no haya vencido.
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil público del cliente autenticado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+              example:
+                user:
+                  id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                  name: María Fernández
+                  email: maria.fernandez@ecobite.test
+                  role: CLIENTE
+                  createdAt: '2026-02-10T15:30:00.000Z'
+        '401':
+          description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token de acceso JWT HS256 obtenido en `POST /users/login` (1 hora de
+        duración, `iss` = `ecobite-api`, `aud` = `ecobite-customer`).
+
+  headers:
+    CacheControl:
+      description: Las respuestas de la API no deben almacenarse en caché.
+      schema:
+        type: string
+        enum:
+          - no-store
+    RetryAfter:
+      description: Segundos a esperar antes de reintentar la solicitud.
+      schema:
+        type: integer
+        minimum: 0
+      example: 900
+
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Formato único de error; sin stack traces ni datos internos.
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Mensaje de error legible, en español.
+      additionalProperties: false
+
+    Zone:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Nombre del barrio (zonas de CABA).
+          example: Palermo
+      additionalProperties: false
+
+    Restaurant:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - isEco
+        - zone
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Verde Bistró
+        category:
+          type:
+            - string
+            - 'null'
+          description: Categoría del restaurante; puede ser `null`.
+          example: Comida saludable
+        isEco:
+          type: boolean
+          description: Siempre `true` en este listado (solo se exponen restaurantes eco-friendly).
+        zone:
+          $ref: '#/components/schemas/Zone'
+      additionalProperties: false
+
+    PublicUser:
+      type: object
+      description: Vista pública del usuario; nunca incluye credenciales ni hashes.
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: María Fernández
+        email:
+          type: string
+          format: email
+          example: maria.fernandez@ecobite.test
+        role:
+          type: string
+          enum:
+            - CLIENTE
+            - ADMIN
+          description: Rol del usuario. El registro público siempre crea `CLIENTE`.
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-02-10T15:30:00.000Z'
+      additionalProperties: false
+
+    UserEnvelope:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: '#/components/schemas/PublicUser'
+      additionalProperties: false
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[^\u0000-\u001f\u007f]+$'
+          description: |
+            Nombre completo del cliente. Se recorta espacio en blanco al inicio y
+            al final; no admite caracteres de control.
+          example: María Fernández
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Se recorta y convierte a minúsculas; debe ser único.
+          example: maria.fernandez@ecobite.test
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: |
+            Al menos 8 caracteres y máximo **72 bytes UTF-8** (el límite de bytes
+            evita el truncamiento silencioso de bcrypt). No se recorta ni modifica.
+          example: clave-segura-123
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Se recorta y convierte a minúsculas antes de la verificación.
+          example: maria.fernandez@ecobite.test
+        password:
+          type: string
+          format: password
+          minLength: 1
+          description: Máximo 72 bytes UTF-8. Los campos adicionales se ignoran.
+          example: clave-segura-123
+
+    LoginResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+        - user
+      properties:
+        accessToken:
+          type: string
+          description: |
+            JWT HS256 de 1 hora: `sub` = UUID del usuario, `iss` = `ecobite-api`,
+            `aud` = `ecobite-customer`. Sin email ni datos personales en el payload.
+        tokenType:
+          type: string
+          enum:
+            - Bearer
+          example: Bearer
+        expiresIn:
+          type: integer
+          enum:
+            - 3600
+          description: Duración del token en segundos (1 hora).
+          example: 3600
+        user:
+          $ref: '#/components/schemas/PublicUser'
+      additionalProperties: false
+
+  responses:
+    PayloadTooLarge:
+      description: El cuerpo de la solicitud supera el límite de 16 KiB.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControl'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: El cuerpo de la solicitud es demasiado grande.
+
+    UnsupportedMediaType:
+      description: 'Los `POST` requieren `Content-Type: application/json`.'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControl'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: 'Se requiere Content-Type: application/json.'
+
+    RateLimited:
+      description: |
+        Se superó el límite de 20 intentos por IP cada 15 minutos, compartido
+        entre registro y login. Consultar `Retry-After` antes de reintentar.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControl'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Demasiados intentos. Intentá nuevamente más tarde.
+
+    ServiceUnavailable:
+      description: La base de datos no está disponible temporalmente.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControl'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Servicio temporalmente no disponible.
+
+    InternalError:
+      description: Error inesperado del servidor, sin mensajes internos.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControl'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Error interno del servidor.

@@ -1,17 +1,17 @@
-const releases = [
+const releases: { version: string; title: string; date: string; changes: number }[] = [
   {
     version: 'v1.0.0',
-    title: 'Customer API and portal foundation',
-    date: 'Oct 14, 2026',
+    title: 'API de clientes y base del portal',
+    date: '14 oct 2026',
     changes: 6,
   },
   {
     version: 'v0.9.0',
-    title: 'Initial API portal release',
-    date: 'Oct 08, 2026',
+    title: 'Primera versión del portal de la API',
+    date: '8 oct 2026',
     changes: 3,
   },
-] as const;
+];
 
 export function ChangelogSummary() {
   return (
@@ -25,7 +25,7 @@ export function ChangelogSummary() {
             <h3 className="min-w-0 flex-1 font-medium">{title}</h3>
           </header>
           <p className="mt-2 text-[0.8em] text-muted">
-            {date} · {changes} changes
+            {date} · {changes} {changes === 1 ? 'cambio' : 'cambios'}
           </p>
         </div>
       ))}

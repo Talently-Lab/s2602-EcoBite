@@ -2,7 +2,7 @@
 
 import { ImageDithering } from '@paper-design/shaders-react';
 
-const EXAMPLE_IMAGE = 'https://images.pexels.com/photos/4411214/pexels-photo-4411214.jpeg';
+const EXAMPLE_IMAGE = '/images/dither-sample.jpg';
 
 type ImageDitheringDecorationProps = {
   image?: string;

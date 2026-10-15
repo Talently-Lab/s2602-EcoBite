@@ -184,6 +184,21 @@ test('missing, malformed, expired, wrong signature/algorithm/audience and missin
   });
 });
 
+test('OpenAPI spec and Scalar docs are served', async () => {
+  await serve(async (url) => {
+    const spec = await fetch(`${url}/openapi.yaml`);
+    assert.equal(spec.status, 200);
+    assert.match(spec.headers.get('content-type') ?? '', /yaml/);
+    const specBody = await spec.text();
+    assert.match(specBody, /^openapi: 3\.1/m);
+    assert.match(specBody, /\/users\/register:/);
+    const docs = await fetch(new URL('/docs', url));
+    assert.equal(docs.status, 200);
+    assert.match(docs.headers.get('content-type') ?? '', /text\/html/);
+    assert.match(await docs.text(), /openapi\.yaml/);
+  });
+});
+
 test('JSON media type, malformed JSON and body limit use explicit status codes', async () => {
   await serve(async (url) => {
     assert.equal((await fetch(`${url}/users/register`, { method: 'POST', body: 'text' })).status, 415);

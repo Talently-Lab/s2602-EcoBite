@@ -1,8 +1,8 @@
 const pastIncidents = [
-  { label: 'Oct 14, 2026', dateTime: '2026-10-14' },
-  { label: 'Oct 13, 2026', dateTime: '2026-10-13' },
-  { label: 'Oct 12, 2026', dateTime: '2026-10-12' },
-  { label: 'Oct 11, 2026', dateTime: '2026-10-11' },
+  { label: '14 oct 2026', dateTime: '2026-10-14' },
+  { label: '13 oct 2026', dateTime: '2026-10-13' },
+  { label: '12 oct 2026', dateTime: '2026-10-12' },
+  { label: '11 oct 2026', dateTime: '2026-10-11' },
 ];
 
 export function StatusSummary() {
@@ -11,9 +11,9 @@ export function StatusSummary() {
       <section aria-labelledby="past-incidents-title">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <h3 id="past-incidents-title" className="font-semibold">
-            Past Incidents
+            Incidentes anteriores
           </h3>
-          <span className="text-muted">Last 14 days · None</span>
+          <span className="text-muted">Diseño de muestra — monitoreo no conectado</span>
         </div>
         <ul className="mt-3 space-y-2">
           {pastIncidents.map((date) => (
@@ -21,7 +21,7 @@ export function StatusSummary() {
               <time dateTime={date.dateTime} className="font-mono text-muted">
                 {date.label}
               </time>
-              <span className="text-muted">No incidents reported.</span>
+              <span className="text-muted">Sin incidentes reportados.</span>
             </li>
           ))}
         </ul>

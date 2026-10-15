@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { apiReference } from '@scalar/express-api-reference';
 import type { PrismaClient } from './generated/prisma/client';
 import type { ApiConfig } from './lib/config';
 import { HttpError } from './lib/http-error';
@@ -24,6 +25,10 @@ export function createApp(db: PrismaClient, config: ApiConfig) {
   });
   app.use(express.json({ limit: '16kb' }));
   app.use('/api', createApiRouter(db, config));
+  app.use('/docs', apiReference({
+    pageTitle: 'EcoBite API Reference',
+    spec: { url: '/api/openapi.yaml' },
+  }));
   app.use((_req, _res) => { throw new HttpError(404, 'Ruta no encontrada.'); });
   app.use(handleError);
   return app;

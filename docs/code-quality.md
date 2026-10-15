@@ -62,23 +62,23 @@ mkdir -p .git/hooks
 cat > .git/hooks/pre-push << 'HOOK'
 #!/bin/bash
 
-echo "🔍 Running linter checks before push..."
+echo "Running linter checks before push..."
 
 # Lint backend if changed
 if git diff --name-only HEAD @{push} | grep -q "^backend/"; then
-  echo "📦 Linting backend..."
+  echo "Linting backend..."
   cd backend && pnpm lint || exit 1
   cd ..
 fi
 
 # Lint api-portal if changed
 if git diff --name-only HEAD @{push} | grep -q "^api-portal/"; then
-  echo "📦 Linting api-portal..."
+  echo "Linting api-portal..."
   cd api-portal && pnpm lint || exit 1
   cd ..
 fi
 
-echo "✅ Lint checks passed!"
+echo "Lint checks passed!"
 HOOK
 
 chmod +x .git/hooks/pre-push
@@ -95,6 +95,30 @@ chmod +x .git/hooks/pre-push
 
 oxlint also runs in GitHub Actions on every PR.
 See `.github/workflows/backend-ci.yml` and `.github/workflows/api-portal-ci.yml`.
+
+Both workflows run on every PR targeting `main` (including frontend-only PRs),
+on pushes to `main`, and via manual dispatch. There are no workflow-level path
+filters, so unrelated PRs do not leave required checks waiting for a result.
+Manual dispatch becomes available once the workflows exist on the default branch.
+
+- **Backend checks:** dependency audit, lint, build, typecheck, and API tests.
+  Build generates the Prisma client before typecheck; CI needs no running
+  database or real credentials. API tests use a Prisma double, so this does not
+  validate migrations or real PostgreSQL behavior.
+- **API Portal checks:** dependency audit, lint, typecheck, and build. Only
+  `.next/cache` is cached for incremental builds, not the production output.
+- Workspace installation and `pnpm audit --audit-level=moderate` use the shared
+  root lockfile, including frontend dependencies. Audit failures block CI;
+  reviewed exceptions remain in `pnpm-workspace.yaml` under `auditConfig`.
+  Neither workflow lints, builds, or tests `frontend/`.
+- Jobs have a 15-minute timeout, read-only repository access, and pinned action
+  commits. Dependabot checks GitHub Actions pins weekly; it does not update
+  package dependencies.
+
+Once successful hosted runs exist, the team can require `Backend checks` and
+`API Portal checks` in the `main` branch rules. These files do not enable branch
+protection themselves. The frontend developer can add a separate frontend CI
+workflow without changing these package commands.
 
 **Local linting before push is still required** to catch issues early and avoid failed CI.
 
@@ -125,13 +149,13 @@ See `.github/workflows/backend-ci.yml` and `.github/workflows/api-portal-ci.yml`
 ## Quality Standards
 
 oxlint enforces:
-- ✅ No unused variables or imports
-- ✅ No unreachable code
-- ✅ No duplicate code patterns
-- ✅ Proper TypeScript usage
-- ✅ No security vulnerabilities in syntax
-- ✅ Performance best practices
-- ✅ Consistent code style
+- No unused variables or imports
+- No unreachable code
+- No duplicate code patterns
+- Proper TypeScript usage
+- No security vulnerabilities in syntax
+- Performance best practices
+- Consistent code style
 
 SonarLint catches additional issues SonarCloud would find.
 

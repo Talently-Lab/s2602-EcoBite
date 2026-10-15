@@ -5,15 +5,15 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'EcoBite API',
-  description: 'EcoBite API developer portal.',
+  description: 'Portal para desarrolladores de la API de EcoBite.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
         <a href="#portal-main" className="fixed left-4 top-4 z-50 -translate-y-24 rounded-lg bg-brand-dark px-4 py-3 text-white focus:translate-y-0">
-          Skip to content
+          Saltar al contenido
         </a>
         <div className="flex min-h-dvh">
           <AppSidebar />

@@ -6,8 +6,8 @@ import { ImageDitheringDecoration } from './components/ImageDitheringDecoration'
 import { PortalLink } from './components/PortalLink';
 import type { ReactNode } from 'react';
 
-// Replace this URL with the image used for the footer background.
-const FOOTER_IMAGE_URL = 'https://i.ibb.co/Nn7zPNk8/Screenshot-2026-10-14-144106.png';
+// Local asset — keep decoration images in public/images so the page works offline.
+const FOOTER_IMAGE_URL = '/images/footer-dither.png';
 
 function MobileSection({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`border-b border-overview-border p-5 ${className}`}>{children}</section>;
@@ -17,7 +17,7 @@ export default function OverviewPage() {
   return (
     <>
       <section
-        aria-label="Overview"
+        aria-label="Resumen"
         className="hidden min-h-dvh min-w-0 border-l border-sidebar-border bg-white text-[clamp(0.8125rem,1vw,0.875rem)] text-heading xl:grid xl:h-dvh xl:grid-cols-5"
       >
       <OverviewColumn
@@ -28,7 +28,7 @@ export default function OverviewPage() {
         topSpace="small"
         upperContent={
           <div className="space-y-4">
-            <h2 className="font-semibold">Overview</h2>
+            <h2 className="font-semibold">Resumen</h2>
             <p>La API de EcoBite para delivery de comida sustentable.</p>
             <p className="hidden xl:block">
               Este portal muestra su documentación, su estado y sus cambios al equipo y al frontend.
@@ -49,9 +49,9 @@ export default function OverviewPage() {
         upperContent={
           <div>
             <div className="flex items-baseline gap-2">
-              <h2 className="font-semibold">Status</h2>
+              <h2 className="font-semibold">Estado</h2>
               <span role="status" className="font-semibold text-brand-dark">
-                All Systems Operational
+                Vista previa — monitoreo no conectado
               </span>
             </div>
             <StatusSummary />
@@ -60,7 +60,7 @@ export default function OverviewPage() {
         upperAction={<PortalLink href="/status">Vistazo</PortalLink>}
         lowerContent={
           <div>
-            <h2 className="font-semibold">Changelog</h2>
+            <h2 className="font-semibold">Novedades</h2>
             <ChangelogSummary />
           </div>
         }
@@ -70,7 +70,7 @@ export default function OverviewPage() {
         topSpace="small"
         upperContent={
           <div className="space-y-4">
-            <h2 className="font-semibold">API Docs</h2>
+            <h2 className="font-semibold">Documentación</h2>
             <p>La referencia de la API se prepara para una experiencia interactiva con Scalar.</p>
             <p className="hidden text-muted xl:block">
               Consulta endpoints, autenticación, parámetros y respuestas desde un mismo lugar.
@@ -89,14 +89,14 @@ export default function OverviewPage() {
       </section>
 
       <section
-        aria-label="Mobile overview"
+        aria-label="Resumen móvil"
         className="flex min-w-0 flex-col border-l border-sidebar-border bg-white text-[0.9375rem] text-heading xl:hidden"
       >
         <MobileSection className="relative min-h-40 overflow-hidden p-0">
           <ImageDitheringDecoration invertColors={false} />
         </MobileSection>
         <MobileSection>
-          <h2 className="font-semibold">Overview</h2>
+          <h2 className="font-semibold">Resumen</h2>
           <p className="mt-4">La API de EcoBite para delivery de comida sustentable.</p>
           <p className="mt-4 text-muted">
             Este portal muestra su documentación, su estado y sus cambios al equipo y al frontend.
@@ -112,9 +112,9 @@ export default function OverviewPage() {
         </MobileSection>
         <MobileSection>
           <div className="flex flex-wrap items-baseline gap-2">
-            <h2 className="font-semibold">Status</h2>
+            <h2 className="font-semibold">Estado</h2>
             <span role="status" className="font-semibold text-brand-dark">
-              All Systems Operational
+              Vista previa — monitoreo no conectado
             </span>
           </div>
           <StatusSummary />
@@ -123,14 +123,14 @@ export default function OverviewPage() {
           </div>
         </MobileSection>
         <MobileSection>
-          <h2 className="font-semibold">Changelog</h2>
+          <h2 className="font-semibold">Novedades</h2>
           <ChangelogSummary />
           <div className="mt-4 flex justify-end">
             <PortalLink href="/changelog">Detalles</PortalLink>
           </div>
         </MobileSection>
         <MobileSection>
-          <h2 className="font-semibold">API Docs</h2>
+          <h2 className="font-semibold">Documentación</h2>
           <p className="mt-4">La referencia de la API se prepara para una experiencia interactiva con Scalar.</p>
           <p className="mt-4 text-muted">
             Consulta endpoints, autenticación, parámetros y respuestas desde un mismo lugar.

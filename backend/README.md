@@ -49,6 +49,13 @@ Enviar `Content-Type: application/json` en los POST. Límite del cuerpo: 16 KiB.
 Las respuestas no deben almacenarse en caché. Los errores tienen el formato
 `{"error":"mensaje"}` sin stack trace ni datos internos.
 
+### `GET /api/openapi.yaml` y `GET /docs`
+
+La especificación OpenAPI 3.1 del contrato vive en `openapi.yaml` (raíz de
+`backend/`) y se sirve tal cual en `/api/openapi.yaml`. Scalar la renderiza como
+referencia interactiva en `/docs`. Al cambiar el contrato, actualizar el YAML:
+es la documentación que consume el portal y frontend.
+
 ### `GET /api/restaurants`
 
 Público. Devuelve un array, únicamente restaurantes activos y eco-friendly,

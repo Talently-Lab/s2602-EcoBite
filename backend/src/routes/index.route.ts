@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -19,7 +21,15 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig) {
     message: { error: 'Demasiados intentos. Intentá nuevamente más tarde.' },
   });
 
+  // Resolved relative to this module so it works from src/ (tsx) and dist/ (node).
+  const specPath = join(__dirname, '..', '..', 'openapi.yaml');
+  let specCache: string | undefined;
+
   apiRouter.get('/', (_req, res) => { res.json({ message: 'API is working!' }); });
+  apiRouter.get('/openapi.yaml', async (_req, res) => {
+    specCache ??= await readFile(specPath, 'utf8');
+    res.type('application/yaml').send(specCache);
+  });
   apiRouter.get('/restaurants', createRestaurantController(createRestaurantService(db)));
   apiRouter.post('/users/register', authLimiter, users.register);
   apiRouter.post('/users/login', authLimiter, users.login);
