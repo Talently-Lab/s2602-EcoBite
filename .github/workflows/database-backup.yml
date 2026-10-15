@@ -1,0 +1,67 @@
+name: Database Backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 6 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # Opt in only after configuring the protected environment and its secrets.
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_DATABASE_BACKUPS == 'true'
+    name: Encrypted Postgres backup
+    environment: production-backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Dump and encrypt
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_BACKUP_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$DATABASE_URL" || ${#BACKUP_PASSPHRASE} -lt 32 ]]; then
+            echo "::error::Configure DATABASE_BACKUP_URL and a random BACKUP_PASSPHRASE of at least 32 characters."
+            exit 1
+          fi
+          umask 077
+          dump="$RUNNER_TEMP/ecobite-$(date -u +%Y%m%dT%H%M%SZ).dump"
+          errors="$RUNNER_TEMP/pg-dump-error"
+          verified="$RUNNER_TEMP/backup-roundtrip"
+          trap 'rm -f "$dump" "$errors" "$verified"' EXIT
+          # Match the Neon server major version (select PostgreSQL 16 at setup).
+          if ! docker run --rm --env DATABASE_URL postgres:16 \
+            sh -c 'exec pg_dump --dbname="$DATABASE_URL" --no-password --format=custom --no-owner --no-acl' \
+            > "$dump" 2> "$errors"; then
+            echo "::error::pg_dump failed. Check the direct Neon URL, role permissions, and PostgreSQL major version. Connection details are not logged."
+            exit 1
+          fi
+          test -s "$dump"
+          if ! docker run --rm --interactive postgres:16 pg_restore --list \
+            < "$dump" > /dev/null 2> "$errors"; then
+            echo "::error::The backup is not a readable PostgreSQL archive."
+            exit 1
+          fi
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --no-symkey-cache \
+            --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 \
+            --output "$dump.gpg" "$dump"
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --no-symkey-cache \
+            --pinentry-mode loopback --passphrase-fd 0 --decrypt \
+            --output "$verified" "$dump.gpg"
+          cmp --silent "$dump" "$verified"
+
+      - name: Store encrypted archive only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ecobite-postgres-${{ github.run_id }}
+          path: ${{ runner.temp }}/ecobite-*.dump.gpg
+          if-no-files-found: error
+          retention-days: 14

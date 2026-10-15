@@ -20,8 +20,10 @@ valores ni versionar el archivo `.env`.
 | --- | --- |
 | `PORT` | Puerto del servidor; por defecto `3000`. |
 | `DATABASE_URL` | Conexión PostgreSQL. |
+| `DIRECT_URL` | Opcional: conexión directa para migraciones; en Neon evita el pooler. El runtime y seed siguen usando `DATABASE_URL`. |
 | `JWT_SECRET` | Secreto aleatorio de al menos 32 bytes, obligatorio. |
 | `CORS_ORIGINS` | Orígenes exactos separados por comas, sin rutas. En desarrollo se admite por defecto `http://localhost:5173`; en producción ninguno si no se configura. |
+| `TRUST_PROXY_HOPS` | `0` por defecto; `1` únicamente detrás de un proxy controlado como el ingreso de Render. |
 
 Generar el secreto con un gestor de secretos o `openssl rand -hex 32` y guardarlo
 directamente en `.env` o Doppler; no pegarlo en chat ni documentación.
@@ -128,7 +130,7 @@ en `localStorage`; acordar la estrategia de sesión con frontend antes de produc
   `Retry-After`). El store es en memoria: se reinicia con el proceso y no comparte
   contadores entre réplicas. Usar un store compartido antes de escalar.
 - Express no confía automáticamente en `X-Forwarded-For`. Tras un proxy,
-  configurar `trust proxy` solo para el proxy real; no usar `true` indiscriminadamente.
+  configurar `TRUST_PROXY_HOPS=1` solo para un salto controlado; no usar `true` indiscriminadamente.
   Sin configuración, usuarios tras ese proxy podrían compartir un límite.
 - CORS limita qué orígenes de navegador pueden leer respuestas; **no reemplaza
   autenticación** ni bloquea clientes como curl.
@@ -157,3 +159,9 @@ base local aislada antes de integrar con frontend.
 
 La importación del Excel/CSV de Rebeca queda fuera de este cambio: faltan los
 archivos fuente y siguen pendientes las decisiones de roles/estados.
+
+## Deploy y presentación
+
+Ver [setup de Render, Neon, Vercel y backups](../docs/deployment.md) y la
+[guía de pruebas con URL real y Scalar](../docs/demo-api.md). El comando
+`pnpm prisma:deploy` aplica migraciones pendientes sin resetear ni ejecutar seed.

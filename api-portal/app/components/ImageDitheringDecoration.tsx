@@ -1,21 +1,30 @@
 'use client';
 
-import { ImageDithering } from '@paper-design/shaders-react';
+import dynamic from 'next/dynamic';
+import { Skeleton } from './Skeleton';
+
+// WebGL can't render on the server; load the shader on the client and show a
+// placeholder of the same size meanwhile so the layout never jumps.
+const ImageDithering = dynamic(
+  () => import('@paper-design/shaders-react').then((module) => module.ImageDithering),
+  { ssr: false, loading: () => <Skeleton className="size-full rounded-none" /> },
+);
 
 const EXAMPLE_IMAGE = '/images/dither-sample.jpg';
 
 type ImageDitheringDecorationProps = {
   image?: string;
-  invertColors?: boolean;
+  colorBack?: string;
+  colorFront?: string;
+  colorHighlight?: string;
 };
 
 export function ImageDitheringDecoration({
   image = EXAMPLE_IMAGE,
-  invertColors = false,
+  colorBack = '#ffffff',
+  colorFront = '#22e66b',
+  colorHighlight = '#22e66b',
 }: ImageDitheringDecorationProps) {
-  const colorBack = invertColors ? '#3a3a45' : '#ffffff';
-  const colorFront = invertColors ? '#ffffff' : '#3a3a45';
-
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <ImageDithering
@@ -24,12 +33,12 @@ export function ImageDitheringDecoration({
         image={image}
         colorBack={colorBack}
         colorFront={colorFront}
-        colorHighlight={colorFront}
+        colorHighlight={colorHighlight}
         originalColors={false}
         inverted={false}
         type="8x8"
         size={2}
-        colorSteps={4}
+        colorSteps={7}
         fit="cover"
       />
     </div>
