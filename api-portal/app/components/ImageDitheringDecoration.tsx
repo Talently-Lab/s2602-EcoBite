@@ -29,7 +29,7 @@ export function ImageDitheringDecoration({
         inverted={false}
         type="8x8"
         size={2}
-        colorSteps={2}
+        colorSteps={4}
         fit="cover"
       />
     </div>
