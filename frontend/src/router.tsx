@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy } from "react";
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Home = lazy(() => import('./pages/Home'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Catalog = lazy(() => import('./pages/Catalog'));
 const DetailProduct = lazy(() => import('./pages/DetailProduct'));
@@ -10,8 +10,8 @@ const Orders = lazy(() => import('./pages/Orders'));
 const MyImpact = lazy(() => import('./pages/MyImpact'));
 
 export const mainRouter = createBrowserRouter([
-  { path: "/", element: <Navigate to="/dashboard" replace /> },
-  { path: "/dashboard", element: <Dashboard /> },
+  { path: "/", element: <Navigate to="/home" replace /> },
+  { path: "/home", element: <Home /> },
   { path: "/catalog", element: <Catalog /> },
   { path: "/detail-product", element: <DetailProduct /> },
   { path: "/auth", element: <Auth /> },

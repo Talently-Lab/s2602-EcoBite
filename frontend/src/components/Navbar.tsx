@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
 const links = [
-  { to: "/dashboard", label: "Inicio" },
+  { to: "/home", label: "Inicio" },
   { to: "/catalog", label: "Restaurantes" },
   { to: "/orders", label: "Pedidos" },
   { to: "/my-impact", label: "Mi impacto" },
