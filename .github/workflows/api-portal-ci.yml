@@ -1,0 +1,53 @@
+name: API Portal CI
+
+on:
+  push:
+    branches: [main]
+  # Always report a result on PRs so this can be a required check.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: api-portal-ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: API Portal checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=moderate
+
+      - name: Lint
+        run: pnpm --filter api-portal lint
+
+      - name: Typecheck
+        run: pnpm --filter api-portal typecheck
+
+      - name: Cache Next.js build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: api-portal/.next/cache
+          key: ${{ runner.os }}-next-node22-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-next-node22-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build
+        run: pnpm --filter api-portal build

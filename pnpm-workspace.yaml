@@ -1,3 +1,18 @@
 packages:
   - 'frontend'
   - 'backend'
+  - 'api-portal'
+
+overrides:
+  # prisma@7.10.0 pins mysql2@3.15.3 and deepmerge-ts@7.1.5 (via @prisma/config) exactly;
+  # these are the exact tested patched releases — mysql2: GHSA-3f6p-5ww8-9rcr,
+  # GHSA-rgwj-5xj2-c3m3 · deepmerge-ts: GHSA-ggr8-5vv4-36mx · source-map-js: GHSA-68fv-2mgg-jv7q.
+  mysql2: 3.24.6
+  deepmerge-ts: 8.0.2
+  source-map-js: 1.2.2
+
+auditConfig:
+  ignoreGhsas:
+    # braces<=3.0.3 stack-exhaustion DoS (CVE-2026-93687) has no patched release yet.
+    # Only reachable via the dev-only shadcn CLI; exploit needs attacker-controlled glob input.
+    - GHSA-vfj7-8cjw-p6xm

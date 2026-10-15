@@ -6,6 +6,8 @@
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
+    "dev:portal": "pnpm --filter api-portal dev",
+    "build:portal": "pnpm --filter api-portal build",
     "build": "pnpm -r build",
     "lint": "pnpm --filter frontend lint"
   }
