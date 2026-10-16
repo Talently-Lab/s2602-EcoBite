@@ -160,7 +160,9 @@ test('registration rejects missing, malformed, too long and privilege-escalation
       null, [], {}, { ...registration, name: '' }, { ...registration, name: 'x'.repeat(121) },
       { ...registration, email: 'invalid' }, { ...registration, password: 123 },
       { ...registration, password: 'short' }, { ...registration, password: 'é'.repeat(37) },
-      { ...registration, role: 'ADMIN' }, { ...registration, activo: true },
+      { ...registration, role: 'ADMIN' }, { ...registration, role: 'ADMIN_PLATAFORMA' },
+      { ...registration, role: 'RESTAURANTE_ADMIN' }, { ...registration, rol: 'ADMIN_PLATAFORMA' },
+      { ...registration, activo: true },
     ]) {
       assert.equal((await post(`${url}/users/register`, body)).status, 400);
     }

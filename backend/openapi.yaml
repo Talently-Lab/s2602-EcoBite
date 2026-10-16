@@ -424,7 +424,8 @@ components:
           type: string
           enum:
             - CLIENTE
-            - ADMIN
+            - ADMIN_PLATAFORMA
+            - RESTAURANTE_ADMIN
           description: Rol del usuario. El registro público siempre crea `CLIENTE`.
         createdAt:
           type: string

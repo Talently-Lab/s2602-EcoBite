@@ -157,8 +157,60 @@ No conecta a PostgreSQL: **no valida migraciones, constraints reales ni queries
 contra la base**. Comprobar también registro → login → `/users/me` sobre una
 base local aislada antes de integrar con frontend.
 
-La importación del Excel/CSV de Rebeca queda fuera de este cambio: faltan los
-archivos fuente y siguen pendientes las decisiones de roles/estados.
+## Importación del dataset S3
+
+El handoff de Rebeca del 15/10/2026 usa `CLIENTE`, `ADMIN_PLATAFORMA` y
+`RESTAURANTE_ADMIN`, y cuatro estados: `PENDIENTE`, `EN_PREPARACION`,
+`COMPLETADO`, `CANCELADO`. La migración `20261015223000_align_s3_enums` renombra
+`ADMIN` conservando las cuentas existentes y agrega los nuevos valores.
+No agrega permisos, rutas administrativas ni registro público de otros roles.
+
+Copiar las ocho exportaciones CSV a `backend/prisma/data/` (gitignored), con
+nombres como `Usuarios.csv` o `Dataset_Ecobite_integrado.xlsx - Usuarios.csv`.
+`ANALYST_DATA_DIR` permite elegir otra carpeta. No subir estos archivos a git.
+
+Desde la raíz:
+
+```sh
+pnpm --filter backend prisma:generate
+pnpm --filter backend data:import -- --dry-run
+```
+
+Este es también el comportamiento por defecto sin argumentos: valida formatos,
+las diez relaciones, unicidad y fórmulas de montos/impacto sin conectarse a la DB.
+El import excluye únicamente usuarios `REPARTIDOR` por decisión aprobada del MVP;
+si algún pedido los referencia, aborta en lugar de perder ese pedido.
+El dataset entregado conserva **806 usuarios, 1 restaurante, 40 productos,
+800 pedidos, 1603 detalles y 44 relaciones producto/empaque**; excluye 94 cuentas.
+Los CSV originales no se modifican.
+
+Para escribir, primero elegir explícitamente una DB aislada, aplicar migraciones
+y ejecutar el seed de referencia. Luego usar `data:import -- --apply`.
+No ejecutar contra Neon sin aprobación del destino y del import.
+La operación resuelve zonas/empaques por nombre contra el seed y verifica sus
+distancias/gramos. Inserta las otras seis tablas en una sola transacción:
+cualquier fallo revierte todo el import. Los IDs UUID son deterministas por
+entidad/código; repetir no duplica ni sobrescribe filas ya existentes. No es
+un sincronizador: cambios posteriores del CSV no actualizan IDs ya importados.
+Conflictos de email con otros IDs abortan, no fusionan cuentas.
+
+Se preservan los hashes originales (los SHA-256 simulados no sirven para login
+bcrypt; registrar una cuenta nueva para probar auth). Se conservan las fechas de
+creación/edición, incluso fechas futuras documentadas, interpretando los DATETIME
+sin zona del CSV como UTC. Solo `COMPLETADO` suma a los KPIs; se permiten los
+20 cancelados sin detalle documentados. Los códigos originales no son los UUID
+expuestos por la API; usar la misma traducción si se integra `order_id` de GA4.
+
+`pnpm --filter backend check:api` incluye los tests del import sin DB. Para
+ejecutar el test PostgreSQL opcional, configurar `IMPORT_TEST_DATABASE_URL` y
+`DATABASE_URL` iguales apuntando a una **DB nueva y desechable**, local, cuyo
+nombre empiece por `ecobite_import_check_`, con migraciones y seed aplicados.
+No usar una base con datos propios: el test crea sus propios registros.
+
+Despliegue: coordinar el rename de `ADMIN` con los consumidores de `role`;
+no hacer rollback a un cliente Prisma generado con el enum viejo tras migrar.
+Revertir código no revierte el enum ni borra datos importados. Cualquier
+downgrade o limpieza de datos necesita un procedimiento y aprobación aparte.
 
 ## Deploy y presentación
 

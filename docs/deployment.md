@@ -108,11 +108,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Seed failed; stop before importing analyst dat
 Close that terminal afterward to discard its environment. The committed seed
 upserts **48 zones and 8 packaging types**. It is not a restaurant/product import.
 
-**Blocked until supplied:** the analyst's actual CSV/Excel/SQL/seed file and its
-agreed mappings. Review the import for identifiers, foreign keys, uniqueness,
-`activo`/`esEco`, and repeatability before executing it. Do not invent rows or
-run arbitrary supplied SQL against production. Take a backup before updating
-existing data. Restaurants appear publicly only when active and eco-friendly.
+The analyst's S3 CSVs and import mapping are now available; follow the
+[backend import instructions](../backend/README.md#importación-del-dataset-s3).
+The approved mapping excludes the 94 simulated courier accounts, not orders;
+all 800 orders remain. Run the default offline validation first, then test on an
+isolated local database before approving an explicit `--apply` against Neon.
+Pending enum migrations and the reference seed must be applied first.
+Do not invent rows or run arbitrary supplied SQL against production. Take a
+backup before an approved production import. Restaurants appear publicly only
+when active and eco-friendly.
 
 ## 5. Create the Vercel portal
 
