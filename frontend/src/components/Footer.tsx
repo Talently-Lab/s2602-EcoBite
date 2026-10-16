@@ -7,7 +7,7 @@ export const Footer = () => {
       <div className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 py-10 sm:px-6 md:py-14">
         <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between md:gap-6">
           {/* Izquierda: texto + buscador */}
-          <div className="max-w-62.5 shrink-0 space-y-16">
+          <div className="hidden sm:block max-w-62.5 shrink-0 space-y-16">
             <p className="text-sm leading-relaxed text-white/90">
               En Ecobite conectamos restaurantes, clientes y repartidores para impulsar una forma de pedir comida más consciente con el planeta.
             </p>
