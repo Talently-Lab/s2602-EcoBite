@@ -9,7 +9,8 @@ datasource db {
 
 enum RolUsuario {
   CLIENTE
-  ADMIN
+  ADMIN_PLATAFORMA
+  RESTAURANTE_ADMIN
 
   @@map("rol")
 }
@@ -25,6 +26,7 @@ enum EstadoPedido {
   PENDIENTE
   COMPLETADO
   CANCELADO
+  EN_PREPARACION
 
   @@map("pedido_estado")
 }

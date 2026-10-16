@@ -79,7 +79,7 @@ export function AppSidebar() {
         >
           <PanelLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
         </button>
-        <Link href="/" aria-label="Inicio de EcoBite" className={collapsed ? 'hidden md:block' : 'hidden'}>
+        <Link href="/" aria-label="Inicio de EcoBite" className={collapsed ? 'block' : 'block md:hidden'}>
           <Image
             src="/images/logo-frog.png"
             alt="EcoBite"

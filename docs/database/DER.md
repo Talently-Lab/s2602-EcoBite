@@ -1,8 +1,14 @@
-# Diagrama Entidad-Relación (DER) - EcoBite — S2
+# Diagrama Entidad-Relación (DER) - EcoBite — S3
 
 El esquema vivo vive en `backend/prisma/schema.prisma` (PostgreSQL + Prisma). Este documento es la referencia visual; mantener ambos en sync al cambiar el modelo.
 
 Fuente de datos: Excel del Data Analyst `Tablas_Ecobite_V3_AlternativaB` (Alternativa B = tabla puente `Producto_Empaque`). Modalidad del equipo: **Delivery sustentable** (Zona + Producto + empaques eco), por eso no existe el modelo `Surplus`.
+
+Actualización S3 (15/10/2026): `Estructura_BD_Ecobite`, `Dataset_Ecobite_integrado`
+y `ECOBITE_data` de Rebeca. El MVP aprobado usa tres roles y cuatro estados.
+`REPARTIDOR` queda fuera del MVP por decisión de la PM; su exclusión del import
+fue aprobada explícitamente. Se conservan UUIDs internos con traducción estable
+de los códigos del CSV. No se agregan campos ni flujo de repartidor.
 
 ```mermaid
 erDiagram
@@ -27,7 +33,7 @@ erDiagram
         timestamp fecha_edicion
         boolean activo_usuario
         string password_hash
-        enum rol "CLIENTE | ADMIN"
+        enum rol "CLIENTE | ADMIN_PLATAFORMA | RESTAURANTE_ADMIN"
         uuid id_zona_habitual FK
     }
 
@@ -75,7 +81,7 @@ erDiagram
         int total_envases_evitados "calculado"
         decimal co2_ahorrado_kg "(6,3) — calculado"
         decimal gramos_plastico_evitados_total "(8,2) — calculado"
-        enum pedido_estado "PENDIENTE | COMPLETADO | CANCELADO"
+        enum pedido_estado "PENDIENTE | COMPLETADO | CANCELADO | EN_PREPARACION"
         timestamp fecha_creacion
         timestamp fecha_edicion
         uuid id_zona_destino FK
@@ -113,8 +119,8 @@ erDiagram
 ## Notas
 
 - **Datos de referencia (seed)**: `pnpm --filter backend prisma:seed` carga los 48 barrios de CABA en `zona` y los 8 envases en `empaques` (idempotente). `distancia_promedio_km` = Haversine desde el Obelisco (-34.6037, -58.3816), mínimo 0.5 km. Restaurantes, productos y `producto_empaque` los provee el Data Analyst más adelante.
-- **Autenticación**: los restaurantes inician sesión con su propia tabla (`email` + `password_hash`), por eso `rol` de usuario no incluye `COMERCIO`.
-- **Enums**: `rol` (CLIENTE | ADMIN), `tipo_transporte` (BICICLETA | VEHICULO_ELECTRICO), `pedido_estado` (PENDIENTE | COMPLETADO | CANCELADO). Los KPIs filtran por `COMPLETADO`.
+- **Autenticación**: el registro público sigue creando solo `CLIENTE`. Los roles administrativos no habilitan registro público, permisos nuevos ni login de restaurantes; la tabla `restaurantes` conserva sus credenciales y aún no tiene un endpoint de login propio.
+- **Enums**: `rol` (CLIENTE | ADMIN_PLATAFORMA | RESTAURANTE_ADMIN), `tipo_transporte` (BICICLETA | VEHICULO_ELECTRICO), `pedido_estado` (PENDIENTE | COMPLETADO | CANCELADO | EN_PREPARACION). Los KPIs filtran por `COMPLETADO`; los pedidos activos son `PENDIENTE` y `EN_PREPARACION`.
 - **Texto libre (no enum)**: `restaurantes.categoria` y `producto.categoria_comida`.
 - **`detalle.producto_nombre` y `precio_unitario`** son copias históricas: si el restaurante cambia el producto, el pedido sigue mostrando lo que se compró.
 

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["scripts/analyst-*.ts", "scripts/import-analyst-data.ts", "tests/import-analyst-data.test.ts"]
+}
