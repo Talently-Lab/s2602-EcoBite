@@ -172,4 +172,12 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;}
   body {
-    @apply bg-background text-foreground;}}
+    @apply bg-background text-foreground;}
+
+  /* Oculta los botones nativos de revelar/limpiar en inputs password
+     (Edge/IE) para que solo se use el toggle propio de PasswordField. */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
+}

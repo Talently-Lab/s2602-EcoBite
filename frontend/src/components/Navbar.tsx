@@ -23,7 +23,7 @@ export const Navbar = () => {
       >
         {/* Izquierda: logo + links desktop */}
         <div className="flex min-w-0 items-center gap-8">
-          <NavLink to="/dashboard" className="flex shrink-0 items-center" aria-label="EcoBite - inicio">
+          <NavLink to="/home" className="flex shrink-0 items-center" aria-label="EcoBite - inicio">
             <img
               src="/images/logo-eco-02.png"
               alt="EcoBite"

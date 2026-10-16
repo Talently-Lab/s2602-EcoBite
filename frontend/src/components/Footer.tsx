@@ -7,17 +7,14 @@ export const Footer = () => {
       <div className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 py-10 sm:px-6 md:py-14">
         <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between md:gap-6">
           {/* Izquierda: texto + buscador */}
-          <div className="sm:max-w-xs shrink-0">
-            <p className="text-[13px] leading-relaxed text-white/90">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-              ornare cursus sed nunc eget dictum. Sed ornare cursus sed nunc
-              eget dictumd nunc eget dictum. Sed ornare cursus sed nunc eget
-              dictum
+          <div className="hidden sm:block max-w-62.5 shrink-0 space-y-16">
+            <p className="text-sm leading-relaxed text-white/90">
+              En Ecobite conectamos restaurantes, clientes y repartidores para impulsar una forma de pedir comida más consciente con el planeta.
             </p>
 
             <form
               role="search"
-              className="relative mt-8 w-56 max-w-full"
+              className="relative mt-8 w-52 max-w-full"
               onSubmit={(e) => e.preventDefault()}
             >
               <label htmlFor="footer-search" className="sr-only">
