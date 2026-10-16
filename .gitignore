@@ -1,11 +1,14 @@
 node_modules/
-agents/
+.agents/
 .vscode
 .idea/
+.claude/
+.windsurf/
 
 # Local workspace
 /.devin/
 /AGENTS.local.md
+skills-lock.json
 
 # Environment files
 /.env
