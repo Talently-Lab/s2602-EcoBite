@@ -58,14 +58,14 @@ export default function OverviewPage() {
             <StatusSummary />
           </div>
         }
-        upperAction={<PortalLink href="/status">Vistazo</PortalLink>}
+        upperAction={<PortalLink href="/status" newTab={false}>Vistazo</PortalLink>}
         lowerContent={
           <div>
             <h2 className="font-semibold">Novedades</h2>
             <ChangelogSummary />
           </div>
         }
-        lowerAction={<PortalLink href="/changelog">Detalles</PortalLink>}
+        lowerAction={<PortalLink href="/changelog" newTab={false}>Detalles</PortalLink>}
       />
       <OverviewColumn
         topSpace="small"
@@ -122,14 +122,14 @@ export default function OverviewPage() {
           </div>
           <StatusSummary />
           <div className="mt-4 flex justify-end">
-            <PortalLink href="/status">Vistazo</PortalLink>
+            <PortalLink href="/status" newTab={false}>Vistazo</PortalLink>
           </div>
         </MobileSection>
         <MobileSection>
           <h2 className="font-semibold">Novedades</h2>
           <ChangelogSummary />
           <div className="mt-4 flex justify-end">
-            <PortalLink href="/changelog">Detalles</PortalLink>
+            <PortalLink href="/changelog" newTab={false}>Detalles</PortalLink>
           </div>
         </MobileSection>
         <MobileSection>
