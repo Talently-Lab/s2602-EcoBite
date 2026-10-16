@@ -1,12 +1,45 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordField } from "@/components/PasswordField";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRegister } from "@/hooks/useAuth";
+import { registerSchema, type RegisterFormValues } from "@/schemas/auth.schema";
 
 type props = {
   onSwitchToLogin: () => void;
 };
 
 export const RegisterForm = ({ onSwitchToLogin }: props) => {
+  const registerHook = useRegister();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const onSubmit = (data: RegisterFormValues) => {
+    if (registerHook.isPending) return;
+    clearErrors("root.server");
+    registerHook.mutate(
+      { name: data.name, email: data.email, password: data.password },
+      {
+        onSuccess: () => onSwitchToLogin(),
+        onError: (error) => {
+          setError("root.server", {
+            type: "server",
+            message: error instanceof Error ? error.message : "Error al registrar usuario.",
+          });
+        },
+      },
+    );
+  };
+
   return (
     <section className="min-h-153.25 w-full rounded-lg border border-green-dark/50 bg-card px-6 py-8 shadow-xs sm:px-12">
       <p className="text-xs font-bold text-[#026129] max-w-70">
@@ -17,21 +50,32 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
       </h1>
       <form
         className="mt-6 flex flex-col gap-4"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
       >
+        {errors.root?.server && (
+          <p role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+            {errors.root.server.message}
+          </p>
+        )}
         <div>
           <label htmlFor="register-email" className="mb-1.5 block text-xs font-bold text-foreground">
             Email
           </label>
           <Input
             id="register-email"
-            name="email"
             type="email"
             autoComplete="email"
-            required
             placeholder="tunombre@ejemplo.com"
+            aria-invalid={errors.email ? true : undefined}
             className="h-10 border-green-dark/50 bg-card"
+            {...register("email")}
           />
+          {errors.email && (
+            <p role="alert" className="mt-1.5 text-xs font-medium text-destructive">
+              {errors.email.message}
+            </p>
+          )}
         </div>
 
         <div>
@@ -40,36 +84,44 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
           </label>
           <Input
             id="register-username"
-            name="username"
             type="text"
             autoComplete="username"
-            required
             placeholder="¿Cómo te llamás?"
+            aria-invalid={errors.name ? true : undefined}
             className="h-10 border-green-dark/50 bg-card"
+            {...register("name")}
           />
+          {errors.name && (
+            <p role="alert" className="mt-1.5 text-xs font-medium text-destructive">
+              {errors.name.message}
+            </p>
+          )}
         </div>
 
         <PasswordField
           id="register-password"
-          name="password"
           label="Contraseña"
           autoComplete="new-password"
           placeholder="Mínimo 8 caracteres"
+          error={errors.password?.message}
+          {...register("password")}
         />
 
         <PasswordField
           id="register-confirm-password"
-          name="confirm-password"
           label="Confirmar contraseña"
           autoComplete="new-password"
           placeholder="Mínimo 8 caracteres"
+          error={errors.confirmPassword?.message}
+          {...register("confirmPassword")}
         />
 
         <Button
           type="submit"
+          disabled={registerHook.isPending}
           className="mt-6 h-10 w-full rounded-md font-semibold"
         >
-          Register
+          {registerHook.isPending ? "Creando cuenta…" : "Register"}
         </Button>
       </form>
 

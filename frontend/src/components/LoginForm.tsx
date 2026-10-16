@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordField } from "@/components/PasswordField";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useLogin } from "@/hooks/useAuth";
+import { loginSchema, type Login } from "@/schemas/auth.schema";
 
 type props = {
   onSwitchToRegister: () => void;
@@ -9,6 +13,30 @@ type props = {
 
 export const LoginForm = ({ onSwitchToRegister }: props) => {
   const [remembered, setRemembered] = useState<boolean>(false);
+  const login = useLogin();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<Login>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = (data: Login) => {
+    if (login.isPending) return;
+    clearErrors("root.server");
+    login.mutate(data, {
+      onError: (error) => {
+        setError("root.server", {
+          type: "server",
+          message: error instanceof Error ? error.message : "Error al iniciar sesión.",
+        });
+      },
+    });
+  };
 
   return (
     <section className="min-h-153.25 flex flex-col justify-center w-full rounded-lg border border-green-dark/50 bg-card px-6 py-8 shadow-xs sm:px-12">
@@ -21,28 +49,40 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
       </p>
       <form
         className="mt-6 flex flex-col gap-4"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
       >
+        {errors.root?.server && (
+          <p role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+            {errors.root.server.message}
+          </p>
+        )}
         <div>
           <label htmlFor="login-username" className="mb-1.5 block text-xs font-bold text-foreground">
-            Usuario
+            Email
           </label>
           <Input
             id="login-username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            required
-            placeholder="¿Cómo te llamás?"
+            type="email"
+            autoComplete="email"
+            placeholder="tunombre@ejemplo.com"
+            aria-invalid={errors.email ? true : undefined}
             className="h-10 border-green-dark/50 bg-card"
+            {...register("email")}
           />
+          {errors.email && (
+            <p role="alert" className="mt-1.5 text-xs font-medium text-destructive">
+              {errors.email.message}
+            </p>
+          )}
         </div>
         <PasswordField
           id="login-password"
-          name="password"
           label="Contraseña"
           autoComplete="current-password"
           placeholder="Mínimo 8 caracteres"
+          error={errors.password?.message}
+          {...register("password")}
         />
 
         <div className="mt-4 mb-10 flex items-center justify-between text-xs">
@@ -70,9 +110,10 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
 
         <Button
           type="submit"
+          disabled={login.isPending}
           className="h-10 w-full rounded-md font-semibold"
         >
-          Iniciá sesión
+          {login.isPending ? "Iniciando sesión…" : "Iniciá sesión"}
         </Button>
       </form>
 

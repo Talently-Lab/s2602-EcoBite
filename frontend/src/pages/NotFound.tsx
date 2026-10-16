@@ -14,8 +14,8 @@ function NotFound() {
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button render={<Link to="/" />}>Volver al inicio</Button>
-          <Button variant="outline" render={<Link to="/dashboard" />}>
-            Ir al dashboard
+          <Button variant="outline" render={<Link to="/home" />}>
+            Ir al Inicio
           </Button>
         </div>
       </div>
