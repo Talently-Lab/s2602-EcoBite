@@ -14,15 +14,19 @@ Specification: https://ecobite-api.onrender.com/api/openapi.yaml
 
 ## Before the meeting
 
-- Deployment/commit: pending cloud setup.
-- Analyst restaurant/product import: pending the actual source file.
-- Live terminal and Scalar checks: pending deployment.
-- Latest downloaded encrypted backup and isolated restore drill: pending setup.
+Verified live on 2026-10-16: API, Scalar, portal, the `/docs` redirect, and real
+restaurant data (`GET /api/restaurants` returns the imported dataset).
 
-Five minutes before presenting, open `/api` and `/docs` to allow the Free service
-to wake up. Cold starts can take about a minute. If a warm-up returns a loading
-page or temporary error, wait for startup and rerun the checks. Free hosting
-cannot guarantee immediate availability.
+- Deployment: live on Render + Neon + Vercel.
+- Analyst import: applied; `/api/restaurants` exposes the active eco rows.
+- Encrypted backup workflow exists; confirm the latest artifact is downloaded.
+  An isolated restore drill is still pending.
+
+Even if an external monitor keeps the service warm, open `/api` and `/docs` five
+minutes before presenting: it takes seconds and proves the state you will show.
+If a warm-up returns a loading page or temporary error, wait about a minute for
+the Free service to wake up and rerun the checks. Free hosting cannot guarantee
+immediate availability.
 
 ## Terminal checks
 

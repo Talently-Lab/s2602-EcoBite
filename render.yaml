@@ -23,6 +23,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://ecobite-api-portal.vercel.app
+        # Portal, customer frontend on Netlify, and local Vite dev for integration.
+        value: https://ecobite-api-portal.vercel.app,https://s2602-ecobite.netlify.app,http://localhost:5173
       - key: TRUST_PROXY_HOPS
         value: "1"

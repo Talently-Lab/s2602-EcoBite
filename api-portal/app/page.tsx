@@ -143,7 +143,7 @@ export default function OverviewPage() {
           </div>
         </MobileSection>
         <MobileSection className="relative min-h-48 overflow-hidden p-0">
-          <ImageDitheringDecoration image={FOOTER_IMAGE_URL} colorFront="#0e5430" colorHighlight="#094026" />
+          <ImageDitheringDecoration image={FOOTER_IMAGE_URL} colorFront="#2aff7c" colorHighlight="#ffffff" colorBack="#083f26" />
         </MobileSection>
         <MobileSection className="border-b-0 px-5 py-6 text-ink">
           <p>© 2026 EcoBite · Talently Lab</p>

@@ -65,15 +65,18 @@ const empaques = [
 ]
 
 async function main() {
-  await prisma.$transaction([
-    ...zonas.map((zona) =>
-      prisma.zona.upsert({ where: { nombreBarrio: zona.nombreBarrio }, update: zona, create: zona }),
-    ),
-    ...empaques.map((empaque) => {
-      const data = { ...empaque, gramosPlasticoEvitados: empaque.pesoBaseG - empaque.pesoEcobiteG }
-      return prisma.empaque.upsert({ where: { nombreEnvase: empaque.nombreEnvase }, update: data, create: data })
-    }),
-  ])
+  await prisma.$transaction(
+    [
+      ...zonas.map((zona) =>
+        prisma.zona.upsert({ where: { nombreBarrio: zona.nombreBarrio }, update: zona, create: zona }),
+      ),
+      ...empaques.map((empaque) => {
+        const data = { ...empaque, gramosPlasticoEvitados: empaque.pesoBaseG - empaque.pesoEcobiteG }
+        return prisma.empaque.upsert({ where: { nombreEnvase: empaque.nombreEnvase }, update: data, create: data })
+      }),
+    ],
+    { timeout: 60000 },
+  )
 
   console.log(`Seed completo: ${zonas.length} zonas y ${empaques.length} empaques.`)
 }

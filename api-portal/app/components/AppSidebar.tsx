@@ -81,12 +81,12 @@ export function AppSidebar() {
         </button>
         <Link href="/" aria-label="Inicio de EcoBite" className={collapsed ? 'block' : 'block md:hidden'}>
           <Image
-            src="/images/logo-frog.png"
+            src="/images/logo-frog-mobile-icon.png"
             alt="EcoBite"
             width={165}
             height={116}
             priority
-            className="size-9"
+            className="size-9 object-contain"
           />
         </Link>
       </header>
