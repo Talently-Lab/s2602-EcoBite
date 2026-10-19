@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLogin } from "@/hooks/useAuth";
 import { loginSchema, type Login } from "@/schemas/auth.schema";
+import { useNavigate } from "react-router-dom";
 
 type props = {
   onSwitchToRegister: () => void;
@@ -14,6 +15,7 @@ type props = {
 export const LoginForm = ({ onSwitchToRegister }: props) => {
   const [remembered, setRemembered] = useState<boolean>(false);
   const login = useLogin();
+  const navigate = useNavigate()
 
   const {
     register,
@@ -29,17 +31,20 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
     if (login.isPending) return;
     clearErrors("root.server");
     login.mutate(data, {
+      onSuccess: () => {
+        navigate('/home')
+      },
       onError: (error) => {
         setError("root.server", {
           type: "server",
-          message: error instanceof Error ? error.message : "Error al iniciar sesión.",
+          message: error.message,
         });
       },
     });
   };
 
   return (
-    <section className="min-h-153.25 flex flex-col justify-center w-full rounded-lg border border-green-dark/50 bg-card px-6 py-8 shadow-xs sm:px-12">
+    <section className="min-h-153.25 flex flex-col justify-center w-full rounded-lg border bg-card px-6 py-8 shadow-xs sm:px-12">
       <p className="text-[17px] font-medium text-primary">¿Ya tenés cuenta?</p>
       <h1 className="mt-3 text-2xl font-bold leading-tight tracking-tight">
         Iniciá sesión
