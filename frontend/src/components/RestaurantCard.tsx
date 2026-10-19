@@ -1,6 +1,5 @@
-import { Carrot } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type RestaurantCardProps = {
@@ -15,53 +14,45 @@ type RestaurantCardProps = {
 
 export const RestaurantCard = ({
   name = "Nombre del Restaurante",
-  description = "Lorem ipsum dolor sit amet, consectetur adipcitation ullamco laboris nisi ut aliquip ex ea commoddidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam",
+  description = "Comida saludable",
   imageSrc = "/images/image-restaurant.png",
   imageAlt = "Interior del restaurante",
-  tag = "Vegetariano",
+  tag = "Eco friendly",
   className,
   onView,
 }: RestaurantCardProps) => {
   return (
     <Card
       className={cn(
-        "w-full gap-0 overflow-hidden rounded-2xl bg-card border border-border py-0",
+        "gap-0 overflow-hidden py-0 border-[#E8E8E8]",
         className
       )}
     >
-      <div className="relative h-38 w-full overflow-hidden">
+      <CardContent className="flex flex-col items-start gap-0 px-3 py-3">
         <img
           src={imageSrc}
           alt={imageAlt}
           loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
+          className="h-40 w-full object-cover rounded-[8px]"
         />
-      </div>
-
-      <CardContent className="flex flex-col px-3.5 pt-5 pb-5 gap-0">
-        <CardTitle className="text-lg font-extrabold tracking-tight text-foreground">
-          {name}
-        </CardTitle>
-
-        <p className="text-xs leading-relaxed text-card-foreground/80 line-clamp-2">
-          {description}
-        </p>
-
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-[10px] border border-border bg-muted px-3 py-2 mt-3 text-xs font-medium text-muted-foreground">
-          <Carrot className="size-4" aria-hidden="true" />
+        <span className="flex items-center gap-1 rounded-full bg-border px-2 py-1 text-[11px] font-bold text-ring mt-3">
+          <span className="h-2 w-2 rounded-full bg-popover block"/>
           {tag}
         </span>
-      </CardContent>
-
-      <CardFooter className="px-3.5 pb-5">
+        <CardTitle className="text-xl font-extrabold tracking-[0.010em]">
+          {name}
+        </CardTitle>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          {description}
+        </p>
         <Button
           type="button"
           onClick={onView}
-          className="cursor-pointer rounded-[10px] w-full font-medium"
+          className="ml-auto mt-3 px-5 py-3 text-sm rounded-[8px]"
         >
           Ver restaurante
         </Button>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 };

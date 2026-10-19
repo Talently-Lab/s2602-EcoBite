@@ -18,13 +18,13 @@
   --primary: #009951;
   --primary-foreground: #000000;
   --secondary: #4de384;
-  --secondary-foreground: #000000;
+  --secondary-foreground: #666666;
   --muted: #dff1e8;
-  --muted-foreground: #000000;
+  --muted-foreground: #2c2c2a;
   --accent: #d7f7e0;
   --accent-foreground: #000000;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #bfe8d1;
+  --border: #E6FDEF;
   --input: #545454;
   --ring: #009951;
   --chart-1: oklch(0.87 0 0);
@@ -55,9 +55,9 @@
     --popover: #121917;
     --popover-foreground: #f2fbf5;
     --primary: #4de384;
-    --primary-foreground: #06281a;
+    --primary-foreground: #2c2c2a;
     --secondary: #0f7a4d;
-    --secondary-foreground: #f2fbf5;
+    --secondary-foreground: #009951;
     --muted: #1a2420;
     --muted-foreground: #d7e5dc;
     --accent: #1e3a2c;
@@ -93,9 +93,9 @@
   --popover: #121917;
   --popover-foreground: #f2fbf5;
   --primary: #4de384;
-  --primary-foreground: #06281a;
+  --primary-foreground: #2c2c2a;
   --secondary: #0f7a4d;
-  --secondary-foreground: #f2fbf5;
+  --secondary-foreground: #009951;
   --muted: #1a2420;
   --muted-foreground: #d7e5dc;
   --accent: #1e3a2c;
@@ -103,9 +103,9 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: #2b3f34;
   --input: #2b3f34;
-  --ring: #4de384;
+  --ring: #36da72;
   --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
+  --chart-2: #737373;
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: #0a5c36;
@@ -121,7 +121,7 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-sans: "Inter Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -164,15 +164,18 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;}
+    @apply border-border outline-ring/50;
+  }
   html {
     @apply font-sans;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;}
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
-    @apply bg-background text-foreground;}
+    @apply bg-background text-foreground;
+  }
 
   /* Oculta los botones nativos de revelar/limpiar en inputs password
      (Edge/IE) para que solo se use el toggle propio de PasswordField. */

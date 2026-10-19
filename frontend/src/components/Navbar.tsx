@@ -16,7 +16,7 @@ export const Navbar = () => {
   const [open, setOpen] = useState<boolean>(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-primary">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-primary!">
       <nav
         aria-label="Navegación principal"
         className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
@@ -41,8 +41,8 @@ export const Navbar = () => {
                   to={link.to}
                   className={({ isActive }) =>
                     cn(
-                      "relative pb-1 text-sm font-medium text-white transition-colors hover:text-white",
-                      isActive && "text-white after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-white"
+                      "relative pb-1 text-sm font-medium text-popover transition-colors hover:text-popover",
+                      isActive && "text-popover after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-popover"
                     )
                   }
                 >
