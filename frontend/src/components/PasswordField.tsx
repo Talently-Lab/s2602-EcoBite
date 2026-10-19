@@ -33,7 +33,7 @@ export const PasswordField = ({
           autoComplete={autoComplete}
           placeholder={placeholder}
           aria-invalid={error ? true : undefined}
-          className={cn("h-10 border-green-dark/50 bg-card pr-10", className)}
+          className={cn("h-10 border-ring/60 bg-card pr-10", className)}
           {...inputProps}
         />
         <button

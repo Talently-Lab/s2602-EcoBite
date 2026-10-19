@@ -68,7 +68,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
             autoComplete="email"
             placeholder="tunombre@ejemplo.com"
             aria-invalid={errors.email ? true : undefined}
-            className="h-10 border-green-dark/50 bg-card"
+            className="h-10 border-ring/60 bg-card"
             {...register("email")}
           />
           {errors.email && (
@@ -88,7 +88,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
             autoComplete="username"
             placeholder="¿Cómo te llamás?"
             aria-invalid={errors.name ? true : undefined}
-            className="h-10 border-green-dark/50 bg-card"
+            className="h-10 border-ring/60 bg-card"
             {...register("name")}
           />
           {errors.name && (

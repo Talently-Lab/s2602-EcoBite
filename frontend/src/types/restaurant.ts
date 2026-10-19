@@ -4,4 +4,10 @@ export type AllRestaurants = {
   description: string;
   imageSrc: string;
   tag: string;
+  cuisine?: string;
+  impact?: string;
+  zone?: string;
+  paymentMethods?: string[];
+  discount?: boolean;
+  isNew?: boolean;
 };
