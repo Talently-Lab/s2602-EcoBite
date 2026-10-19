@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRegister } from "@/hooks/useAuth";
 import { registerSchema, type RegisterFormValues } from "@/schemas/auth.schema";
+import { useNavigate } from "react-router-dom";
 
 type props = {
   onSwitchToLogin: () => void;
@@ -12,6 +13,7 @@ type props = {
 
 export const RegisterForm = ({ onSwitchToLogin }: props) => {
   const registerHook = useRegister();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -29,11 +31,13 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
     registerHook.mutate(
       { name: data.name, email: data.email, password: data.password },
       {
-        onSuccess: () => onSwitchToLogin(),
+        onSuccess: () => {
+          navigate('/home')
+        },
         onError: (error) => {
           setError("root.server", {
             type: "server",
-            message: error instanceof Error ? error.message : "Error al registrar usuario.",
+            message: error.message,
           });
         },
       },

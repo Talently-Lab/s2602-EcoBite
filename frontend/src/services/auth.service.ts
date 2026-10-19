@@ -12,16 +12,23 @@ export const register = async (payload: Register) => {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) throw new Error("Error al registrar usuario");
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      if (response.status === 409) {
+        throw new Error("Ese correo ya está registrado");
+      }
+      if (response.status === 500) {
+        throw new Error("Error de red");
+      }
+      throw new Error(body?.error);
+    }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    if (error instanceof Error) throw error;
-    throw new Error("Error al registrar usuario");
+    throw error;
   }
 };
-
 
 export const login = async (payload: Login) => {
   try {
@@ -41,4 +48,4 @@ export const login = async (payload: Login) => {
     if (error instanceof Error) throw error;
     throw new Error("Error al iniciar sesión");
   }
-}
+};
