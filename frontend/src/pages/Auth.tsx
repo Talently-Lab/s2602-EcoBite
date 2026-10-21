@@ -20,7 +20,7 @@ const Auth = () => {
   const visual = VISUALS[mode];
 
   return (
-    <section className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
+    <section className="flex min-h-screen items-center justify-center bg-[#FFFFFF] px-4 py-10 text-foreground">
       <div className="grid w-full max-w-5xl items-start gap-6 md:grid-cols-[420px_1fr]">
         {mode === "login" ? (
           <LoginForm onSwitchToRegister={() => setMode("register")} />
@@ -35,9 +35,10 @@ const Auth = () => {
             alt={visual.alt}
             className="block max-h-135.5 w-full object-cover"
           />
-          <h2 className="mt-8 text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Comé rico. Elegí un cambio.
+          <h2 className="mt-8 text-center text-[#000000] text-2xl font-extrabold tracking-tight sm:text-3xl">
+            El sabor del impacto
           </h2>
+          <p className="text-[#00733D] text-lg">Lorem Ipsum is simply </p>
         </section>
       </div>
     </section>

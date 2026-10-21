@@ -45,11 +45,11 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
   };
 
   return (
-    <section className="min-h-153.25 w-full rounded-lg border border-green-dark/50 bg-card px-6 py-8 shadow-xs sm:px-12">
-      <p className="text-xs font-bold text-[#026129] max-w-70">
+    <section className="min-h-153.25 w-full rounded-lg border border-[#00733D]/40 bg-[#FFFFFF] px-6 py-8 shadow-xs sm:px-12">
+      <p className="text-xs font-bold text-[#00733D] max-w-70">
         Creá tu cuenta y descubrí restaurantes locales con opciones de delivery de menor impacto ambiental.
       </p>
-      <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight">
+      <h1 className="mt-2 text-2xl text-[#000000] font-bold leading-tight tracking-tight">
         Crear mi cuenta
       </h1>
       <form
@@ -63,7 +63,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
           </p>
         )}
         <div>
-          <label htmlFor="register-email" className="mb-1.5 block text-xs font-bold text-foreground">
+          <label htmlFor="register-email" className="mb-1.5 block text-xs font-bold text-[#000000]">
             Email
           </label>
           <Input
@@ -72,7 +72,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
             autoComplete="email"
             placeholder="tunombre@ejemplo.com"
             aria-invalid={errors.email ? true : undefined}
-            className="h-10 border-ring/60 bg-card"
+            className="h-10 border-[#00733D]/50 bg-[#FFFFFF]"
             {...register("email")}
           />
           {errors.email && (
@@ -83,7 +83,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
         </div>
 
         <div>
-          <label htmlFor="register-username" className="mb-1.5 block text-xs font-bold text-foreground">
+          <label htmlFor="register-username" className="mb-1.5 block text-xs font-bold text-[#000000]">
             Usuario
           </label>
           <Input
@@ -92,7 +92,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
             autoComplete="username"
             placeholder="¿Cómo te llamás?"
             aria-invalid={errors.name ? true : undefined}
-            className="h-10 border-ring/60 bg-card"
+            className="h-10 border-[#00733D]/50 bg-[#FFFFFF]"
             {...register("name")}
           />
           {errors.name && (
@@ -123,18 +123,18 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
         <Button
           type="submit"
           disabled={registerHook.isPending}
-          className="mt-6 h-10 w-full rounded-md font-semibold"
+          className="mt-6 h-10 w-full rounded-md font-semibold bg-[#009951]! text-[#FFFFFF]!"
         >
           {registerHook.isPending ? "Creando cuenta…" : "Register"}
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-[#7D7D7D]">
+      <p className="mt-4 text-center text-xs text-[#4D4D4D]">
         ¿Ya tenés cuenta?{" "}
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="cursor-pointer font-bold text-primary underline-offset-4 hover:underline"
+          className="cursor-pointer font-bold text-[#00733D] underline-offset-4"
         >
           Creá la tuya.
         </button>
