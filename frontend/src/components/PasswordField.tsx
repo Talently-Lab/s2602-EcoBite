@@ -23,7 +23,7 @@ export const PasswordField = ({
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-bold text-foreground">
+      <label htmlFor={id} className="mb-1.5 block text-xs font-bold text-[#000000]">
         {label}
       </label>
       <div className="relative">
@@ -33,7 +33,7 @@ export const PasswordField = ({
           autoComplete={autoComplete}
           placeholder={placeholder}
           aria-invalid={error ? true : undefined}
-          className={cn("h-10 border-ring/60 bg-card pr-10", className)}
+          className={cn("h-10 border-[#00733D]/50 bg-[#FFFFFF] pr-10", className)}
           {...inputProps}
         />
         <button
@@ -42,7 +42,7 @@ export const PasswordField = ({
           aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
           className={cn(
             "absolute inset-y-0 right-3 flex cursor-pointer items-center transition-colors",
-            error ? "text-destructive" : "text-primary",
+            error ? "text-destructive" : "text-[#00733D]",
           )}
         >
           {visible ? <EyeOff size={16} /> : <Eye size={16} />}
