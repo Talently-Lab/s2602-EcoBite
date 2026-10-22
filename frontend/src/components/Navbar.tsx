@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Menu, User, X } from "lucide-react";
+import { Menu, User, X, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
@@ -57,6 +57,14 @@ export const Navbar = () => {
         <div className="hidden items-center gap-5 lg:flex text-[#FFFFFF]">
           <button
             type="button"
+            aria-label="Mi carrito"
+            onClick={() => navigate("/cart")}
+            className="grid size-9 place-items-center rounded-md transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
+          >
+            <ShoppingCart className="size-6 font-bold" color="white" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
             aria-label="Mi cuenta"
             onClick={() => navigate('/auth')}
             className="grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
@@ -103,6 +111,14 @@ export const Navbar = () => {
               </li>
             ))}
             <li className="flex items-center justify-end gap-3 px-3 pt-3">
+              <button
+                type="button"
+                aria-label="Mi carrito"
+                onClick={() => navigate('/cart')}
+                className="grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
+              >
+                <ShoppingCart className="size-6 font-bold" color="white" aria-hidden="true" />
+              </button>
               <button
                 type="button"
                 aria-label="Mi cuenta"
