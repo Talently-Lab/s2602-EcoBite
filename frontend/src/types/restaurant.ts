@@ -1,13 +1,11 @@
-export type AllRestaurants = {
-  id?: string | number;
+type Zone = {
+  id: string;
   name: string;
-  description: string;
-  imageSrc: string;
-  tag: string;
-  cuisine?: string;
-  impact?: string;
-  zone?: string;
-  paymentMethods?: string[];
-  discount?: boolean;
-  isNew?: boolean;
+};
+export type AllRestaurants = {
+  id: string;
+  name: string;
+  category: string;
+  isEco?: string;
+  zone: Zone;
 };

@@ -82,7 +82,11 @@ const Home = () => {
         </h2>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {MOCK_RESTAURANTS.map((restaurant) => (
-            <RestaurantCard key={restaurant.name} {...restaurant} />
+            <RestaurantCard
+              key={restaurant.name}
+              {...restaurant}
+              onView={() => navigate(`/catalog/${restaurant.id}`)}
+            />
           ))}
         </div>
       </section>
