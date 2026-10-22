@@ -15,7 +15,7 @@ type RestaurantCardProps = {
 export const RestaurantCard = ({
   name = "Nombre del Restaurante",
   description = "Comida saludable",
-  imageSrc = "/images/image-restaurant.png",
+  imageSrc = "/images/image-restaurant-02.png",
   imageAlt = "Interior del restaurante",
   tag = "Eco friendly",
   className,

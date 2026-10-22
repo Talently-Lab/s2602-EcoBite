@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const zoneOptions = [
 
 const Catalog = () => {
   const { restaurants, loading, error, refetch } = useRestaurants();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [cuisine, setCuisine] = useState<string | null>(null);
   const [zone, setZone] = useState<string | null>(null);
@@ -131,9 +133,15 @@ const Catalog = () => {
 
           {!loading && restaurants.length > 0 && (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {restaurants.map((restaurant: AllRestaurants) => (
-                <RestaurantCard key={restaurant.id ?? restaurant.name} {...restaurant} />
-              ))}
+              {restaurants.map((restaurant: AllRestaurants) => {
+                return (
+                  <RestaurantCard
+                    key={restaurant.id}
+                    {...restaurant}
+                    onView={() => navigate(`/catalog/${restaurant.id}`)}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
