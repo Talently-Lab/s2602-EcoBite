@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
+import { ScrollableArea } from './ScrollableArea';
 
 type OverviewColumnProps = {
   topSpace: 'large' | 'small';
+  hideScrollbars?: boolean;
   topDecoration?: ReactNode;
   upperDecoration?: ReactNode;
   upperContent?: ReactNode;
@@ -21,12 +23,14 @@ const rowTemplates = {
 
 // Content scrolls inside its block when the viewport is short, so the action
 // link below it is always visible instead of being clipped by overflow-hidden.
+// With hideScrollbars the bar is removed and ScrollableArea shows a fade hint.
 const contentClassName =
   'relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]';
 const actionClassName = 'relative z-10 flex shrink-0 justify-end pt-3';
 
 export function OverviewColumn({
   topSpace,
+  hideScrollbars = false,
   topDecoration,
   upperDecoration,
   upperContent,
@@ -51,14 +55,22 @@ export function OverviewColumn({
         className={`relative flex min-h-0 min-w-0 flex-col break-words overflow-hidden border-b border-overview-border p-[clamp(0.375rem,1.4vw,1.5rem)] ${upperContent || upperDecoration ? '' : 'bg-sidebar-hover'}`}
       >
         {upperDecoration}
-        <div className={contentClassName}>{upperContent}</div>
+        {hideScrollbars ? (
+          <ScrollableArea>{upperContent}</ScrollableArea>
+        ) : (
+          <div className={contentClassName}>{upperContent}</div>
+        )}
         {upperAction && <div className={actionClassName}>{upperAction}</div>}
       </div>
       <div
         className={`relative flex min-h-0 min-w-0 flex-col break-words overflow-hidden border-b border-overview-border p-[clamp(0.375rem,1.4vw,1.5rem)] ${lowerContent || lowerDecoration ? '' : 'bg-sidebar-hover'}`}
       >
         {lowerDecoration}
-        <div className={contentClassName}>{lowerContent}</div>
+        {hideScrollbars ? (
+          <ScrollableArea>{lowerContent}</ScrollableArea>
+        ) : (
+          <div className={contentClassName}>{lowerContent}</div>
+        )}
         {lowerAction && <div className={actionClassName}>{lowerAction}</div>}
       </div>
       <div

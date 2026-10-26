@@ -21,6 +21,13 @@ Reglas del archivo:
   se agregan al final solo cuando existen el tag o la GitHub Release correspondientes.
 - Referenciar issues con enlaces explícitos, por ejemplo
   `([Issue #27](https://github.com/Talently-Lab/s2602-EcoBite/issues/27))`.
+- Una entrada por cambio, en una sola línea y escrita desde la perspectiva del
+  lector; el detalle de implementación va en el commit o el PR.
+- Las actualizaciones de dependencias solo se listan si corrigen una
+  vulnerabilidad, rompen compatibilidad o exigen una acción. Las de toolchain
+  que no llegan a producción se agrupan en una sola entrada.
+- En `Security`, nombrar el paquete, la versión corregida y el tipo de falla,
+  enlazando el advisory (CVE/GHSA) cuando exista.
 
 ## [1.1.0] - 2026-10-23
 
@@ -51,6 +58,21 @@ distancia estimada y el CO₂ ahorrado.
 
 - Referencia OpenAPI: las colecciones muestran nombre en español (`x-displayName`) y
   el encabezado `X-Content-Type-Options` queda documentado en las respuestas.
+
+### Security
+
+- `express` 5.3.0 con `body-parser` 2.4.0: corrige un DoS por bytes finales tras
+  un cuerpo comprimido
+  ([GHSA-27r3-jxmh-p828](https://github.com/advisories/GHSA-27r3-jxmh-p828)).
+- `next` 16.4.3 (portal): corrige dos RCE no autenticados y un DoS en Server
+  Actions
+  ([GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw),
+  [GHSA-673q-mjm6-r5xr](https://github.com/advisories/GHSA-673q-mjm6-r5xr),
+  [GHSA-p3m5-59mp-jv5r](https://github.com/advisories/GHSA-p3m5-59mp-jv5r)).
+- Toolchain de desarrollo (`vite` 8.3.5, `shadcn` 4.22.1, SDK de MCP 1.32.2,
+  `undici` 7.30.1, `ip-address` 10.7.5, `fast-uri` 3.1.9, `hono` 4.13.14,
+  `zod` 4.6.7): resuelve el resto de los avisos de `pnpm audit`
+  (24 vulnerabilidades en total); sin cambios en el contrato de la API.
 
 ## [1.0.0] - 2026-10-15
 
