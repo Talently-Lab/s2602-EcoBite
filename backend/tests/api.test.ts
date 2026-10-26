@@ -112,6 +112,7 @@ test('restaurants use active/eco filtering and exclude credentials', async () =>
     const rows = await response.json();
     assert.equal(rows[0].name, 'Local de prueba');
     assert.equal(rows[0].category, null);
+    assert.equal(rows[0].isEco, true);
     assert.deepEqual(data.calls[0].input.where, { activo: true, esEco: true });
     assert.equal(data.calls[0].input.select.passwordHash, undefined);
     assert.equal(data.calls[0].input.select.email, undefined);
@@ -211,7 +212,10 @@ test('OpenAPI spec and Scalar docs are served', async () => {
     const docs = await fetch(new URL('/docs', url));
     assert.equal(docs.status, 200);
     assert.match(docs.headers.get('content-type') ?? '', /text\/html/);
-    assert.match(await docs.text(), /openapi\.yaml/);
+    const html = await docs.text();
+    assert.match(html, /"url": "\/api\/openapi\.yaml"/);
+    assert.doesNotMatch(html, /"spec"\s*:/);
+    assert.match(html, /https:\/\/cdn\.jsdelivr\.net\/npm\/@scalar\/api-reference@\d+\.\d+\.\d+\/esm\.js/);
   });
 });
 
@@ -254,12 +258,40 @@ test('registration and login share an IP rate limit', async () => {
   await serve(async (url) => {
     for (let index = 0; index < 20; index++) {
       const path = index % 2 ? 'register' : 'login';
-      assert.equal((await post(`${url}/users/${path}`, {})).status, 400);
+      const response = await post(`${url}/users/${path}`, {});
+      assert.equal(response.status, 400);
+      assert.match(response.headers.get('ratelimit') ?? '', /r=\d+; t=\d+/);
+      assert.match(response.headers.get('ratelimit-policy') ?? '', /q=20; w=900;/);
     }
     const response = await post(`${url}/users/login`, {});
     assert.equal(response.status, 429);
     assert.ok(response.headers.get('retry-after'));
+    assert.match(response.headers.get('ratelimit') ?? '', /r=0; t=\d+/);
+    assert.match(response.headers.get('ratelimit-policy') ?? '', /q=20; w=900;/);
     assert.equal((await fetch(`${url}/restaurants`)).status, 200);
+  });
+});
+
+test('rate-limit headers are conditional on reaching the auth limiter', async () => {
+  await serve(async (url, data) => {
+    for (const [response, status] of [
+      [await fetch(`${url}/users/login`, { method: 'POST', body: 'text' }), 415],
+      [await fetch(`${url}/users/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{',
+      }), 400],
+      [await post(`${url}/users/login`, { password: 'x'.repeat(17000) }), 413],
+      [await fetch(`${url}/restaurants`), 200],
+    ] as const) {
+      assert.equal(response.status, status);
+      assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+      assert.equal(response.headers.get('ratelimit'), null);
+      assert.equal(response.headers.get('ratelimit-policy'), null);
+    }
+    data.fail({ code: 'P1001' });
+    const unavailable = await post(`${url}/users/login`, registration);
+    assert.equal(unavailable.status, 503);
+    assert.match(unavailable.headers.get('ratelimit') ?? '', /r=19; t=\d+/);
+    assert.match(unavailable.headers.get('ratelimit-policy') ?? '', /q=20; w=900;/);
   });
 });
 

@@ -1,5 +1,5 @@
-import { OverviewColumn } from './components/OverviewColumn';
-import { Skeleton, SkeletonBlock } from './components/Skeleton';
+import { OverviewColumn } from '../components/OverviewColumn';
+import { Skeleton, SkeletonBlock } from '../components/Skeleton';
 
 const decoration = <Skeleton className="absolute inset-0 rounded-none" />;
 

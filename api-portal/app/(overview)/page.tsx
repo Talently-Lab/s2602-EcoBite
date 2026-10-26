@@ -1,9 +1,9 @@
-import { OverviewColumn } from './components/OverviewColumn';
-import { EndpointList } from './components/EndpointList';
-import { StatusSummary } from './components/StatusSummary';
-import { ChangelogSummary } from './components/ChangelogSummary';
-import { ImageDitheringDecoration } from './components/ImageDitheringDecoration';
-import { PortalLink } from './components/PortalLink';
+import { OverviewColumn } from '../components/OverviewColumn';
+import { EndpointList } from '../components/EndpointList';
+import { StatusSummary } from '../components/StatusSummary';
+import { ChangelogSummary } from '../components/ChangelogSummary';
+import { ImageDitheringDecoration } from '../components/ImageDitheringDecoration';
+import { PortalLink } from '../components/PortalLink';
 import type { ReactNode } from 'react';
 
 // Local asset — keep decoration images in public/images so the page works offline.
@@ -27,6 +27,7 @@ export default function OverviewPage() {
       />
       <OverviewColumn
         topSpace="small"
+        hideScrollbars
         upperContent={
           <div className="space-y-4">
             <h2 className="font-semibold">Resumen</h2>
@@ -39,7 +40,7 @@ export default function OverviewPage() {
         lowerContent={
           <div>
             <h2 className="font-semibold">Endpoints</h2>
-            <p className="mt-3">Lista de endpoints.</p>
+            <p className="mt-3">Todas las rutas de la API, agrupadas por recurso.</p>
             <EndpointList />
           </div>
         }
@@ -47,6 +48,7 @@ export default function OverviewPage() {
       />
       <OverviewColumn
         topSpace="large"
+        hideScrollbars
         upperContent={
           <div>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -107,7 +109,7 @@ export default function OverviewPage() {
         </MobileSection>
         <MobileSection>
           <h2 className="font-semibold">Endpoints</h2>
-          <p className="mt-3">Lista de endpoints.</p>
+          <p className="mt-3">Todas las rutas de la API, agrupadas por recurso.</p>
           <EndpointList />
           <div className="mt-4 flex justify-end">
             <PortalLink href="/docs">Todos</PortalLink>
