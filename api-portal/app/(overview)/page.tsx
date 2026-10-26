@@ -1,9 +1,9 @@
-import { OverviewColumn } from './components/OverviewColumn';
-import { EndpointList } from './components/EndpointList';
-import { StatusSummary } from './components/StatusSummary';
-import { ChangelogSummary } from './components/ChangelogSummary';
-import { ImageDitheringDecoration } from './components/ImageDitheringDecoration';
-import { PortalLink } from './components/PortalLink';
+import { OverviewColumn } from '../components/OverviewColumn';
+import { EndpointList } from '../components/EndpointList';
+import { StatusSummary } from '../components/StatusSummary';
+import { ChangelogSummary } from '../components/ChangelogSummary';
+import { ImageDitheringDecoration } from '../components/ImageDitheringDecoration';
+import { PortalLink } from '../components/PortalLink';
 import type { ReactNode } from 'react';
 
 // Local asset — keep decoration images in public/images so the page works offline.

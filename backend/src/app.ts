@@ -28,7 +28,8 @@ export function createApp(db: PrismaClient, config: ApiConfig) {
   app.use('/api', createApiRouter(db, config));
   app.use('/docs', apiReference({
     pageTitle: 'EcoBite API Reference',
-    spec: { url: '/api/openapi.yaml' },
+    url: '/api/openapi.yaml',
+    bundle: 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.75.0/esm.js',
   }));
   app.use((_req, _res) => { throw new HttpError(404, 'Ruta no encontrada.'); });
   app.use(handleError);

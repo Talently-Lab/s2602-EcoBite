@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
-    "check:api": "node --import tsx --test tests/api.test.ts tests/import-analyst-data.test.ts",
+    "check:api": "node --import tsx --test tests/api.test.ts tests/orders.test.ts tests/import-analyst-data.test.ts",
     "start": "node dist/index.js",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.import.json",

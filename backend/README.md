@@ -78,6 +78,129 @@ El frontend aún espera `description`, `imageSrc` y `tag` en su tipo de tarjeta:
 necesita un adaptador/ajuste de contrato en una tarea posterior. No se inventan
 estos datos ni se modifica el frontend en este cambio.
 
+### `GET /api/zones`
+
+Público. Devuelve las zonas activas de CABA habilitadas como destino de
+entrega, ordenadas por nombre e ID. `distanceKm` es la distancia promedio
+estimada desde el Obelisco (seed, Haversine) y alimenta el cálculo de CO₂.
+
+```ts
+Array<{
+  id: string;
+  name: string;
+  comuna: number;
+  distanceKm: number;
+}>
+```
+
+### `GET /api/restaurants/:id`
+
+Público. Devuelve el restaurante con sus productos disponibles, ordenados por
+nombre e ID. No incluye email ni contraseña del restaurante.
+
+```ts
+{
+  id: string;
+  name: string;
+  category: string | null;
+  isEco: boolean;
+  zone: { id: string; name: string };
+  products: Array<{
+    id: string;
+    name: string;
+    category: string;
+    price: number;
+    available: boolean;
+  }>;
+}
+```
+
+- `404`: `id` que no es UUID, restaurante inexistente, inactivo o no eco
+  (la misma respuesta, sin distinguir el motivo; el `id` inválido ni siquiera
+  consulta la base).
+
+### `POST /api/orders`
+
+Protegido: `Authorization: Bearer <accessToken>`. Crea un pedido para el
+usuario del token (cualquier rol; la cuenta debe seguir activa). El
+`usuarioId` nunca se toma del cuerpo.
+
+```json
+{
+  "restaurantId": "<uuid>",
+  "destinationZoneId": "<uuid>",
+  "deliveryAddress": "Av. Corrientes 1234",
+  "transportType": "BICICLETA",
+  "items": [{ "productId": "<uuid>", "quantity": 2 }]
+}
+```
+
+- Se rechazan campos adicionales; los totales se calculan en el servidor con
+  decimales (`Prisma.Decimal`), nunca con floats ni valores del cliente.
+- `deliveryAddress`: recortada, 1–200 caracteres sin controles.
+- `transportType`: `BICICLETA` o `VEHICULO_ELECTRICO`.
+- `items`: 1–50 ítems sin `productId` repetido; `quantity` entera 1–99.
+- Todos los productos deben pertenecer al restaurante y estar disponibles;
+  la zona y el restaurante deben estar activos (y el restaurante, eco).
+  Un producto sin `producto_empaque` configurado se rechaza: su impacto no
+  se puede calcular y devolver cero ocultaría un dato faltante.
+- El pedido nace siempre con `status` = `EN_PREPARACION`. La regla de máximo
+  8 km por transporte aún no se aplica. No hay pagos ni retiro en local.
+- Confirmación duplicada: las solicitudes idénticas se serializan con un
+  advisory lock de transacción (PostgreSQL), así una doble confirmación
+  concurrente tampoco duplica. Repetir el mismo pedido (restaurante, zona,
+  dirección, transporte e ítems) dentro de 60 s devuelve el existente con
+  `200` en vez de crear otro.
+- `201`: `{"order":{...}}`; `200`: pedido duplicado existente.
+- `400`: datos inválidos, zona inactiva, productos no disponibles o productos
+  sin empaque configurado.
+- `401`: sesión ausente/inválida o cuenta inactiva. `404`: restaurante no
+  encontrado. `413`/`415`: límites de cuerpo y media type.
+
+Respuesta (`Order`):
+
+```ts
+{
+  id: string;
+  status: 'EN_PREPARACION' | 'PENDIENTE' | 'COMPLETADO' | 'CANCELADO';
+  createdAt: string;
+  restaurant: { id: string; name: string };
+  destinationZone: { id: string; name: string };
+  deliveryAddress: string;
+  transportType: 'BICICLETA' | 'VEHICULO_ELECTRICO';
+  total: number;
+  impact: {
+    distanceKm: number;      // copia de distancia_promedio_km de la zona
+    co2SavedKg: number;      // distanceKm × 0.08, 3 decimales
+    containersAvoided: number;
+    plasticAvoidedG: number;
+  };
+  items: Array<{             // ordenados por name e id, no por el orden enviado
+    productId: string;
+    name: string;            // copia histórica del nombre
+    quantity: number;
+    unitPrice: number;       // copia histórica del precio
+    subtotal: number;
+    containersAvoided: number;
+    plasticAvoidedG: number;
+  }>;
+}
+```
+
+### `GET /api/orders`
+
+Protegido. Lista solo los pedidos del usuario autenticado, del más reciente
+al más antiguo. La cuenta se consulta en cada llamada: desactivarla invalida
+el acceso de inmediato. `200`: `{"orders": Order[]}`. `401`: sesión o cuenta
+inválida.
+
+### `GET /api/orders/:id`
+
+Protegido. Devuelve `{"order": Order}` solo si el pedido pertenece al usuario
+del token. `404`: `id` que no es UUID (sin consulta a la base), pedido
+inexistente o de otro usuario — la misma respuesta para no revelar pedidos
+ajenos. `401`: sesión o cuenta inválida.
+
 ### `POST /api/users/register`
 
 ```json
@@ -137,6 +260,8 @@ en `localStorage`; acordar la estrategia de sesión con frontend antes de produc
 - El registro revela duplicados con `409`; el login no distingue si el email existe.
   Revisar esa política si el servicio se abre públicamente.
 - No hay paginación todavía: el alcance inicial del dataset tiene un restaurante.
+  `GET /api/orders` también devuelve el historial completo del usuario; si el
+  volumen crece, evaluar `limit`/cursor en una versión posterior.
 - Algunos errores de conexión/timeout de Prisma responden `503`. Otros errores
   inesperados responden `500`, sin filtrar mensajes internos.
 - Los emails existentes importados por otro mecanismo deben respetar la
