@@ -3,7 +3,7 @@ import { Input } from "./ui/input";
 
 export const Footer = () => {
   return (
-    <footer className="w-full bg-[#545454] text-white dark:bg-[#121917]">
+    <footer className="w-full bg-[#545454] text-[#FFFFFF]">
       <div className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 py-10 sm:px-6 md:py-14">
         <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between md:gap-6">
           {/* Izquierda: texto + buscador */}

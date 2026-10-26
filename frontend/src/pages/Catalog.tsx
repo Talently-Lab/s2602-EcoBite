@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { Button } from "@/components/ui/button";
@@ -14,17 +15,11 @@ import { useRestaurants } from "@/hooks/useRestaurants";
 import { MainLayout } from "@/pages/layout/MainLayout";
 import type { AllRestaurants } from "@/types/restaurant";
 
-const cuisineOptions = [
+const categoryOptions = [
   { value: "saludable", label: "Comida saludable" },
   { value: "estacion", label: "Cocina de estación" },
   { value: "vegana", label: "Comida vegana" },
   { value: "casera", label: "Comida casera" },
-];
-
-const impactOptions = [
-  { value: "eco-friendly", label: "Eco friendly" },
-  { value: "bajo-carbono", label: "Bajo carbono" },
-  { value: "local", label: "Local" },
 ];
 
 const zoneOptions = [
@@ -37,26 +32,26 @@ const zoneOptions = [
 
 const Catalog = () => {
   const { restaurants, loading, error, refetch } = useRestaurants();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [cuisine, setCuisine] = useState<string | null>(null);
-  const [impact, setImpact] = useState<string | null>(null);
   const [zone, setZone] = useState<string | null>(null);
 
   return (
     <MainLayout>
       <section>
-        <h1 className="text-3xl font-bold tracking-tight">Restaurantes</h1>
-        <p className="mt-2 text-muted-foreground">
+        <h1 className="text-3xl font-bold tracking-tight text-[#2C2C2A]">Restaurantes</h1>
+        <p className="mt-1 text-[#2C2C2A]">
           Encontrá restaurantes y conocé qué prácticas ambientales implementan.
         </p>
 
         <div className="mt-4">
-          <label htmlFor="search" className="text-base font-medium text-foreground">
+          <label htmlFor="search" className="text-[13px] font-normal text-[#0A0D0A]">
             Explorar opciones
           </label>
           <div className="relative mt-2">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#8C8C8C]"
               aria-hidden="true"
             />
             <Input
@@ -71,16 +66,16 @@ const Catalog = () => {
         </div>
 
         <div>
-          <p className="mt-8 mb-3 text-base font-semibold text-foreground">Filtra por:</p>
+          <p className="mt-8 mb-3 text-[13px] font-semibold text-[#2C2C2A]">Filtra por:</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div>
-              <label className="text-base text-muted-foreground">Tipo de comida</label>
+              <label className="text-[13px] text-[#0A0D0A]">Categoria</label>
               <Select value={cuisine} onValueChange={(v) => setCuisine(v)}>
                 <SelectTrigger className="rounded-lg w-full mt-1">
                   <SelectValue placeholder="Selecciona aqui..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {cuisineOptions.map((opt) => (
+                  {categoryOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
@@ -90,23 +85,7 @@ const Catalog = () => {
             </div>
 
             <div>
-              <label className="text-base text-muted-foreground">Impacto</label>
-              <Select value={impact} onValueChange={(v) => setImpact(v)}>
-                <SelectTrigger className="rounded-lg w-full mt-1">
-                  <SelectValue placeholder="Selecciona aqui..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {impactOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-base text-muted-foreground">Zona</label>
+              <label className="text-[13px] text-[#0A0D0A]">Zona</label>
               <Select value={zone} onValueChange={(v) => setZone(v)}>
                 <SelectTrigger className="rounded-lg w-full mt-1">
                   <SelectValue placeholder="Selecciona aqui..." />
@@ -124,12 +103,12 @@ const Catalog = () => {
         </div>
 
         <div className="mt-8">
-          <h2 className="text-2xl font-normal tracking-tight">Restaurantes destacados</h2>
+          <h2 className="text-2xl font-normal tracking-tight text-[#2C2C2A]">Restaurantes destacados</h2>
 
           {loading && (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-80 animate-pulse rounded-2xl bg-muted" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-80 animate-pulse rounded-2xl bg-[#2C2C2A]/30" />
               ))}
             </div>
           )}
@@ -137,10 +116,10 @@ const Catalog = () => {
           {error && (
             <div
               role="alert"
-              className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-border bg-muted/50 p-6 text-center sm:flex-row sm:justify-between sm:text-left"
+              className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#AEACAC] bg-white p-6 text-center sm:flex-row sm:justify-between sm:text-left"
             >
-              <p className="text-sm text-destructive">{error.message}</p>
-              <Button type="button" onClick={() => refetch()} className="cursor-pointer">
+              <p className="text-sm text-destructive">ERROR</p>
+              <Button type="button" onClick={() => refetch()} className="cursor-pointer bg-[#009951]! text-[#FFFFFF]!">
                 Reintentar
               </Button>
             </div>
@@ -154,9 +133,15 @@ const Catalog = () => {
 
           {!loading && restaurants.length > 0 && (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {restaurants.map((restaurant: AllRestaurants) => (
-                <RestaurantCard key={restaurant.id ?? restaurant.name} {...restaurant} />
-              ))}
+              {restaurants.map((restaurant: AllRestaurants) => {
+                return (
+                  <RestaurantCard
+                    key={restaurant.id}
+                    {...restaurant}
+                    onView={() => navigate(`/catalog/${restaurant.id}`)}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,18 +1,53 @@
 export const PageSkeleton = () => {
-  // ESTE VA A SER EL LOADER PRINCIPAL DE  TODA LA APP, corregir a futuro
   return (
     <div
+      role="status"
       aria-busy="true"
       aria-label="Cargando página"
-      className="mx-auto w-full max-w-7xl animate-pulse px-4 py-6 sm:px-6"
+      className="flex min-h-dvh w-full flex-col items-center justify-center gap-6 bg-[#FFFFFF] px-4"
     >
-      <div className="h-8 w-48 rounded-md bg-muted" />
-      <div className="mt-2 h-4 w-72 rounded-md bg-muted" />
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-80 rounded-2xl bg-muted" />
-        ))}
+      <div className="relative size-50">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 100 100"
+          className="absolute inset-0 size-full animate-spin"
+          style={{ animationDuration: "2.6s" }}
+        >
+          <circle
+            cx="50"
+            cy="50"
+            r="44"
+            fill="none"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="180 96"
+            className="stroke-[#00733D]"
+          />
+        </svg>
+        <img
+          src="/images/logo-eco-04.png"
+          alt=""
+          width={136}
+          height={136}
+          className="absolute top-1/2 left-1/2 size-34 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full object-cover"
+        />
       </div>
+
+      <p
+        aria-hidden="true"
+        className="flex items-center gap-1.5 text-lg font-medium text-[#2C2C2A]"
+      >
+        Cargando
+        <span className="flex items-end gap-1">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="loader-dot size-3 rounded-full bg-[#00733D]"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </span>
+      </p>
     </div>
   );
 };
