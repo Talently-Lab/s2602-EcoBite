@@ -3,7 +3,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { RestaurantProduct } from "@/types/restaurant";
 
-type props = RestaurantProduct & {
+type ItemProps = RestaurantProduct & {
   description?: string;
   imageSrc?: string;
   imageAlt?: string;
@@ -12,7 +12,7 @@ type props = RestaurantProduct & {
   className?: string;
 };
 
-export const Item = ({ ...product }: props) => {
+export const Item = ({ ...product }: ItemProps) => {
   const cardClassName = cn(
     "gap-0 overflow-hidden py-0 border border-[#E8E8E8]! bg-[#FFFFFF]!",
     product.className
@@ -34,7 +34,7 @@ export const Item = ({ ...product }: props) => {
                 {product.name}
               </CardTitle>
               <p className="mt-1 text-sm text-[#6B6B6B]">
-                {product. description}
+                {product.description}
               </p>
               <span className="mt-2 text-base font-extrabold text-[#009951]">
                 $ {product.price}
@@ -69,7 +69,7 @@ export const Item = ({ ...product }: props) => {
           {product.name}
         </CardTitle>
         <p className="my-1.5 text-xs text-[#6B6B6B]">
-          {product.description || 'No description'}
+          {product.description || "Sin descripción"}
         </p>
         <div className="mt-auto flex w-full items-center justify-between gap-3">
           <span className="text-lg font-extrabold text-[#2C2C2A]">

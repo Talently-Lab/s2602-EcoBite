@@ -1,11 +1,11 @@
-import { StrictMode, Suspense, lazy } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import { RouterProvider } from 'react-router-dom'
-import { mainRouter } from './router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { PageSkeleton } from './components/PageSkeleton'
-import { Toaster } from "@/components/ui/sonner"
+import { StrictMode, Suspense, lazy } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import { RouterProvider } from "react-router-dom";
+import { mainRouter } from "@/router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { Toaster } from "@/components/ui/sonner";
 
 const syncDarkClass = () => {
   const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;

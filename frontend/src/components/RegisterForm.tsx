@@ -125,7 +125,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
           disabled={registerHook.isPending}
           className="mt-6 h-10 w-full rounded-md font-semibold bg-[#009951]! text-[#FFFFFF]!"
         >
-          {registerHook.isPending ? "Creando cuenta…" : "Register"}
+          {registerHook.isPending ? "Creando cuenta…" : "Crear cuenta"}
         </Button>
       </form>
 

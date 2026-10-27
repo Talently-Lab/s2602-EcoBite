@@ -1,4 +1,4 @@
-import type { RestaurantDetail } from "@/types/restaurant";
+import type { AllRestaurants, RestaurantDetail } from "@/types/restaurant";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -9,7 +9,7 @@ export const getRestaurants = async () => {
     throw new Error(body?.error ?? "Error al cargar restaurantes");
   }
 
-  const data = await response.json();
+  const data: AllRestaurants[] = await response.json();
   return data;
 };
 

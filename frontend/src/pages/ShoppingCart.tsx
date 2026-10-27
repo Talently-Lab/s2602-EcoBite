@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Bike, Leaf, Minus, Plus, Recycle, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { MainLayout } from "./layout/MainLayout";
+import { MainLayout } from "@/pages/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import type { CartItem } from "@/types/cart";
 

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordField } from "@/components/PasswordField";
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useLogin } from "@/hooks/useAuth";
 import { loginSchema, type Login } from "@/schemas/auth.schema";
 import { useNavigate } from "react-router-dom";
@@ -101,7 +101,7 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
               type="checkbox"
               checked={remembered}
               onChange={(e) => setRemembered(e.target.checked)}
-              className="size-4 shrink-0 cursor-pointer appearance-none rounded-[4px] border-2 border-[#00733D]/50 bg-[#FFFFFF] bg-center bg-no-repeat transition-colors hover:border-[#009951] focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:outline-none checked:border-[#009951] checked:bg-[#009951] checked:bg-[length:70%] checked:bg-[url(data:image/svg+xml,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M20%206%209%2017l-5-5%22%2F%3E%3C%2Fsvg%3E)]"
+              className="size-4 shrink-0 cursor-pointer appearance-none rounded-lg border-2 border-[#00733D]/50 bg-[#FFFFFF] bg-center bg-no-repeat transition-colors hover:border-[#009951] focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:outline-none checked:border-[#009951] checked:bg-[#009951] checked:bg-size-[70%] checked:bg-[url(data:image/svg+xml,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M20%206%209%2017l-5-5%22%2F%3E%3C%2Fsvg%3E)]"
             />
             Recordarme
           </label>

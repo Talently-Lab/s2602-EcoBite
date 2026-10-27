@@ -82,11 +82,11 @@ const RestaurantDetail = () => {
 
       <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-wrap gap-1" role="tablist" aria-label="Categorías del menú">
-          {typesMenus.map((type, i) => {
+          {typesMenus.map((type) => {
             const isActive = type === activeCategory;
             return (
               <Button
-                key={i}
+                key={type}
                 type="button"
                 role="tab"
                 aria-selected={isActive}

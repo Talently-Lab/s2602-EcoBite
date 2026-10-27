@@ -14,7 +14,6 @@ import {
 import { useRestaurants } from "@/hooks/useRestaurants";
 import { useZones } from "@/hooks/useFilters";
 import { MainLayout } from "@/pages/layout/MainLayout";
-import type { AllRestaurants } from "@/types/restaurant";
 
 const categoryOptions = [
   { value: "saludable", label: "Comida saludable" },
@@ -63,9 +62,11 @@ const Catalog = () => {
           <p className="mt-8 mb-3 text-[13px] font-semibold text-[#2C2C2A]">Filtra por:</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div>
-              <label className="text-[13px] text-[#0A0D0A]">Categoria</label>
+              <label htmlFor="filter-category" className="text-[13px] text-[#0A0D0A]">
+                Categoria
+              </label>
               <Select value={cuisine} onValueChange={(v) => setCuisine(v)}>
-                <SelectTrigger className="rounded-lg w-full mt-1">
+                <SelectTrigger id="filter-category" className="rounded-lg w-full mt-1">
                   <SelectValue placeholder="Selecciona aqui..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -79,9 +80,11 @@ const Catalog = () => {
             </div>
 
             <div>
-              <label className="text-[13px] text-[#0A0D0A]">Zona</label>
+              <label htmlFor="filter-zone" className="text-[13px] text-[#0A0D0A]">
+                Zona
+              </label>
               <Select value={zone} onValueChange={(v) => setZone(v)}>
-                <SelectTrigger className="rounded-lg w-full mt-1">
+                <SelectTrigger id="filter-zone" className="rounded-lg w-full mt-1">
                   <SelectValue placeholder="Selecciona aqui..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -127,15 +130,14 @@ const Catalog = () => {
 
           {!loading && restaurants.length > 0 && (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {restaurants.map((restaurant: AllRestaurants) => {
-                return (
-                  <RestaurantCard
-                    key={restaurant.id}
-                    {...restaurant}
-                    onView={() => navigate(`/catalog/${restaurant.id}`)}
-                  />
-                );
-              })}
+              {restaurants.map((restaurant) => (
+                <RestaurantCard
+                  key={restaurant.id}
+                  name={restaurant.name}
+                  description={restaurant.category}
+                  onView={() => navigate(`/catalog/${restaurant.id}`)}
+                />
+              ))}
             </div>
           )}
         </div>

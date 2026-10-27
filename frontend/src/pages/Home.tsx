@@ -1,10 +1,9 @@
 import { Bike, Leaf, Recycle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MainLayout } from "./layout/MainLayout";
+import { MainLayout } from "@/pages/layout/MainLayout";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { useRestaurants } from "@/hooks/useRestaurants";
-import type { AllRestaurants } from "@/types/restaurant";
 
 const FEATURES = [
   {
@@ -102,23 +101,22 @@ const Home = () => {
           </div>
         )}
 
-        {!error && !loading && restaurants?.length === 0 && (
+        {!error && !loading && restaurants.length === 0 && (
           <p className="mt-4 text-sm text-muted-foreground">
             No hay restaurantes disponibles por ahora.
           </p>
         )}
 
-        {!loading && restaurants?.length > 0 && (
+        {!loading && restaurants.length > 0 && (
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {restaurants?.map((restaurant: AllRestaurants) => {
-              return (
-                <RestaurantCard
-                  key={restaurant.id}
-                  {...restaurant}
-                  onView={() => navigate(`/catalog/${restaurant.id}`)}
-                />
-              );
-            })}
+            {restaurants.map((restaurant) => (
+              <RestaurantCard
+                key={restaurant.id}
+                name={restaurant.name}
+                description={restaurant.category}
+                onView={() => navigate(`/catalog/${restaurant.id}`)}
+              />
+            ))}
           </div>
         )}
       </section>

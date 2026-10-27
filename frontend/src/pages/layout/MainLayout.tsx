@@ -8,12 +8,12 @@ type MainLayoutProps = {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
-    <section className="flex min-h-screen flex-col bg-[#FFFFFF] text-foreground">
+    <main className="flex min-h-screen flex-col bg-[#FFFFFF] text-foreground">
       <Navbar />
       <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-3">
         {children}
       </div>
       <Footer />
-    </section>
+    </main>
   );
 };

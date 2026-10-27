@@ -9,7 +9,7 @@ export const useRestaurants = () => {
 
   return {
     ...query,
-    restaurants: query.data,
+    restaurants: query.data ?? [],
     loading: query.isPending,
   };
 };
