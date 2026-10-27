@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
-import { Input } from "./ui/input";
+import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ export const PasswordField = ({
   label,
   error,
   autoComplete = "current-password",
-  placeholder = "Enter your password",
+  placeholder = "Ingresá tu contraseña",
   className,
   ...inputProps
 }: props) => {

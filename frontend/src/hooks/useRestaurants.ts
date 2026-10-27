@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getRestaurants } from "@/services/restaurants.service";
+import { getRestaurantById, getRestaurants } from "@/services/restaurants.service";
 
 export const useRestaurants = () => {
   const query = useQuery({
@@ -9,7 +9,21 @@ export const useRestaurants = () => {
 
   return {
     ...query,
-    restaurants: query.data,
+    restaurants: query.data ?? [],
+    loading: query.isPending,
+  };
+};
+
+export const useRestaurantById = (id: string) => {
+  const query = useQuery({
+    queryKey: ["restaurants", "detail", id],
+    queryFn: () => getRestaurantById(id),
+    enabled: Boolean(id),
+  });
+
+  return {
+    ...query,
+    restaurant: query.data,
     loading: query.isPending,
   };
 };

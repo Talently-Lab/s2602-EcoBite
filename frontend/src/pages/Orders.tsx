@@ -1,4 +1,4 @@
-import { MainLayout } from "./layout/MainLayout"
+import { MainLayout } from "@/pages/layout/MainLayout"
 
 const Orders = () => {
   return (
