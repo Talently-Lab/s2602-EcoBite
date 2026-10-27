@@ -1,9 +1,10 @@
 import { Bike, Leaf, Recycle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MOCK_RESTAURANTS } from "@/lib/mocks";
 import { MainLayout } from "./layout/MainLayout";
 import { RestaurantCard } from "@/components/RestaurantCard";
+import { useRestaurants } from "@/hooks/useRestaurants";
+import type { AllRestaurants } from "@/types/restaurant";
 
 const FEATURES = [
   {
@@ -28,6 +29,7 @@ const FEATURES = [
 
 const Home = () => {
   const navigate = useNavigate();
+  const { restaurants, loading, error, refetch } = useRestaurants();
 
   return (
     <MainLayout>
@@ -80,15 +82,45 @@ const Home = () => {
         <h2 className="text-sm font-bold text-[#2C2C2A]">
           Encontrá restaurantes y conocé qué prácticas ambientales implementan.
         </h2>
-        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {MOCK_RESTAURANTS.map((restaurant) => (
-            <RestaurantCard
-              key={restaurant.name}
-              {...restaurant}
-              onView={() => navigate(`/catalog/${restaurant.id}`)}
-            />
-          ))}
-        </div>
+        {loading && (
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-80 animate-pulse rounded-2xl bg-[#2C2C2A]/30" />
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div
+            role="alert"
+            className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#AEACAC] bg-white p-6 text-center sm:flex-row sm:justify-between sm:text-left"
+          >
+            <p className="text-sm text-destructive">ERROR</p>
+            <Button type="button" onClick={() => refetch()} className="cursor-pointer bg-[#009951]! text-[#FFFFFF]!">
+              Reintentar
+            </Button>
+          </div>
+        )}
+
+        {!error && !loading && restaurants?.length === 0 && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            No hay restaurantes disponibles por ahora.
+          </p>
+        )}
+
+        {!loading && restaurants?.length > 0 && (
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {restaurants?.map((restaurant: AllRestaurants) => {
+              return (
+                <RestaurantCard
+                  key={restaurant.id}
+                  {...restaurant}
+                  onView={() => navigate(`/catalog/${restaurant.id}`)}
+                />
+              );
+            })}
+          </div>
+        )}
       </section>
     </MainLayout>
   );

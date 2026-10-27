@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRestaurants } from "@/hooks/useRestaurants";
+import { useZones } from "@/hooks/useFilters";
 import { MainLayout } from "@/pages/layout/MainLayout";
 import type { AllRestaurants } from "@/types/restaurant";
 
@@ -22,16 +23,9 @@ const categoryOptions = [
   { value: "casera", label: "Comida casera" },
 ];
 
-const zoneOptions = [
-  { value: "norte", label: "Zona Norte" },
-  { value: "sur", label: "Zona Sur" },
-  { value: "este", label: "Zona Este" },
-  { value: "oeste", label: "Zona Oeste" },
-  { value: "centro", label: "Centro" },
-];
-
 const Catalog = () => {
   const { restaurants, loading, error, refetch } = useRestaurants();
+  const { zones } = useZones();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [cuisine, setCuisine] = useState<string | null>(null);
@@ -91,9 +85,9 @@ const Catalog = () => {
                   <SelectValue placeholder="Selecciona aqui..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {zoneOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {zones.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.name}>
+                      {opt.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
