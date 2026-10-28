@@ -13,10 +13,12 @@ overrides:
   # Transitive deps whose parent ranges (^2.3.0, ^7.29.1, ^10.x) already allow the
   # patched releases but were locked to vulnerable ones.
   # body-parser: GHSA-27r3-jxmh-p828 · undici: GHSA-xjj6-f33q-929c,
-  # GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472 · ip-address: GHSA-rxp7-6hxx-x8q5.
+  # GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472 · ip-address: GHSA-rxp7-6hxx-x8q5
+  # · qs: GHSA-6pq8-jhm2-2vcw.
   body-parser: 2.4.0
   undici: 7.30.1
   ip-address: 10.7.5
+  qs: 6.16.1
 
 auditConfig:
   ignoreGhsas:

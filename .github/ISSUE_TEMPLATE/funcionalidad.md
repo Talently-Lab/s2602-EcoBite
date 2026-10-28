@@ -23,6 +23,11 @@ labels: enhancement
 - 
 - 
 
+## Criterios de aceptación
+
+- [ ] Resultado observable y evidencia que lo verifica:
+- [ ] Caso de fallo que debe rechazarse o manejarse:
+
 ## Fuera de alcance
 
 <!-- Qué NO está incluido explícitamente. Marcar rutas, cambios de esquema,
@@ -41,22 +46,25 @@ labels: enhancement
 
 ## Etiquetas
 
-<!-- Aplicar al menos una etiqueta de categoría. Este repo solo tiene las
-     etiquetas por defecto de GitHub; si el equipo crea etiquetas de
-     sprint (ej.: sprint-3), agregarlas acá. -->
+<!-- Aplicar al menos una etiqueta de categoría; no duplicar la prioridad como etiqueta. -->
 - Categoría: `enhancement`
-- Sprint: trackear en el tablero del equipo
+- Sprint: `sprint-N` solo con compromiso aprobado; sin etiqueta si sigue en backlog
 
 ## Prioridad
 
-<!-- Definir en la tarjeta del tablero: Alta / Media / Baja -->
+<!-- Definir en el campo Priority del tablero: High / Medium / Low.
+     Justificar urgencia; no inventar un bloqueo o una vulnerabilidad. -->
 
 ## Flujo del tablero
 
 <!-- Después de crear este issue:
-1. Crear o linkear la tarjeta correspondiente en el tablero del equipo
-2. Asignarla y setear la prioridad
-3. Moverla a "In Progress" al empezar el trabajo
+1. Para trabajo backend/API portal: asignar a NaferJ y agregar una sola vez:
+   gh project item-add 1 --owner Talently-Lab --url <issue-url>
+   Tablero: https://github.com/orgs/Talently-Lab/projects/1
+2. Setear Status = Todo, Priority y etiquetas; linkear el alcance aprobado en Trello si aplica
+3. Mover a In Progress al implementar y a In Review cuando se abra el PR
+4. Verificar cierre y Done al completar; no asumir que la automatización está configurada
+Para trabajo de otro integrante, confirmar responsable y tablero; no asignarlo a NaferJ automáticamente.
 -->
 
 ## Hito
@@ -64,9 +72,18 @@ labels: enhancement
 <!-- Solo setear si el equipo usa milestones y este issue forma parte
      de una entrega/release acordada. Tareas internas van sin milestone. -->
 
-## Verificación (gates locales — todo en verde)
+## Impacto de release
 
-- `pnpm install`
+- Decisión: sin cambio de API / patch / minor / major (justificar).
+- Si hay release de API aprobado: alinear `backend/package.json`, `backend/openapi.yaml` y `backend/CHANGELOG.md`.
+- Tooling/docs/interno: sin bump de API; no sincronizar versiones de todo el monorepo.
+
+## Verificación (gates locales - todo en verde)
+
+- `pnpm --filter backend lint`
 - `pnpm --filter backend build`
-- Si toca el esquema: `pnpm --filter backend exec prisma migrate status`
-- `pnpm --filter frontend lint` (solo si se toca frontend)
+- `pnpm --filter backend typecheck`
+- `pnpm --filter backend check:api` (doble de Prisma, no PostgreSQL real)
+- Si toca `api-portal/`: `pnpm --filter api-portal lint`, `pnpm --filter api-portal typecheck` y `pnpm --filter api-portal build`.
+- Si toca datos/esquema: definir pruebas en PostgreSQL aislado; nunca migrar o sembrar producción como verificación.
+- Para trabajo exclusivo de portal, omitir gates backend sin relación. Para frontend, coordinar con su responsable.
