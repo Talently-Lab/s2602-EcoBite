@@ -1,7 +1,5 @@
 blank_issues_enabled: true
-# Cuando el equipo confirme la URL del tablero (Trello o GitHub Projects),
-# agregar un contact_link, ej.:
-# contact_links:
-#   - name: Tablero del proyecto
-#     url: <URL del tablero>
-#     about: Ver el backlog y la planificación de sprints
+contact_links:
+  - name: EcoBite Backend Board
+    url: https://github.com/orgs/Talently-Lab/projects/1
+    about: Backlog y seguimiento de backend, API portal y operaciones; el alcance del equipo se acuerda en Trello.
