@@ -4,31 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { MainLayout } from "@/pages/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import type { CartItem } from "@/types/cart";
-
-const INITIAL_ITEMS: CartItem[] = [
-  {
-    id: "jamaica-1",
-    name: "Agua de Jamaica",
-    price: 15000,
-    quantity: 1,
-    image: "/images/image-cart.png",
-  },
-  {
-    id: "jamaica-2",
-    name: "Agua de Jamaica",
-    price: 15000,
-    quantity: 1,
-    image: "/images/image-cart.png",
-  },
-  {
-    id: "jamaica-3",
-    name: "Agua de Jamaica",
-    price: 15000,
-    quantity: 1,
-    image: "/images/image-cart.png",
-  },
-];
+import { useCartStore } from "@/context/cart-store";
 
 const DELIVERY_OPTIONS = [
   { id: "delivery", label: "Delivery" },
@@ -54,27 +30,11 @@ const formatPrice = (amount: number) =>
 const formatQuantity = (quantity: number) => String(quantity).padStart(2, "0");
 
 const ShoppingCart = () => {
-  const [items, setItems] = useState<CartItem[]>(INITIAL_ITEMS);
+  const items = useCartStore((s) => s.items);
+  const increase = useCartStore((s) => s.increase);
+  const decrease = useCartStore((s) => s.decrease);
+  const removeItem = useCartStore((s) => s.removeItem);
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("delivery");
-
-  const increment = (id: string) =>
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      )
-    );
-
-  const decrement = (id: string) =>
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-          : item
-      )
-    );
-
-  const removeItem = (id: string) =>
-    setItems((prev) => prev.filter((item) => item.id !== id));
 
   return (
     <MainLayout>
@@ -122,7 +82,7 @@ const ShoppingCart = () => {
             <ul>
               {items.map((item) => (
                 <li
-                  key={item.id}
+                  key={item.productId}
                   className="flex items-center gap-4 border-b border-[#8A8A8A]/50 py-4"
                 >
                   <img
@@ -143,7 +103,7 @@ const ShoppingCart = () => {
                   <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                     <button
                       type="button"
-                      onClick={() => decrement(item.id)}
+                      onClick={() => decrease(item.productId)}
                       disabled={item.quantity <= 1}
                       aria-label={`Quitar una unidad de ${item.name}`}
                       className="grid size-8 place-items-center rounded-full border border-[#009951] text-[#009951] transition-colors hover:bg-[#009951]/10 disabled:cursor-not-allowed disabled:opacity-40"
@@ -155,7 +115,7 @@ const ShoppingCart = () => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => increment(item.id)}
+                      onClick={() => increase(item.productId)}
                       aria-label={`Agregar una unidad de ${item.name}`}
                       className="grid size-8 place-items-center rounded-full bg-[#009951] text-white transition-colors hover:bg-[#003D29]"
                     >
@@ -163,7 +123,7 @@ const ShoppingCart = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.productId)}
                       aria-label={`Eliminar ${item.name} del carrito`}
                       className="ml-1 grid size-8 place-items-center rounded-full text-[#009951] transition-colors hover:bg-[#009951]/10"
                     >
@@ -215,7 +175,10 @@ const ShoppingCart = () => {
             <p>TOTAL</p>
             <p>$20.014</p>
           </div>
-          <Button className="w-full bg-[#009951]! text-[#FFFFFF]! rounded-[8px]! mt-8 py-5">
+          <Button
+            disabled={items.length === 0}
+            className="w-full bg-[#009951]! text-[#FFFFFF]! rounded-[8px]! mt-8 py-5"
+          >
             Ir a Pagar
           </Button>
         </div>
