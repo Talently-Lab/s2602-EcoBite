@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useCartStore } from "@/context/cart-store";
 import type { RestaurantProduct } from "@/types/restaurant";
 
 type ItemProps = RestaurantProduct & {
@@ -13,6 +14,17 @@ type ItemProps = RestaurantProduct & {
 };
 
 export const Item = ({ ...product }: ItemProps) => {
+  const addItem = useCartStore((s) => s.addItem);
+
+  const handleAddToCart = () => {
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.imageSrc ?? "/images/image-dish.png",
+    });
+  };
+
   const cardClassName = cn(
     "gap-0 overflow-hidden py-0 border border-[#E8E8E8]! bg-[#FFFFFF]!",
     product.className
@@ -43,6 +55,7 @@ export const Item = ({ ...product }: ItemProps) => {
           </div>
           <Button
             type="button"
+            onClick={handleAddToCart}
             className="w-full py-3 text-sm rounded-[8px] bg-[#009951]! text-[#FFFFFF]! sm:w-auto sm:shrink-0 sm:px-5"
           >
             Agregar
@@ -77,6 +90,7 @@ export const Item = ({ ...product }: ItemProps) => {
           </span>
           <Button
             type="button"
+            onClick={handleAddToCart}
             className="px-5 py-3 text-sm rounded-[8px] bg-[#009951]! text-[#FFFFFF]!"
           >
             Agregar

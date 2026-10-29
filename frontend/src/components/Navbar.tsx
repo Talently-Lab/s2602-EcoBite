@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Menu, User, X, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useCartStore } from "@/context/cart-store";
 
 const links = [
   { to: "/home", label: "Inicio" },
@@ -14,6 +15,9 @@ const links = [
 export const Navbar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState<boolean>(false);
+  const totalItems = useCartStore((s) =>
+    s.items.reduce((acc, item) => acc + item.quantity, 0)
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#009951]">
@@ -57,11 +61,23 @@ export const Navbar = () => {
         <div className="hidden items-center gap-5 lg:flex text-[#FFFFFF]">
           <button
             type="button"
-            aria-label="Mi carrito"
+            aria-label={
+              totalItems > 0
+                ? `Mi carrito, ${totalItems} productos`
+                : "Mi carrito"
+            }
             onClick={() => navigate("/cart")}
-            className="grid size-9 place-items-center rounded-md transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
+            className="relative grid size-9 place-items-center rounded-md transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
           >
             <ShoppingCart className="size-6 font-bold" color="white" aria-hidden="true" />
+            {totalItems > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-[#FFFFFF] px-1 py-0.5 text-[10px] font-bold leading-none text-[#003D29] tabular-nums"
+              >
+                {totalItems}
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -113,11 +129,23 @@ export const Navbar = () => {
             <li className="flex items-center justify-end gap-3 px-3 pt-3">
               <button
                 type="button"
-                aria-label="Mi carrito"
+                aria-label={
+                  totalItems > 0
+                    ? `Mi carrito, ${totalItems} productos`
+                    : "Mi carrito"
+                }
                 onClick={() => navigate('/cart')}
-                className="grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
+                className="relative grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
               >
                 <ShoppingCart className="size-6 font-bold" color="white" aria-hidden="true" />
+                {totalItems > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-[#FFFFFF] px-1 py-0.5 text-[10px] font-bold leading-none text-[#003D29] tabular-nums"
+                  >
+                    {totalItems}
+                  </span>
+                )}
               </button>
               <button
                 type="button"
