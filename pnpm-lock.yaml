@@ -12,6 +12,14 @@ overrides:
   undici: 7.30.1
   ip-address: 10.7.5
   qs: 6.16.1
+  seroval: 1.6.11
+  systeminformation: 5.33.16
+  '@ts-morph/common@0.27.0>minimatch': 11.0.3
+
+patchedDependencies:
+  deepmerge@4.3.1:
+    hash: e677e62a9a859b7362de5746d8b6a448af3a65e0afa1af4c0f70f0b4ff57e79b
+    path: patches/deepmerge@4.3.1.patch
 
 importers:
 
@@ -844,6 +852,9 @@ packages:
 
   '@internationalized/number@3.6.8':
     resolution: {integrity: sha512-8UmMFia46DUt+k97zKd9fKWXcWHR+k8ae3eYzILETuT2KbIvLyOfac7zesw+sJdRAAZ7Q9pM1Mk22aXp2LD0Ig==}
+
+  '@isaacs/nonrecursive-glob-match@1.0.3':
+    resolution: {integrity: sha512-SI7kyKHq4XXDRozw+r9GlRZkia1ZkFrpLW98r2IC2Bpr8YkFGE3fvjzmxCG0x78A++69HmDNrDvSMYBZmHGpKA==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2867,8 +2878,8 @@ packages:
     resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
     engines: {node: '>=18'}
 
-  minimatch@10.2.6:
-    resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
+  minimatch@11.0.3:
+    resolution: {integrity: sha512-iny/40PEGkNJQ5/Pv6z3nm6FbRAby32GeZRjCUJk2WnNDbgPSTcdI+DDvLqsgBdD4cD5sMtMheqPPnehCCa8Nw==}
     engines: {node: 18 || 20 || >=22}
 
   minimist@1.2.8:
@@ -3327,10 +3338,10 @@ packages:
     resolution: {integrity: sha512-N7mWAMydj89EnYTHtRpS3LBrAz3J9O6oVrqpuXuvlAHfAUG8WEKqtbAd7SBiJNY5NfCAFhSdyAh7wI4Shjqy4g==}
     engines: {node: '>=10'}
     peerDependencies:
-      seroval: ^1.0
+      seroval: 1.6.11
 
-  seroval@1.6.8:
-    resolution: {integrity: sha512-HlSgSAkTk4EqHcje1ptJjfZi1YDv5KbhVJ/d3P7T/nAXua2VmDu+AKDX5VTdFfZf48nDkWB2TKYt0DrCSa+3wg==}
+  seroval@1.6.11:
+    resolution: {integrity: sha512-hpb6XnMCGN/A+79Uf8V7/iTGkyyyazNn5X0CoCAp7Uy9vT3RT8jZ9GLcnxGoVjg3P8AArbe4ZVHq6C8oT2a0kA==}
     engines: {node: '>=10'}
 
   serve-static@2.2.1:
@@ -3500,8 +3511,8 @@ packages:
     resolution: {integrity: sha512-H+ue8Zo4vJmV2nRjpx86P35lzwDT3nItnIsocgumgr0hHMQ+ZGq5vrERg9kJBo5AWGmxZDhzDo+WVIJqkB0cGA==}
     engines: {node: '>=16'}
 
-  systeminformation@5.33.14:
-    resolution: {integrity: sha512-9liS0hutibZOitbibm90AK3WZe/1rGhNGZSw+/4TbY5moax6KkWwv1TKJmk9uSOD4bvPPg57VAuuNN+4edIpBg==}
+  systeminformation@5.33.16:
+    resolution: {integrity: sha512-R+Lh69IJXfJj6bfyH1In5cIR9FTr4hBS39YvlZHZjsK1p9cuELPq7hplZZIb56ZESMMb+DzdKqqE6Iomi01Mvg==}
     engines: {node: '>=10.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
@@ -3965,7 +3976,7 @@ snapshots:
       object-treeify: 1.1.33
       open: 8.4.2
       picomatch: 4.0.7
-      systeminformation: 5.33.14
+      systeminformation: 5.33.16
       undici: 7.30.1
       which: 4.0.0
       yocto-spinner: 1.2.2
@@ -4214,6 +4225,8 @@ snapshots:
   '@internationalized/number@3.6.8':
     dependencies:
       '@swc/helpers': 0.5.23
+
+  '@isaacs/nonrecursive-glob-match@1.0.3': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -4631,7 +4644,7 @@ snapshots:
       '@dotenvx/dotenvx': 1.75.1
       cn: 0.2.6
       code-block-writer: 13.0.3
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=e677e62a9a859b7362de5746d8b6a448af3a65e0afa1af4c0f70f0b4ff57e79b)
       execa: 9.6.1
       fast-glob: 3.3.3
       fs-extra: 11.4.1
@@ -4843,7 +4856,7 @@ snapshots:
   '@ts-morph/common@0.27.0':
     dependencies:
       fast-glob: 3.3.3
-      minimatch: 10.2.6
+      minimatch: 11.0.3
       path-browserify: 1.0.1
 
   '@types/bcrypt@6.0.0':
@@ -5351,7 +5364,7 @@ snapshots:
 
   deepmerge-ts@8.0.2: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.3.1(patch_hash=e677e62a9a859b7362de5746d8b6a448af3a65e0afa1af4c0f70f0b4ff57e79b): {}
 
   default-browser-id@5.0.1: {}
 
@@ -5987,8 +6000,9 @@ snapshots:
 
   mimic-function@5.0.1: {}
 
-  minimatch@10.2.6:
+  minimatch@11.0.3:
     dependencies:
+      '@isaacs/nonrecursive-glob-match': 1.0.3
       brace-expansion: 5.0.12
 
   minimist@1.2.8: {}
@@ -6446,11 +6460,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  seroval-plugins@1.6.8(seroval@1.6.8):
+  seroval-plugins@1.6.8(seroval@1.6.11):
     dependencies:
-      seroval: 1.6.8
+      seroval: 1.6.11
 
-  seroval@1.6.8: {}
+  seroval@1.6.11: {}
 
   serve-static@2.2.1:
     dependencies:
@@ -6479,7 +6493,7 @@ snapshots:
       cn: 0.2.6
       commander: 14.0.3
       dedent: 1.7.2
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=e677e62a9a859b7362de5746d8b6a448af3a65e0afa1af4c0f70f0b4ff57e79b)
       diff: 8.0.4
       execa: 9.6.1
       fast-glob: 3.3.3
@@ -6588,8 +6602,8 @@ snapshots:
   solid-js@1.9.16:
     dependencies:
       csstype: 3.2.3
-      seroval: 1.6.8
-      seroval-plugins: 1.6.8(seroval@1.6.8)
+      seroval: 1.6.11
+      seroval-plugins: 1.6.8(seroval@1.6.11)
 
   solid-presence@0.2.0(solid-js@1.9.16):
     dependencies:
@@ -6663,7 +6677,7 @@ snapshots:
     dependencies:
       copy-anything: 4.1.5
 
-  systeminformation@5.33.14: {}
+  systeminformation@5.33.16: {}
 
   tagged-tag@1.0.0: {}
 
