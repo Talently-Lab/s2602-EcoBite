@@ -1,4 +1,6 @@
+import bcrypt from 'bcrypt'
 import { prisma } from '../src/lib/prisma'
+import { validateRegistration } from '../src/lib/validation'
 
 // Fuente: Excel de Rebeca (Tablas_Ecobite_V3_AlternativaB), pestañas Zona/Distancias y Empaques.
 // distanciaPromedioKm = Haversine desde el Obelisco (-34.6037, -58.3816), mínimo 0.5 km.
@@ -64,6 +66,30 @@ const empaques = [
   { nombreEnvase: 'Vaso / Botella para bebida', materialTradicional: 'Plástico PET / Poliestireno (Desechable)', pesoBaseG: 22, materialEcobite: 'Cartón polipapel / Bioplástico PLA compostable', pesoEcobiteG: 0, usoHabitual: 'Licuados; jugos; gaseosas de la casa' },
 ]
 
+async function seedAdmin() {
+  const email = process.env.SEED_ADMIN_EMAIL
+  const password = process.env.SEED_ADMIN_PASSWORD
+  if (!email && !password) {
+    console.log('Seed de admin omitido: SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD no están configuradas.')
+    return
+  }
+  if (!email || !password) {
+    throw new Error('SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD deben configurarse juntas.')
+  }
+  const admin = validateRegistration({
+    name: process.env.SEED_ADMIN_NAME || 'Administrador EcoBite',
+    email,
+    password,
+  })
+  const passwordHash = await bcrypt.hash(admin.password, 12)
+  await prisma.usuario.upsert({
+    where: { email: admin.email },
+    update: { passwordHash, rol: 'ADMIN_PLATAFORMA', activo: true },
+    create: { nombreCompleto: admin.name, email: admin.email, passwordHash, rol: 'ADMIN_PLATAFORMA' },
+  })
+  console.log(`Seed de admin aplicado para ${admin.email} (rol ADMIN_PLATAFORMA).`)
+}
+
 async function main() {
   await prisma.$transaction(
     [
@@ -77,6 +103,8 @@ async function main() {
     ],
     { timeout: 60000 },
   )
+
+  await seedAdmin()
 
   console.log(`Seed completo: ${zonas.length} zonas y ${empaques.length} empaques.`)
 }

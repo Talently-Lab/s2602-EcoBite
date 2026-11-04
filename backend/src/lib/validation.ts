@@ -1,8 +1,11 @@
+import { z } from 'zod';
 import { HttpError } from './http-error';
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const noControlChars = /^[^\u0000-\u001f\u007f]+$/;
+
 export function isUuid(value: unknown): value is string {
-  return typeof value === 'string' &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  return typeof value === 'string' && uuidPattern.test(value);
 }
 
 function bodyObject(body: unknown): Record<string, unknown> {
@@ -12,69 +15,93 @@ function bodyObject(body: unknown): Record<string, unknown> {
   return body as Record<string, unknown>;
 }
 
+function parse<T>(schema: z.ZodType<T>, value: unknown, message: string): T {
+  const result = schema.safeParse(value);
+  if (!result.success) throw new HttpError(400, message);
+  return result.data;
+}
+
+const uuid = z.string().regex(uuidPattern);
+const trimmedText = (max: number) => z.string().trim().min(1).max(max).regex(noControlChars);
+const credentialsMessage =
+  'Email y contraseña válidos son obligatorios (máximo 72 bytes para la contraseña).';
+const credentialsSchema = z.object({
+  email: z.string().trim().toLowerCase().max(254).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
+  password: z.string().min(1).refine((value) => Buffer.byteLength(value, 'utf8') <= 72),
+});
+
 export function validateCredentials(body: unknown) {
   const input = bodyObject(body);
-  const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
-  const password = input.password;
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      typeof password !== 'string' || !password || Buffer.byteLength(password, 'utf8') > 72) {
-    throw new HttpError(400, 'Email y contraseña válidos son obligatorios (máximo 72 bytes para la contraseña).');
-  }
-  return { email, password };
+  return parse(credentialsSchema, input, credentialsMessage);
 }
 
 export function validateRegistration(body: unknown) {
   const input = bodyObject(body);
-  const credentials = validateCredentials(input);
-  const name = typeof input.name === 'string' ? input.name.trim() : '';
-  if (!name || name.length > 120 || /[\u0000-\u001f\u007f]/.test(name)) {
-    throw new HttpError(400, 'El nombre es obligatorio y debe tener como máximo 120 caracteres.');
-  }
+  const credentials = parse(credentialsSchema, input, credentialsMessage);
+  const name = parse(
+    trimmedText(120),
+    input.name,
+    'El nombre es obligatorio y debe tener como máximo 120 caracteres.',
+  );
   if (credentials.password.length < 8) {
     throw new HttpError(400, 'La contraseña debe tener al menos 8 caracteres.');
   }
-  if (Object.keys(input).some((key) => !['name', 'email', 'password'].includes(key))) {
-    throw new HttpError(400, 'Solo se permiten los campos name, email y password.');
-  }
+  parse(
+    z.strictObject({ name: z.unknown(), email: z.unknown(), password: z.unknown() }),
+    input,
+    'Solo se permiten los campos name, email y password.',
+  );
   return { name, ...credentials };
 }
 
 export function validateOrder(body: unknown) {
   const input = bodyObject(body);
-  if (Object.keys(input).some((key) =>
-    !['restaurantId', 'destinationZoneId', 'deliveryAddress', 'transportType', 'items'].includes(key))) {
-    throw new HttpError(400, 'Solo se permiten los campos restaurantId, destinationZoneId, deliveryAddress, transportType e items.');
-  }
-  if (!isUuid(input.restaurantId) || !isUuid(input.destinationZoneId)) {
-    throw new HttpError(400, 'restaurantId y destinationZoneId deben ser UUID válidos.');
-  }
-  const deliveryAddress = typeof input.deliveryAddress === 'string' ? input.deliveryAddress.trim() : '';
-  if (!deliveryAddress || deliveryAddress.length > 200 || /[\u0000-\u001f\u007f]/.test(deliveryAddress)) {
-    throw new HttpError(400, 'La dirección de entrega es obligatoria y debe tener como máximo 200 caracteres.');
-  }
-  const transportType = input.transportType;
-  if (transportType !== 'BICICLETA' && transportType !== 'VEHICULO_ELECTRICO') {
-    throw new HttpError(400, 'transportType debe ser BICICLETA o VEHICULO_ELECTRICO.');
-  }
-  const rows = Array.isArray(input.items) ? input.items : [];
-  const valid = rows.length >= 1 && rows.length <= 50 && rows.every((item) => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
-    const record = item as Record<string, unknown>;
-    return Object.keys(record).length === 2 && isUuid(record.productId) &&
-      typeof record.quantity === 'number' && Number.isInteger(record.quantity) &&
-      record.quantity >= 1 && record.quantity <= 99;
-  });
-  if (!valid || new Set(rows.map((item) => (item as Record<string, unknown>).productId)).size !== rows.length) {
-    throw new HttpError(400, 'items debe tener entre 1 y 50 productos con productId UUID y quantity entera entre 1 y 99, sin repetidos.');
+  parse(
+    z.strictObject({
+      restaurantId: z.unknown().optional(),
+      destinationZoneId: z.unknown().optional(),
+      deliveryAddress: z.unknown().optional(),
+      transportType: z.unknown().optional(),
+      items: z.unknown().optional(),
+    }),
+    input,
+    'Solo se permiten los campos restaurantId, destinationZoneId, deliveryAddress, transportType e items.',
+  );
+  const ids = parse(
+    z.object({ restaurantId: uuid, destinationZoneId: uuid }),
+    input,
+    'restaurantId y destinationZoneId deben ser UUID válidos.',
+  );
+  const deliveryAddress = parse(
+    trimmedText(200),
+    input.deliveryAddress,
+    'La dirección de entrega es obligatoria y debe tener como máximo 200 caracteres.',
+  );
+  const transportType = parse(
+    z.enum(['BICICLETA', 'VEHICULO_ELECTRICO']),
+    input.transportType,
+    'transportType debe ser BICICLETA o VEHICULO_ELECTRICO.',
+  );
+  const itemsMessage =
+    'items debe tener entre 1 y 50 productos con productId UUID y quantity entera entre 1 y 99, sin repetidos.';
+  const items = parse(
+    z.array(
+      z.strictObject({
+        productId: uuid,
+        quantity: z.number().int().min(1).max(99),
+      }),
+    ).min(1).max(50),
+    input.items,
+    itemsMessage,
+  );
+  if (new Set(items.map((item) => item.productId)).size !== items.length) {
+    throw new HttpError(400, itemsMessage);
   }
   return {
-    restaurantId: input.restaurantId as string,
-    destinationZoneId: input.destinationZoneId as string,
+    restaurantId: ids.restaurantId,
+    destinationZoneId: ids.destinationZoneId,
     deliveryAddress,
-    transportType: transportType as 'BICICLETA' | 'VEHICULO_ELECTRICO',
-    items: rows.map((item) => {
-      const record = item as { productId: string; quantity: number };
-      return { productId: record.productId, quantity: record.quantity };
-    }),
+    transportType,
+    items,
   };
 }

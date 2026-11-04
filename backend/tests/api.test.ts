@@ -11,7 +11,7 @@ import jwt from 'jsonwebtoken';
 import { checkDeployment } from '../scripts/check-deployed.mjs';
 import { createApp } from '../src/app';
 import type { PrismaClient } from '../src/generated/prisma/client';
-import { readConfig } from '../src/lib/config';
+import { readConfig, type ApiConfig } from '../src/lib/config';
 import { createToken } from '../src/lib/tokens';
 
 const secret = randomBytes(32).toString('hex');
@@ -25,6 +25,7 @@ function fixture() {
   const calls: { method: string; input: any }[] = [];
   let saved: typeof user & { passwordHash: string } | null = null;
   let failure: unknown;
+  let hangs = false;
   const db = {
     usuario: {
       async create(input: any) {
@@ -51,17 +52,24 @@ function fixture() {
         }];
       },
     },
+    async $queryRaw(...args: any[]) {
+      calls.push({ method: '$queryRaw', input: args });
+      if (failure) throw failure;
+      if (hangs) return new Promise(() => {});
+      return [{ '?column?': 1 }];
+    },
   };
   return {
     db: db as unknown as PrismaClient, calls,
     deactivate() { if (saved) saved.activo = false; },
     fail(error: unknown) { failure = error; },
+    hang() { hangs = true; },
   };
 }
 
-async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Promise<void>, trustProxyHops: 0 | 1 = 0) {
+async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Promise<void>, trustProxyHops: 0 | 1 = 0, overrides: Partial<ApiConfig> = {}) {
   const data = fixture();
-  const server: Server = createApp(data.db, { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops })
+  const server: Server = createApp(data.db, { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops, ...overrides })
     .listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();
@@ -103,6 +111,33 @@ test('root is exact; unknown routes and unsupported methods return 404', async (
     assert.equal((await fetch(`${url}/missing`)).status, 404);
     assert.equal((await fetch(`${url}/restaurants`, { method: 'DELETE' })).status, 404);
   });
+});
+
+test('health check reports ok only when the database answers in time', async () => {
+  await serve(async (url) => {
+    const response = await fetch(`${url}/health`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'ok' });
+  });
+});
+
+test('health check returns 503 without internals on any database error or stall', async () => {
+  await serve(async (url, data) => {
+    data.fail(new Error('boom'));
+    const failed = await fetch(`${url}/health`);
+    assert.equal(failed.status, 503);
+    const body = await failed.json();
+    assert.deepEqual(body, { error: 'Servicio temporalmente no disponible.' });
+    assert.equal(JSON.stringify(body).includes('boom'), false);
+  });
+  await serve(async (url, data) => {
+    data.hang();
+    const started = Date.now();
+    const stalled = await fetch(`${url}/health`);
+    assert.equal(stalled.status, 503);
+    assert.ok(Date.now() - started < 2000);
+    assert.deepEqual(await stalled.json(), { error: 'Servicio temporalmente no disponible.' });
+  }, 0, { healthCheckTimeoutMs: 50 });
 });
 
 test('restaurants use active/eco filtering and exclude credentials', async () => {
