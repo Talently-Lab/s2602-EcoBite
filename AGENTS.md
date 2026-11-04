@@ -4,6 +4,7 @@
 - `pnpm-workspace.yaml` packages: `frontend`, `backend`, `api-portal`. Single root `pnpm-lock.yaml`, `packageManager: pnpm@10.34.5`, Node 22+.
 - Root scripts (from repo root): `pnpm dev:frontend` / `pnpm dev:backend` / `pnpm dev:portal` (`--filter`), `pnpm build` (`pnpm -r build`), `pnpm build:portal` (portal only), `pnpm lint` (frontend only — `pnpm -r lint` for all packages). Or `cd frontend|backend|api-portal` and run package scripts directly. Never `npm`/`yarn`.
 - `pnpm-workspace.yaml` pins security overrides (`mysql2`, `deepmerge-ts`, `source-map-js`) plus `auditConfig` ignores — don't change without checking the CI audit step.
+- Frontend dependency security: `pnpm --filter frontend check:dependencies` checks the installed shadcn/registry deepmerge patch, ts-morph/minimatch compatibility, and patched devtools serialization. `patches/deepmerge@4.3.1.patch` rejects `__proto__` keys in source and distributed builds; keep it until an upstream fix is adopted. Its version-based low advisory remains visible; no new audit exception is applied.
 - Commits follow `.github/git-commit-instructions.md`: Conventional Commits in English, mandatory scope, blank line between title and body.
 
 ## CI (backend + portal only)

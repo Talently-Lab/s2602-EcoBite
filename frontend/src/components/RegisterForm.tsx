@@ -32,7 +32,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
       { name: data.name, email: data.email, password: data.password },
       {
         onSuccess: () => {
-          navigate('/home')
+          navigate('/catalog')
         },
         onError: (error) => {
           setError("root.server", {

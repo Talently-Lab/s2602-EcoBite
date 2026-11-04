@@ -32,7 +32,7 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
     clearErrors("root.server");
     login.mutate(data, {
       onSuccess: () => {
-        navigate('/home')
+        navigate('/catalog')
       },
       onError: (error) => {
         setError("root.server", {

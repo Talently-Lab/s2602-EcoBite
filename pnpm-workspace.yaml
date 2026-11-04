@@ -19,9 +19,15 @@ overrides:
   undici: 7.30.1
   ip-address: 10.7.5
   qs: 6.16.1
+  seroval: 1.6.11
+  systeminformation: 5.33.16
+  '@ts-morph/common@0.27.0>minimatch': 11.0.3
 
 auditConfig:
   ignoreGhsas:
     # braces<=3.0.3 stack-exhaustion DoS (CVE-2026-93687) has no patched release yet.
     # Only reachable via the dev-only shadcn CLI; exploit needs attacker-controlled glob input.
     - GHSA-vfj7-8cjw-p6xm
+
+patchedDependencies:
+  deepmerge@4.3.1: patches/deepmerge@4.3.1.patch
