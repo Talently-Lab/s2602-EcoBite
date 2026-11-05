@@ -1,0 +1,14 @@
+{
+  "dbml": {
+    "entry": "docs/database/ecobite.dbml"
+  },
+  "diagram": {
+    "id": "6ae91cc3027db74914cccefe",
+    "workspaceId": ""
+  },
+  "document": {
+    "source": "file",
+    "workspaceUrlName": "",
+    "projectUrlName": ""
+  }
+}

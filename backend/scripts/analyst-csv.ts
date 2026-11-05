@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EstadoPedido, RolUsuario, TipoTransporte } from '../src/generated/prisma/enums';
+import { categoriaFromLabel } from '../src/lib/categories';
 
 export const sheets = ['Zonas', 'Empaques', 'Usuarios', 'Restaurantes', 'Producto', 'Producto_Empaque', 'Pedidos', 'Detalle'] as const;
 export type Sheet = typeof sheets[number];
@@ -63,6 +64,7 @@ const integer = (min = 0, max = 2147483647): Rule => (value) =>
 const decimal = (precision: number, scale: number): Rule => (value) =>
   new RegExp(`^\\d{1,${precision - scale}}(?:[.,]\\d{1,${scale}})?$`).test(value);
 const boolean: Rule = (value) => value === 'TRUE' || value === 'FALSE';
+const categoria: Rule = (value) => categoriaFromLabel(value) !== null;
 const oneOf = (values: string[]): Rule => (value) => values.includes(value);
 const code = (prefix: string): Rule => (value) => new RegExp(`^${prefix}-\\d+$`).test(value);
 const email: Rule = (value) => value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -90,8 +92,8 @@ const fields: Record<Sheet, Record<string, Rule>> = {
     rol: oneOf([...Object.values(RolUsuario), 'REPARTIDOR']), id_zona_habitual: optional(integer(1)),
   },
   Restaurantes: {
-    id_restaurante: code('RES'), nombre_restaurante: text(), categoria: optional(text()),
-    es_100_eco: boolean, activo_restaurante: boolean, id_zona: integer(1),
+    id_restaurante: code('RES'), nombre_restaurante: text(), direccion: optional(text()),
+    categoria, es_100_eco: boolean, activo_restaurante: boolean, id_zona: integer(1),
     email, password_hash: hash, fecha_creacion: date, fecha_edicion: date,
   },
   Producto: {

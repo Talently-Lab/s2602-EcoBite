@@ -45,6 +45,13 @@ Reglas del archivo:
   `SEED_ADMIN_NAME`).
   ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
 
+### Changed
+
+- `GET /restaurants` y `GET /restaurants/{id}`: `category` ya no admite `null`
+  y siempre devuelve una de las cuatro etiquetas (`Comida saludable`,
+  `Comida de estación`, `Comida vegana`, `Comida casera`).
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+
 ### Security
 
 - El rol administrativo nunca se lee del JWT: `GET /dashboard/stats` consulta

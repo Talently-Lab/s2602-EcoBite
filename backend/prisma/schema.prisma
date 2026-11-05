@@ -31,6 +31,23 @@ enum EstadoPedido {
   @@map("pedido_estado")
 }
 
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+
+  @@map("estado_solicitud")
+}
+
+enum CategoriaRestaurante {
+  COMIDA_SALUDABLE
+  COMIDA_DE_ESTACION
+  COMIDA_VEGANA
+  COMIDA_CASERA
+
+  @@map("categoria_restaurante")
+}
+
 model Usuario {
   id                String     @id @default(uuid()) @map("id_usuario") @db.Uuid
   nombreCompleto    String     @map("nombre_completo")
@@ -43,10 +60,15 @@ model Usuario {
   passwordHash      String     @map("password_hash")
   rol               RolUsuario @default(CLIENTE)
   zonaHabitualId    String?    @map("id_zona_habitual") @db.Uuid
+  restauranteId     String?    @map("id_restaurante") @db.Uuid
   zonaHabitual      Zona?      @relation("ZonaHabitual", fields: [zonaHabitualId], references: [id])
+  restaurante       Restaurante? @relation("RestauranteAdmin", fields: [restauranteId], references: [id])
   pedidos           Pedido[]
+  solicitudes       SolicitudRestaurante[] @relation("SolicitudUsuario")
+  solicitudesRevisadas SolicitudRestaurante[] @relation("SolicitudRevisor")
 
   @@index([zonaHabitualId])
+  @@index([restauranteId])
   @@map("usuario")
 }
 
@@ -60,6 +82,7 @@ model Zona {
   usuarios            Usuario[]     @relation("ZonaHabitual")
   restaurantes        Restaurante[]
   pedidosDestino      Pedido[]      @relation("ZonaDestino")
+  solicitudes         SolicitudRestaurante[]
 
   @@map("zona")
 }
@@ -67,15 +90,16 @@ model Zona {
 model Restaurante {
   id            String     @id @default(uuid()) @map("id_restaurante") @db.Uuid
   nombre        String     @map("nombre_restaurante")
-  categoria     String?
+  direccion     String
+  categoria     CategoriaRestaurante
   esEco         Boolean    @default(true) @map("es_100_eco")
   activo        Boolean    @default(true) @map("activo_restaurante")
   zonaId        String     @map("id_zona") @db.Uuid
   email         String     @unique
-  passwordHash  String     @map("password_hash")
   fechaCreacion DateTime   @default(now()) @map("fecha_creacion")
   fechaEdicion  DateTime   @updatedAt @map("fecha_edicion")
   zona          Zona       @relation(fields: [zonaId], references: [id])
+  administradores Usuario[] @relation("RestauranteAdmin")
   productos     Producto[]
   pedidos       Pedido[]
 
@@ -144,6 +168,30 @@ model Detalle {
   @@index([pedidoId])
   @@index([productoId])
   @@map("detalle")
+}
+
+model SolicitudRestaurante {
+  id                        String               @id @default(uuid()) @map("id_solicitud") @db.Uuid
+  usuarioId                 String               @map("id_usuario") @db.Uuid
+  nombreRestaurante         String               @map("nombre_restaurante")
+  direccion                 String
+  email                     String               @unique
+  categoria                 CategoriaRestaurante
+  estado                    EstadoSolicitud      @default(PENDIENTE) @map("estado_solicitud")
+  fechaAceptacionCompromiso DateTime             @map("fecha_aceptacion_compromiso")
+  fechaSolicitud            DateTime             @default(now()) @map("fecha_solicitud")
+  fechaRevision             DateTime?            @map("fecha_revision")
+  adminRevisorId            String?              @map("id_admin_revisor") @db.Uuid
+  zonaId                    String               @map("id_zona") @db.Uuid
+  usuario                   Usuario              @relation("SolicitudUsuario", fields: [usuarioId], references: [id])
+  adminRevisor              Usuario?             @relation("SolicitudRevisor", fields: [adminRevisorId], references: [id])
+  zona                      Zona                 @relation(fields: [zonaId], references: [id])
+
+  @@index([usuarioId])
+  @@index([adminRevisorId])
+  @@index([zonaId])
+  @@index([estado])
+  @@map("solicitud_restaurante")
 }
 
 model Empaque {

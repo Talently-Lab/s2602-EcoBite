@@ -32,7 +32,8 @@ function fixture(): Dataset {
       activo_usuario: 'TRUE', password_hash: hash, rol, id_zona_habitual: '1',
     })),
     Restaurantes: [{
-      id_restaurante: 'RES-1', nombre_restaurante: 'Local demo', categoria: '',
+      id_restaurante: 'RES-1', nombre_restaurante: 'Local demo', direccion: 'Direccion demo',
+      categoria: 'Comida saludable',
       es_100_eco: 'TRUE', activo_restaurante: 'TRUE', id_zona: '1', email: 'local@example.test',
       password_hash: hash, fecha_creacion: timestamp, fecha_edicion: edited,
     }],
@@ -84,6 +85,7 @@ test('approved exclusion keeps all orders, does not mutate CSV rows and refuses 
 test('validation rejects malformed fields without exposing their values', () => {
   const cases: [Sheet, string, string][] = [
     ['Usuarios', 'rol', 'ADMIN'], ['Usuarios', 'email', 'private-invalid-value'],
+    ['Restaurantes', 'categoria', ''], ['Restaurantes', 'categoria', 'private-invalid-value'],
     ['Producto', 'disponible', 'yes'], ['Producto', 'precio', '1,001'],
     ['Producto', 'precio', 'NaN'], ['Producto', 'fecha_creacion', '2026-02-30 00:00:00'],
     ['Producto', 'fecha_edicion', 'not-a-date'], ['Detalle', 'cantidad', '2items'],
@@ -132,6 +134,9 @@ test('mapping preserves timestamps, hashes and decimals, with deterministic UUID
   const { data } = validateDataset(fixture());
   const plan = prepareImport(data, new Map([['Retiro', 'zone-uuid']]), new Map([[packName, 'pack-uuid']]));
   assert.equal(plan.usuarios[0].passwordHash, hash);
+  assert.equal(plan.restaurantes[0].categoria, 'COMIDA_SALUDABLE');
+  assert.equal(plan.restaurantes[0].direccion, 'Direccion demo');
+  assert.equal('passwordHash' in plan.restaurantes[0], false);
   for (const row of [plan.usuarios[0], plan.productos[0], plan.restaurantes[0], plan.pedidos[0]]) {
     assert.ok(row.fechaEdicion instanceof Date);
     assert.equal(row.fechaEdicion.toISOString(), '2026-12-30T12:34:56.000Z');
@@ -146,6 +151,22 @@ test('mapping preserves timestamps, hashes and decimals, with deterministic UUID
   assert.notEqual(sourceId('usuario', 'USR-1'), sourceId('pedido', 'USR-1'));
   assert.match(plan.usuarios[0].id!, /^[a-f0-9-]{14}8[a-f0-9-]{21}$/);
   assert.throws(() => prepareImport(data, new Map(), new Map()), ImportValidationError);
+});
+
+test('categoria labels map to the enum tolerating case, accents and whitespace', () => {
+  const zones = new Map([['Retiro', 'zone-uuid']]);
+  const packaging = new Map([[packName, 'pack-uuid']]);
+  for (const [label, expected] of [
+    ['Comida Saludable', 'COMIDA_SALUDABLE'],
+    [' comida de estacion ', 'COMIDA_DE_ESTACION'],
+    ['COMIDA VEGANA', 'COMIDA_VEGANA'],
+    ['Comida Casera', 'COMIDA_CASERA'],
+  ] as const) {
+    const data = fixture();
+    data.Restaurantes[0].categoria = label;
+    const plan = prepareImport(validateDataset(data).data, zones, packaging);
+    assert.equal(plan.restaurantes[0].categoria, expected, label);
+  }
 });
 
 test('KPI validation catches inconsistent amounts, packaging, CO2, transport and restaurant links', () => {
@@ -249,7 +270,7 @@ test('PostgreSQL import is atomic, repeatable and preserves existing accounts', 
     const zone = await prisma.zona.findUniqueOrThrow({ where: { nombreBarrio: 'Retiro' } });
     await prisma.restaurante.create({ data: {
       nombre: 'Email collision probe', email: data.Restaurantes[0].email,
-      passwordHash: hash, zonaId: zone.id,
+      direccion: 'Probe 123', categoria: 'COMIDA_SALUDABLE', zonaId: zone.id,
     } });
     await assert.rejects(importDataset(prisma, data), (error: unknown) =>
       !!error && typeof error === 'object' && 'code' in error && error.code === 'P2002');

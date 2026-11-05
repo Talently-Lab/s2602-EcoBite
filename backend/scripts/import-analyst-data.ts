@@ -79,7 +79,7 @@ export async function main(args = process.argv.slice(2)) {
   const { data, excludedCouriers } = validateDataset(source);
   for (const sheet of sheets) console.log(`${sheet}: ${data[sheet].length} validated rows`);
   console.log(`REPARTIDOR: ${excludedCouriers} accounts excluded by approved MVP policy`);
-  console.log('Source password hashes are preserved; SHA-256 demo accounts cannot use bcrypt login.');
+  console.log('User password hashes are preserved; SHA-256 demo accounts cannot use bcrypt login.');
   if (!flags.includes('--apply')) {
     console.log('PASS: validation only; no database connection or writes. Use --apply explicitly to import.');
     return;

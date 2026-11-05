@@ -10,12 +10,22 @@ y `ECOBITE_data` de Rebeca. El MVP aprobado usa tres roles y cuatro estados.
 fue aprobada explícitamente. Se conservan UUIDs internos con traducción estable
 de los códigos del CSV. No se agregan campos ni flujo de repartidor.
 
+Actualización S6 wave 2 (migración `restaurante_onboarding`): enums
+`categoria_restaurante` y `estado_solicitud`, tabla `solicitud_restaurante`,
+`usuario.id_restaurante`, `restaurantes.direccion`; se elimina
+`restaurantes.password_hash`. La fuente canónica del DER es
+`docs/database/ecobite.dbml`.
+
 ```mermaid
 erDiagram
     USUARIO }o--o| ZONA : "habita en"
+    USUARIO }o--o| RESTAURANTES : administra
     USUARIO ||--o{ PEDIDO : realiza
+    USUARIO ||--o{ SOLICITUD_RESTAURANTE : solicita
+    USUARIO |o--o{ SOLICITUD_RESTAURANTE : revisa
     ZONA ||--o{ RESTAURANTES : contiene
     ZONA ||--o{ PEDIDO : "destino de"
+    ZONA ||--o{ SOLICITUD_RESTAURANTE : "postulada en"
     RESTAURANTES ||--|{ PRODUCTO : publica
     RESTAURANTES ||--o{ PEDIDO : recibe
     PEDIDO ||--|{ DETALLE : contiene
@@ -35,6 +45,7 @@ erDiagram
         string password_hash
         enum rol "CLIENTE | ADMIN_PLATAFORMA | RESTAURANTE_ADMIN"
         uuid id_zona_habitual FK
+        uuid id_restaurante FK
     }
 
     ZONA {
@@ -49,12 +60,12 @@ erDiagram
     RESTAURANTES {
         uuid id_restaurante PK
         string nombre_restaurante
-        string categoria
+        string direccion
+        enum categoria "COMIDA_SALUDABLE | COMIDA_DE_ESTACION | COMIDA_VEGANA | COMIDA_CASERA"
         boolean es_100_eco
         boolean activo_restaurante
         uuid id_zona FK
         string email UK
-        string password_hash
         timestamp fecha_creacion
         timestamp fecha_edicion
     }
@@ -114,14 +125,30 @@ erDiagram
         uuid id_empaque "PK, FK"
         int envases_por_unidad "mínimo 1 (CHECK)"
     }
+
+    SOLICITUD_RESTAURANTE {
+        uuid id_solicitud PK
+        uuid id_usuario FK
+        string nombre_restaurante
+        string direccion
+        string email UK
+        enum categoria "COMIDA_SALUDABLE | COMIDA_DE_ESTACION | COMIDA_VEGANA | COMIDA_CASERA"
+        enum estado_solicitud "PENDIENTE | APROBADA | RECHAZADA"
+        timestamp fecha_aceptacion_compromiso
+        timestamp fecha_solicitud
+        timestamp fecha_revision
+        uuid id_admin_revisor FK
+        uuid id_zona FK
+    }
 ```
 
 ## Notas
 
 - **Datos de referencia (seed)**: `pnpm --filter backend prisma:seed` carga los 48 barrios de CABA en `zona` y los 8 envases en `empaques` (idempotente). `distancia_promedio_km` = Haversine desde el Obelisco (-34.6037, -58.3816), mínimo 0.5 km. Restaurantes, productos y `producto_empaque` los provee el Data Analyst más adelante.
-- **Autenticación**: el registro público sigue creando solo `CLIENTE`. Los roles administrativos no habilitan registro público, permisos nuevos ni login de restaurantes; la tabla `restaurantes` conserva sus credenciales y aún no tiene un endpoint de login propio.
-- **Enums**: `rol` (CLIENTE | ADMIN_PLATAFORMA | RESTAURANTE_ADMIN), `tipo_transporte` (BICICLETA | VEHICULO_ELECTRICO), `pedido_estado` (PENDIENTE | COMPLETADO | CANCELADO | EN_PREPARACION). Los KPIs filtran por `COMPLETADO`; los pedidos activos son `PENDIENTE` y `EN_PREPARACION`.
-- **Texto libre (no enum)**: `restaurantes.categoria` y `producto.categoria_comida`.
+- **Autenticación**: el registro público sigue creando solo `CLIENTE`. Los roles administrativos no habilitan registro público, permisos nuevos ni login de restaurantes; `restaurantes` ya no guarda credenciales: el email es identidad de contacto y un `RESTAURANTE_ADMIN` se vincula al local por `usuario.id_restaurante`.
+- **Enums**: `rol` (CLIENTE | ADMIN_PLATAFORMA | RESTAURANTE_ADMIN), `tipo_transporte` (BICICLETA | VEHICULO_ELECTRICO), `pedido_estado` (PENDIENTE | COMPLETADO | CANCELADO | EN_PREPARACION), `categoria_restaurante` (COMIDA_SALUDABLE | COMIDA_DE_ESTACION | COMIDA_VEGANA | COMIDA_CASERA), `estado_solicitud` (PENDIENTE | APROBADA | RECHAZADA). Los KPIs filtran por `COMPLETADO`; los pedidos activos son `PENDIENTE` y `EN_PREPARACION`.
+- **Texto libre (no enum)**: `producto.categoria_comida`.
+- **Onboarding de restaurantes**: `solicitud_restaurante` registra la postulación (datos del local, email único, compromiso aceptado) y su revisión por un admin; aún no tiene endpoints públicos.
 - **`detalle.producto_nombre` y `precio_unitario`** son copias históricas: si el restaurante cambia el producto, el pedido sigue mostrando lo que se compró.
 
 ### Campos calculados (se guardan al crear el pedido)

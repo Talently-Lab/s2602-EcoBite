@@ -90,6 +90,79 @@ async function seedAdmin() {
   console.log(`Seed de admin aplicado para ${admin.email} (rol ADMIN_PLATAFORMA).`)
 }
 
+// Cuentas demo para la verificación del PM (workbook decisión 11): un cliente y
+// un restaurante ya aprobado con su usuario RESTAURANTE_ADMIN vinculado. Los
+// emails son fijos y documentados; la contraseña solo vive en el entorno.
+const DEMO_CLIENTE_EMAIL = 'cliente.demo@ecobite.test'
+const DEMO_RESTAURANTE_EMAIL = 'restaurante.demo@ecobite.test'
+
+async function seedDemoUsers() {
+  const password = process.env.SEED_DEMO_USERS_PASSWORD
+  if (!password) {
+    console.log('Seed de usuarios demo omitido: SEED_DEMO_USERS_PASSWORD no está configurada.')
+    return
+  }
+
+  const cliente = validateRegistration({ name: 'Cliente Demo', email: DEMO_CLIENTE_EMAIL, password })
+  const clienteHash = await bcrypt.hash(cliente.password, 12)
+  await prisma.usuario.upsert({
+    where: { email: cliente.email },
+    update: { passwordHash: clienteHash, rol: 'CLIENTE', activo: true },
+    create: { nombreCompleto: cliente.name, email: cliente.email, passwordHash: clienteHash, rol: 'CLIENTE' },
+  })
+
+  const zona = await prisma.zona.findUnique({ where: { nombreBarrio: 'Palermo' } })
+  if (!zona) throw new Error('Zona Palermo no encontrada; el seed base de zonas debe correr antes.')
+
+  const restaurante = await prisma.restaurante.upsert({
+    where: { email: DEMO_RESTAURANTE_EMAIL },
+    update: {},
+    create: {
+      nombre: 'Restaurante Demo EcoBite',
+      direccion: 'Av. Santa Fe 3000',
+      categoria: 'COMIDA_SALUDABLE',
+      email: DEMO_RESTAURANTE_EMAIL,
+      zonaId: zona.id,
+    },
+  })
+
+  const restUser = validateRegistration({ name: 'Restaurante Demo', email: DEMO_RESTAURANTE_EMAIL, password })
+  const restHash = await bcrypt.hash(restUser.password, 12)
+  const restUsuario = await prisma.usuario.upsert({
+    where: { email: restUser.email },
+    update: { passwordHash: restHash, rol: 'RESTAURANTE_ADMIN', activo: true, restauranteId: restaurante.id },
+    create: {
+      nombreCompleto: restUser.name,
+      email: restUser.email,
+      passwordHash: restHash,
+      rol: 'RESTAURANTE_ADMIN',
+      restauranteId: restaurante.id,
+    },
+  })
+
+  const adminRevisor = process.env.SEED_ADMIN_EMAIL
+    ? await prisma.usuario.findUnique({ where: { email: process.env.SEED_ADMIN_EMAIL }, select: { id: true } })
+    : null
+
+  await prisma.solicitudRestaurante.upsert({
+    where: { email: DEMO_RESTAURANTE_EMAIL },
+    update: { estado: 'APROBADA', fechaRevision: new Date(), adminRevisorId: adminRevisor?.id ?? null },
+    create: {
+      usuarioId: restUsuario.id,
+      nombreRestaurante: restaurante.nombre,
+      direccion: restaurante.direccion,
+      email: DEMO_RESTAURANTE_EMAIL,
+      categoria: 'COMIDA_SALUDABLE',
+      estado: 'APROBADA',
+      fechaAceptacionCompromiso: new Date(),
+      fechaRevision: new Date(),
+      adminRevisorId: adminRevisor?.id ?? null,
+      zonaId: zona.id,
+    },
+  })
+  console.log('Seed de usuarios demo aplicado (cliente + restaurante aprobado).')
+}
+
 async function main() {
   await prisma.$transaction(
     [
@@ -105,6 +178,7 @@ async function main() {
   )
 
   await seedAdmin()
+  await seedDemoUsers()
 
   console.log(`Seed completo: ${zonas.length} zonas y ${empaques.length} empaques.`)
 }
