@@ -385,6 +385,33 @@ test('POST /orders rejects malformed bodies before any DB call', async () => {
   });
 });
 
+test('POST /orders keeps field-specific messages for missing keys and rejects extra keys', async () => {
+  await serve(async (url, data) => {
+    const token = await signIn(url);
+    const count = data.calls.length;
+    const missing: [string, string][] = [
+      ['restaurantId', 'restaurantId y destinationZoneId deben ser UUID válidos.'],
+      ['destinationZoneId', 'restaurantId y destinationZoneId deben ser UUID válidos.'],
+      ['deliveryAddress', 'La dirección de entrega es obligatoria y debe tener como máximo 200 caracteres.'],
+      ['transportType', 'transportType debe ser BICICLETA o VEHICULO_ELECTRICO.'],
+      ['items', 'items debe tener entre 1 y 50 productos con productId UUID y quantity entera entre 1 y 99, sin repetidos.'],
+    ];
+    for (const [key, message] of missing) {
+      const body: Record<string, unknown> = { ...orderBody() };
+      delete body[key];
+      const response = await post(`${url}/orders`, body, token);
+      assert.equal(response.status, 400, key);
+      assert.deepEqual(await response.json(), { error: message }, key);
+    }
+    const extra = await post(`${url}/orders`, orderBody({ extra: true }), token);
+    assert.equal(extra.status, 400);
+    assert.deepEqual(await extra.json(), {
+      error: 'Solo se permiten los campos restaurantId, destinationZoneId, deliveryAddress, transportType e items.',
+    });
+    assert.equal(data.calls.length, count);
+  });
+});
+
 test('POST /orders rejects unavailable products, foreign or inactive targets and expired sessions', async () => {
   await serve(async (url, data) => {
     const token = await signIn(url);

@@ -2,6 +2,7 @@ export interface ApiConfig {
   jwtSecret: string;
   corsOrigins: string[];
   trustProxyHops: 0 | 1;
+  healthCheckTimeoutMs?: number;
 }
 
 export class ConfigError extends Error {}

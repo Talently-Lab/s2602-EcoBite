@@ -24,6 +24,9 @@ valores ni versionar el archivo `.env`.
 | `JWT_SECRET` | Secreto aleatorio de al menos 32 bytes, obligatorio. |
 | `CORS_ORIGINS` | Orígenes exactos separados por comas, sin rutas. En desarrollo se admite por defecto `http://localhost:5173`; en producción ninguno si no se configura. |
 | `TRUST_PROXY_HOPS` | `0` por defecto; `1` únicamente detrás de un proxy controlado como el ingreso de Render. |
+| `SEED_ADMIN_EMAIL` | Opcional. Junto con `SEED_ADMIN_PASSWORD`, el seed crea o promueve la cuenta administradora con este email (normalizado a minúsculas). |
+| `SEED_ADMIN_PASSWORD` | Opcional. Mismas reglas que el registro: al menos 8 caracteres y máximo 72 bytes UTF-8 (bcrypt costo 12). Debe configurarse junto con `SEED_ADMIN_EMAIL`; si solo hay una, el seed falla. |
+| `SEED_ADMIN_NAME` | Opcional. Nombre visible de la cuenta administradora cuando el seed la crea; por defecto `Administrador EcoBite`. |
 
 Generar el secreto con un gestor de secretos o `openssl rand -hex 32` y guardarlo
 directamente en `.env` o Doppler; no pegarlo en chat ni documentación.
@@ -40,16 +43,48 @@ pnpm prisma:seed
 Aplicar migraciones únicamente a la base local destinada al proyecto.
 El seed actual carga zonas y empaques; no inventa restaurantes ni productos.
 Por eso una base recién inicializada puede devolver `[]` en restaurantes.
+Si `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` están configuradas, el seed
+además crea la cuenta `ADMIN_PLATAFORMA` o, si el email ya existe, restablece
+su contraseña, rol y estado activo (es idempotente).
 
 Desde la raíz: `pnpm dev:backend`. Desde `backend/`: `pnpm dev`.
 El servidor valida la configuración y ejecuta `SELECT 1` antes de escuchar.
-`GET /api` solo confirma que el proceso responde: **no es monitoreo de servicios**.
+`GET /api` solo confirma que el proceso responde: para monitoreo usar
+`GET /api/health`.
 
 ## Contrato HTTP
 
 Enviar `Content-Type: application/json` en los POST. Límite del cuerpo: 16 KiB.
 Las respuestas no deben almacenarse en caché. Los errores tienen el formato
 `{"error":"mensaje"}` sin stack trace ni datos internos.
+
+### `GET /api/health`
+
+Público. Ejecuta `SELECT 1` contra la base de datos con un límite de
+2 segundos. Responde `200` con `{"status":"ok"}` si la base contesta a tiempo;
+ante cualquier error o demora responde `503` con
+`{"error":"Servicio temporalmente no disponible."}`, sin exponer detalles
+internos (cadena de conexión, versión ni stack).
+
+### `GET /api/dashboard/stats`
+
+Protegido: `Authorization: Bearer <accessToken>` y además la cuenta debe tener
+rol `ADMIN_PLATAFORMA` y estar activa. El rol se consulta en la base de datos
+en cada solicitud (nunca desde el JWT), así que un token sigue válido pero
+pierde el acceso apenas se degrada el rol o se desactiva la cuenta.
+`401`: sesión o cuenta inválida. `403`: cualquier otro rol.
+
+```ts
+{
+  totalOrders: number;    // pedidos en estado COMPLETADO
+  totalRevenue: number;   // suma de monto_total de esos pedidos
+  totalCo2Saved: number;  // suma de co2_ahorrado_kg de esos pedidos
+}
+```
+
+Solo cuentan los pedidos `COMPLETADO`; `PENDIENTE`, `EN_PREPARACION` y
+`CANCELADO` se excluyen. Hoy ningún endpoint mueve un pedido a `COMPLETADO`,
+así que en producción los tres totales responden `0` hasta que exista uno.
 
 ### `GET /api/openapi.yaml` y `GET /docs`
 

@@ -29,6 +29,33 @@ Reglas del archivo:
 - En `Security`, nombrar el paquete, la versión corregida y el tipo de falla,
   enlazando el advisory (CVE/GHSA) cuando exista.
 
+## [Unreleased]
+
+### Added
+
+- `GET /health`: chequeo público de salud que ejecuta `SELECT 1` con un límite
+  de 2 segundos; ante cualquier error o demora responde `503` sin exponer
+  detalles internos.
+  ([Issue #34](https://github.com/Talently-Lab/s2602-EcoBite/issues/34))
+- `GET /dashboard/stats` (solo `ADMIN_PLATAFORMA`): totales globales de pedidos
+  en estado `COMPLETADO` (cantidad, ingresos y CO₂ ahorrado).
+  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+- El seed crea la cuenta administradora cuando `SEED_ADMIN_EMAIL` y
+  `SEED_ADMIN_PASSWORD` están configuradas (nombre opcional con
+  `SEED_ADMIN_NAME`).
+  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+
+### Security
+
+- El rol administrativo nunca se lee del JWT: `GET /dashboard/stats` consulta
+  `activo` y `rol` en la base en cada solicitud, así que un token sigue válido
+  pero pierde el acceso apenas se degrada el rol o se desactiva la cuenta.
+  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+- Al ejecutarse con credenciales configuradas, el seed reemplaza también la
+  contraseña, el rol y el estado de la cuenta administradora: un registro
+  previo con ese email no conserva su propia contraseña al ser promovido.
+  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+
 ## [1.1.0] - 2026-10-23
 
 Esta versión introduce los pedidos de delivery sustentable: el cliente arma su

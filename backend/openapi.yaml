@@ -52,6 +52,12 @@ tags:
   - name: users
     x-displayName: Usuarios
     description: Perfil del cliente autenticado.
+  - name: dashboard
+    x-displayName: Dashboard
+    description: Métricas globales de plataforma, solo para administradores.
+  - name: ops
+    x-displayName: Operación
+    description: Estado operativo del servicio.
 
 paths:
   /restaurants:
@@ -811,6 +817,103 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /health:
+    get:
+      tags:
+        - ops
+      summary: Comprobar la salud del servicio
+      description: |
+        Ejecuta `SELECT 1` contra la base de datos con un límite de 2 segundos.
+        Ante cualquier error o demora responde `503` con el formato de error
+        estándar, sin exponer detalles internos.
+      operationId: checkHealth
+      security: []
+      x-badges:
+        - name: Público
+          position: after
+      responses:
+        '200':
+          description: La API y la base de datos responden.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: ok
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /dashboard/stats:
+    get:
+      tags:
+        - dashboard
+      summary: Obtener métricas globales de pedidos completados
+      description: |
+        Requiere el JWT de una cuenta activa con rol `ADMIN_PLATAFORMA`. El rol
+        se verifica en la base de datos en cada solicitud, nunca desde el token:
+        un JWT sigue válido pero pierde el acceso apenas se degrada el rol o se
+        desactiva la cuenta. Otros roles responden `403`.
+
+        Solo suman los pedidos en estado `COMPLETADO`; si no hay ninguno, los
+        tres totales responden `0`.
+      operationId: getDashboardStats
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      responses:
+        '200':
+          description: Totales globales de pedidos completados.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+              example:
+                totalOrders: 2
+                totalRevenue: 4000.25
+                totalCo2Saved: 1.582
+        '401':
+          description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Sesión inválida o vencida.
+        '403':
+          description: La cuenta no tiene rol `ADMIN_PLATAFORMA`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No tenés permisos para acceder a este recurso.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1386,6 +1489,39 @@ components:
           examples: [3600]
         user:
           $ref: '#/components/schemas/PublicUser'
+      additionalProperties: false
+
+    HealthStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+      additionalProperties: false
+
+    DashboardStats:
+      type: object
+      description: Totales globales calculados solo sobre pedidos en estado COMPLETADO.
+      required:
+        - totalOrders
+        - totalRevenue
+        - totalCo2Saved
+      properties:
+        totalOrders:
+          type: integer
+          description: Cantidad de pedidos en estado COMPLETADO.
+          examples: [2]
+        totalRevenue:
+          type: number
+          description: Suma de los montos totales de los pedidos COMPLETADO.
+          examples: [4000.25]
+        totalCo2Saved:
+          type: number
+          description: Suma del CO₂ ahorrado (kg) de los pedidos COMPLETADO.
+          examples: [1.582]
       additionalProperties: false
 
   responses:

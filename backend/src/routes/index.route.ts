@@ -4,11 +4,15 @@ import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import type { PrismaClient } from '../generated/prisma/client';
 import type { ApiConfig } from '../lib/config';
+import { createDashboardController } from '../controllers/dashboard.controller';
+import { createHealthController } from '../controllers/health.controller';
 import { createOrderController } from '../controllers/orders.controller';
 import { createRestaurantController } from '../controllers/restaurants.controller';
 import { createUserController } from '../controllers/users.controller';
 import { createZoneController } from '../controllers/zones.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authenticate, requireRole } from '../middlewares/auth.middleware';
+import { createDashboardService } from '../services/dashboard.service';
+import { createHealthService } from '../services/health.service';
 import { createOrderService } from '../services/orders.service';
 import { createRestaurantService } from '../services/restaurants.service';
 import { createUserService } from '../services/users.service';
@@ -20,6 +24,8 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig) {
   const restaurants = createRestaurantController(createRestaurantService(db));
   const zones = createZoneController(createZoneService(db));
   const orders = createOrderController(createOrderService(db));
+  const dashboard = createDashboardController(createDashboardService(db));
+  const health = createHealthController(createHealthService(db, config.healthCheckTimeoutMs));
   const auth = authenticate(config.jwtSecret);
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -38,6 +44,7 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig) {
     specCache ??= await readFile(specPath, 'utf8');
     res.type('application/yaml').send(specCache);
   });
+  apiRouter.get('/health', health.check);
   apiRouter.get('/restaurants', restaurants.list);
   apiRouter.get('/restaurants/:id', restaurants.getById);
   apiRouter.get('/zones', zones.list);
@@ -47,6 +54,7 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig) {
   apiRouter.post('/users/register', authLimiter, users.register);
   apiRouter.post('/users/login', authLimiter, users.login);
   apiRouter.get('/users/me', auth, users.me);
+  apiRouter.get('/dashboard/stats', auth, requireRole(db, 'ADMIN_PLATAFORMA'), dashboard.stats);
 
   return apiRouter;
 }
