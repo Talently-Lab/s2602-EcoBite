@@ -29,7 +29,12 @@ Reglas del archivo:
 - En `Security`, nombrar el paquete, la versión corregida y el tipo de falla,
   enlazando el advisory (CVE/GHSA) cuando exista.
 
-## [Unreleased]
+## [1.2.0] - 2026-11-06
+
+Esta versión suma la base del flujo de restaurantes aliados (solicitudes con
+estados y categorías), cuentas demo para la verificación del equipo, vistas de
+analítica de solo lectura sin PII y el apagado ordenado del servidor, además del
+health check y las estadísticas del admin.
 
 ### Added
 
@@ -44,6 +49,10 @@ Reglas del archivo:
   `SEED_ADMIN_PASSWORD` están configuradas (nombre opcional con
   `SEED_ADMIN_NAME`).
   ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+- Esquema `analytics` de solo lectura: vistas para el equipo de Datos que
+  excluyen `password_hash` y la PII de los solicitantes (email y dirección),
+  accesibles mediante el rol restringido `analista_datos`.
+  ([Issue #47](https://github.com/Talently-Lab/s2602-EcoBite/issues/47))
 - Cuentas demo de verificación (cliente y administrador de restaurante con su
   solicitud `APROBADA`) cuando `SEED_DEMO_USERS_PASSWORD` está configurada; el
   restaurante demo queda inactivo y nunca aparece en el catálogo.
@@ -66,6 +75,10 @@ Reglas del archivo:
   `activo` y `rol` en la base en cada solicitud, así que un token sigue válido
   pero pierde el acceso apenas se degrada el rol o se desactiva la cuenta.
   ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+- La columna `restaurantes.password_hash` se eliminó de la base: los
+  administradores de restaurante se autentican con su cuenta `usuario`, como el
+  resto de los roles; ya no existe una credencial separada por restaurante.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
 - Al ejecutarse con credenciales configuradas, el seed reemplaza también la
   contraseña, el rol y el estado de la cuenta administradora: un registro
   previo con ese email no conserva su propia contraseña al ser promovido.
@@ -141,5 +154,6 @@ distancia estimada y el CO₂ ahorrado.
   `Content-Type: application/json` (`415` si no coincide) y el cuerpo se limita a
   16 KiB (`413` si se excede).
 
-[1.1.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/fd39d6c...HEAD
+[1.2.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/1cbcffe...HEAD
+[1.1.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/fd39d6c...1cbcffe
 [1.0.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/7c458ba...fd39d6c
