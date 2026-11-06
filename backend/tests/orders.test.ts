@@ -486,7 +486,7 @@ test('GET /orders and /orders/:id only expose the authenticated user\'s orders',
 test('OpenAPI documents the new contract accurately', async () => {
   await serve(async (url) => {
     const spec = await (await fetch(`${url}/openapi.yaml`)).text();
-    assert.match(spec, /version: 1\.1\.0/);
+    assert.match(spec, /version: 1\.2\.0/);
     for (const path of ['/zones:', '/restaurants/{id}:', '/orders:', '/orders/{id}:']) {
       assert.match(spec, new RegExp(`  ${path.replace(/[/.]/g, '\\$&')}$`, 'm'));
     }
