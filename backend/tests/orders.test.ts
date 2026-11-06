@@ -53,17 +53,17 @@ const productNoPackaging = {
   precio: new Prisma.Decimal('2500.00'), disponible: true, empaques: [],
 };
 const restaurant = {
-  id: restaurantId, nombre: 'Verde Bistró', categoria: 'Comida saludable', esEco: true, activo: true,
+  id: restaurantId, nombre: 'Verde Bistró', categoria: 'COMIDA_SALUDABLE', esEco: true, activo: true,
   zonaId: zone.id, email: 'private@example.test', passwordHash: 'must-not-leak',
   zona: { id: zone.id, nombreBarrio: 'Palermo' },
   productos: [productB, productC, productA],
 };
 const inactiveRestaurant = {
-  id: inactiveRestaurantId, nombre: 'Local cerrado', categoria: null, esEco: true, activo: false,
+  id: inactiveRestaurantId, nombre: 'Local cerrado', categoria: 'COMIDA_CASERA', esEco: true, activo: false,
   zonaId: zone.id, zona: { id: zone.id, nombreBarrio: 'Palermo' }, productos: [],
 };
 const otherRestaurant = {
-  id: productD.restauranteId, nombre: 'Otro local', categoria: null, esEco: true, activo: true,
+  id: productD.restauranteId, nombre: 'Otro local', categoria: 'COMIDA_VEGANA', esEco: true, activo: true,
   zonaId: zone.id, zona: { id: zone.id, nombreBarrio: 'Palermo' }, productos: [productD],
 };
 
@@ -250,6 +250,16 @@ test('GET /zones returns active zones with numeric distance', async () => {
     assert.equal(typeof rows[0].distanceKm, 'number');
     const call = data.calls.find((entry) => entry.method === 'zona.findMany');
     assert.deepEqual(call?.input.where, { activo: true });
+  });
+});
+
+test('restaurant list and detail expose the category label, not the enum constant', async () => {
+  await serve(async (url) => {
+    const list = await (await fetch(`${url}/restaurants`)).json();
+    assert.deepEqual(list.map((row: any) => row.category), ['Comida vegana', 'Comida saludable']);
+    const detail = await (await fetch(`${url}/restaurants/${restaurantId}`)).json();
+    assert.equal(detail.category, 'Comida saludable');
+    assert.equal(JSON.stringify({ list, detail }).includes('COMIDA_'), false);
   });
 });
 

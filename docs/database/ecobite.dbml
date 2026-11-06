@@ -1,0 +1,213 @@
+Project EcoBite {
+  database_type: 'PostgreSQL'
+  Note: 'Canonical EcoBite DER. Nine tables, 82 fields, and 14 relationships. Solicitud_Restaurante, Usuario.id_restaurante, direccion, and categoria_restaurante land in the restaurant-onboarding migration (S6 wave 2); items marked proposal are new vs. the pre-S6 baseline.'
+}
+
+enum rol_usuario {
+  CLIENTE
+  ADMIN_PLATAFORMA
+  RESTAURANTE_ADMIN
+}
+
+enum tipo_transporte {
+  BICICLETA
+  VEHICULO_ELECTRICO
+}
+
+enum pedido_estado {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+  EN_PREPARACION
+}
+
+enum estado_solicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA [note: 'Rejection without reason stays in the model; the endpoint is a S4 "si da tiempo" item (A6).']
+}
+
+enum categoria_restaurante {
+  COMIDA_SALUDABLE [note: 'Comida saludable']
+  COMIDA_DE_ESTACION [note: 'Comida de estación']
+  COMIDA_VEGANA [note: 'Comida vegana']
+  COMIDA_CASERA [note: 'Comida casera']
+}
+
+Table Usuario {
+  id_usuario uuid [pk]
+  nombre_completo text [not null]
+  email text [unique, not null]
+  telefono text [null]
+  direccion_habitual text [null]
+  fecha_registro timestamp [not null, default: `now()`]
+  fecha_edicion timestamp [not null]
+  activo_usuario boolean [not null, default: true]
+  password_hash text [not null]
+  rol rol_usuario [not null, default: 'CLIENTE']
+  id_zona_habitual uuid [null]
+  id_restaurante uuid [null, status: 'proposal', note: 'Proposal link from an approved restaurant administrator to the restaurant.']
+}
+
+Table Zona {
+  id_zona uuid [pk]
+  nombre_barrio varchar(100) [unique, not null]
+  comuna int [not null]
+  codigo_postal varchar(10) [not null]
+  activo_zona boolean [not null, default: true]
+  distancia_promedio_km decimal(5,2) [not null, check: `distancia_promedio_km >= 0.5`]
+}
+
+Table Restaurantes {
+  id_restaurante uuid [pk]
+  nombre_restaurante text [not null]
+  direccion text [not null]
+  categoria categoria_restaurante [not null]
+  es_100_eco boolean [not null, default: true]
+  activo_restaurante boolean [not null, default: true]
+  id_zona uuid [not null]
+  email text [unique, not null, note: 'Contact identity; authentication is proposed to remain centralized in Usuario.']
+  fecha_creacion timestamp [not null, default: `now()`]
+  fecha_edicion timestamp [not null]
+}
+
+Table Producto {
+  id_producto uuid [pk]
+  id_restaurante uuid [not null]
+  nombre_producto text [not null]
+  categoria_comida text [not null]
+  precio decimal(10,2) [not null, check: `precio >= 0`]
+  disponible boolean [not null, default: true]
+  fecha_creacion timestamp [not null, default: `now()`]
+  fecha_edicion timestamp [not null]
+}
+
+Table Pedidos {
+  id_pedido uuid [pk]
+  id_usuario uuid [not null]
+  id_restaurante uuid [not null]
+  direccion_entrega text [not null]
+  monto_total decimal(10,2) [not null, note: 'Calculated: sum of item quantities times unit prices.']
+  distancia_estimada_km decimal(5,2) [not null, note: 'Snapshot copied from the destination zone.']
+  tipo_transporte tipo_transporte [not null]
+  total_envases_evitados int [not null, default: 0, note: 'Calculated: sum of item packaging counts.']
+  co2_ahorrado_kg decimal(6,3) [not null, default: 0, note: 'Calculated: delivery distance times the approved CO2 factor.']
+  gramos_plastico_evitados_total decimal(8,2) [not null, default: 0, note: 'Calculated: sum of item plastic impact.']
+  pedido_estado pedido_estado [not null, default: 'PENDIENTE']
+  fecha_creacion timestamp [not null, default: `now()`]
+  fecha_edicion timestamp [not null]
+  id_zona_destino uuid [not null]
+}
+
+Table Detalle {
+  id_detalle uuid [pk]
+  id_pedido uuid [not null]
+  producto_nombre text [not null, note: 'Historical product-name snapshot at purchase time.']
+  cantidad int [not null, check: `cantidad >= 1`]
+  precio_unitario decimal(10,2) [not null, note: 'Historical unit-price snapshot at purchase time.']
+  gramos_plastico_evitados_item decimal(8,2) [not null, default: 0, note: 'Calculated: quantity times packaging plastic impact.']
+  id_producto uuid [not null]
+  envases_item int [not null, default: 0, note: 'Calculated: quantity times packaging units.']
+}
+
+Table Producto_Empaque {
+  id_producto uuid [not null]
+  id_empaque uuid [not null]
+  envases_por_unidad int [not null, check: `envases_por_unidad >= 1`]
+
+  indexes {
+    (id_producto, id_empaque) [pk]
+  }
+}
+
+Table Empaques {
+  id_empaque uuid [pk]
+  nombre_envase varchar(100) [unique, not null]
+  material_tradicional varchar(100) [not null]
+  peso_base_g decimal(8,2) [not null]
+  material_ecobite varchar(100) [not null]
+  peso_ecobite_g decimal(8,2) [not null]
+  gramos_plastico_evitados decimal(8,2) [not null, note: 'Calculated: traditional base weight minus EcoBite weight.']
+  uso_habitual varchar(100) [null]
+}
+
+Table Solicitud_Restaurante [headercolor: #c3f7c8, status: 'proposal'] {
+  id_solicitud uuid [pk]
+  id_usuario uuid [not null]
+  nombre_restaurante text [not null]
+  direccion text [not null]
+  email text [unique, not null, note: 'One solicitud per restaurant email; blocks re-application after rejection.']
+  categoria categoria_restaurante [not null]
+  estado_solicitud estado_solicitud [not null, default: 'PENDIENTE']
+  fecha_aceptacion_compromiso timestamp [not null]
+  fecha_solicitud timestamp [not null]
+  fecha_revision timestamp [null]
+  id_admin_revisor uuid [null]
+  id_zona uuid [not null]
+}
+
+Ref usuario_pedidos: Usuario.id_usuario < Pedidos.id_usuario
+Ref restaurante_pedidos: Restaurantes.id_restaurante < Pedidos.id_restaurante
+Ref zona_pedidos_destino: Zona.id_zona < Pedidos.id_zona_destino
+Ref pedido_detalles: Pedidos.id_pedido < Detalle.id_pedido
+Ref producto_detalles: Producto.id_producto < Detalle.id_producto
+Ref restaurante_productos: Restaurantes.id_restaurante < Producto.id_restaurante
+Ref zona_usuarios_habituales: Zona.id_zona ?<? Usuario.id_zona_habitual
+Ref zona_restaurantes: Zona.id_zona < Restaurantes.id_zona
+Ref restaurante_administradores: Restaurantes.id_restaurante ?<? Usuario.id_restaurante
+Ref producto_empaques: Producto.id_producto < Producto_Empaque.id_producto
+Ref empaque_productos: Empaques.id_empaque < Producto_Empaque.id_empaque
+Ref usuario_solicitudes: Usuario.id_usuario < Solicitud_Restaurante.id_usuario [color: #16a34a]
+Ref zona_solicitudes: Zona.id_zona < Solicitud_Restaurante.id_zona [color: #16a34a]
+Ref solicitud_revisor: Usuario.id_usuario ?<? Solicitud_Restaurante.id_admin_revisor [color: #16a34a]
+
+TableGroup identity_access [color: #2563eb] {
+  Usuario
+  Restaurantes
+  Note: 'Identity, authentication, and restaurant contact.'
+}
+
+TableGroup geography [color: #7c3aed] {
+  Zona
+  Note: 'Geographic zones shared by users, restaurants, orders, and requests.'
+}
+
+TableGroup ordering [color: #ea580c] {
+  Pedidos
+  Detalle
+  Note: 'Order headers and order details.'
+}
+
+TableGroup catalog_packaging [color: #0f766e] {
+  Producto
+  Producto_Empaque
+  Empaques
+  Note: 'Products and their environmental packaging impact.'
+}
+
+TableGroup onboarding_proposal [color: #16a34a] {
+  Solicitud_Restaurante
+  Note: 'Approved restaurant onboarding request (workbook R2-R5, A3-A5). Not yet implemented.'
+}
+
+DiagramView "S6 baseline excluding request" {
+  Tables {
+    Usuario
+    Restaurantes
+    Zona
+    Producto
+    Producto_Empaque
+    Empaques
+    Pedidos
+    Detalle
+  }
+}
+
+DiagramView "Restaurant onboarding focus" {
+  Tables {
+    Usuario
+    Restaurantes
+    Zona
+    Solicitud_Restaurante
+  }
+}

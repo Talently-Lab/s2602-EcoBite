@@ -1038,10 +1038,13 @@ components:
           type: string
           examples: [Verde Bistró]
         category:
-          type:
-            - string
-            - 'null'
-          description: Categoría del restaurante; puede ser `null`.
+          type: string
+          enum:
+            - Comida saludable
+            - Comida de estación
+            - Comida vegana
+            - Comida casera
+          description: Categoría del restaurante.
           examples: [Comida saludable]
         isEco:
           type: boolean
@@ -1139,10 +1142,13 @@ components:
           type: string
           examples: [Verde Bistró]
         category:
-          type:
-            - string
-            - 'null'
-          description: Categoría del restaurante; puede ser `null`.
+          type: string
+          enum:
+            - Comida saludable
+            - Comida de estación
+            - Comida vegana
+            - Comida casera
+          description: Categoría del restaurante.
           examples: [Comida saludable]
         isEco:
           type: boolean

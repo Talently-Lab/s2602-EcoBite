@@ -1,4 +1,5 @@
 import type { PrismaClient } from '../generated/prisma/client';
+import { categoriaLabels } from '../lib/categories';
 import { HttpError } from '../lib/http-error';
 import { isUuid } from '../lib/validation';
 
@@ -16,7 +17,7 @@ export function createRestaurantService(db: Pick<PrismaClient, 'restaurante'>) {
       return restaurants.map((restaurant) => ({
         id: restaurant.id,
         name: restaurant.nombre,
-        category: restaurant.categoria,
+        category: categoriaLabels[restaurant.categoria],
         isEco: restaurant.esEco,
         zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
       }));
@@ -40,7 +41,7 @@ export function createRestaurantService(db: Pick<PrismaClient, 'restaurante'>) {
       return {
         id: restaurant.id,
         name: restaurant.nombre,
-        category: restaurant.categoria,
+        category: categoriaLabels[restaurant.categoria],
         isEco: restaurant.esEco,
         zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
         products: restaurant.productos.map((product) => ({

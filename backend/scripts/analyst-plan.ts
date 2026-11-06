@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { EstadoPedido, RolUsuario, TipoTransporte } from '../src/generated/prisma/enums';
 import type { Prisma } from '../src/generated/prisma/client';
+import { categoriaFromLabel } from '../src/lib/categories';
 import { ImportValidationError, normalizeName, type Dataset } from './analyst-csv';
 
 // Application-specific version-8 UUIDs: stable per entity/source code.
@@ -59,12 +60,12 @@ export function prepareImport(data: Dataset, zones: Map<string, string>, packagi
     restaurantes: data.Restaurantes.map((row) => ({
       id: sourceId('restaurante', row.id_restaurante),
       nombre: row.nombre_restaurante,
-      categoria: optional(row.categoria),
+      direccion: row.direccion || '',
+      categoria: categoriaFromLabel(row.categoria)!,
       esEco: row.es_100_eco === 'TRUE',
       activo: row.activo_restaurante === 'TRUE',
       zonaId: lookup(zoneId, row.id_zona),
       email: row.email.trim().toLowerCase(),
-      passwordHash: row.password_hash,
       fechaCreacion: date(row.fecha_creacion),
       fechaEdicion: date(row.fecha_edicion),
     })),

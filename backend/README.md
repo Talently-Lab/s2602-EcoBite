@@ -27,6 +27,7 @@ valores ni versionar el archivo `.env`.
 | `SEED_ADMIN_EMAIL` | Opcional. Junto con `SEED_ADMIN_PASSWORD`, el seed crea o promueve la cuenta administradora con este email (normalizado a minúsculas). |
 | `SEED_ADMIN_PASSWORD` | Opcional. Mismas reglas que el registro: al menos 8 caracteres y máximo 72 bytes UTF-8 (bcrypt costo 12). Debe configurarse junto con `SEED_ADMIN_EMAIL`; si solo hay una, el seed falla. |
 | `SEED_ADMIN_NAME` | Opcional. Nombre visible de la cuenta administradora cuando el seed la crea; por defecto `Administrador EcoBite`. |
+| `SEED_DEMO_USERS_PASSWORD` | Opcional. Si se define, el seed crea las cuentas demo del PM con esta contraseña (mínimo 8 caracteres): `cliente.demo@ecobite.test` (`CLIENTE`) y `restaurante.demo@ecobite.test` (`RESTAURANTE_ADMIN` + restaurante aprobado). |
 
 Generar el secreto con un gestor de secretos o `openssl rand -hex 32` y guardarlo
 directamente en `.env` o Doppler; no pegarlo en chat ni documentación.
@@ -45,7 +46,12 @@ El seed actual carga zonas y empaques; no inventa restaurantes ni productos.
 Por eso una base recién inicializada puede devolver `[]` en restaurantes.
 Si `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` están configuradas, el seed
 además crea la cuenta `ADMIN_PLATAFORMA` o, si el email ya existe, restablece
-su contraseña, rol y estado activo (es idempotente).
+su contraseña, rol y estado activo (es idempotente). Con
+`SEED_DEMO_USERS_PASSWORD` crea además las cuentas demo
+`cliente.demo@ecobite.test` (`CLIENTE`) y `restaurante.demo@ecobite.test`
+(`RESTAURANTE_ADMIN`, vinculado a un restaurante aprobado en Palermo); sin la
+variable se omiten. El restaurante demo se siembra inactivo: nunca aparece en
+el catálogo público.
 
 Desde la raíz: `pnpm dev:backend`. Desde `backend/`: `pnpm dev`.
 El servidor valida la configuración y ejecuta `SELECT 1` antes de escuchar.
@@ -102,7 +108,7 @@ ordenados por nombre e ID. No incluye email ni contraseña del restaurante.
 Array<{
   id: string;
   name: string;
-  category: string | null;
+  category: string;
   isEco: boolean;
   zone: { id: string; name: string };
 }>
@@ -137,7 +143,7 @@ nombre e ID. No incluye email ni contraseña del restaurante.
 {
   id: string;
   name: string;
-  category: string | null;
+  category: string;
   isEco: boolean;
   zone: { id: string; name: string };
   products: Array<{
@@ -301,6 +307,14 @@ en `localStorage`; acordar la estrategia de sesión con frontend antes de produc
   inesperados responden `500`, sin filtrar mensajes internos.
 - Los emails existentes importados por otro mecanismo deben respetar la
   normalización a minúsculas. Este cambio no modifica datos existentes.
+
+## Apagado ordenado
+
+El servidor escucha `SIGTERM` y `SIGINT` (Ctrl+C) y cierra de forma ordenada:
+deja de aceptar conexiones nuevas, drena las solicitudes en curso, cierra las
+conexiones keep-alive inactivas y desconecta Prisma antes de salir con código
+`0`. Si el drenado supera los 10 segundos, cierra las conexiones restantes a la
+fuerza y sale con código `1`.
 
 ## Verificación
 

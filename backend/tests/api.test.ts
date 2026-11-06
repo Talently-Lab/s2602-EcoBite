@@ -46,7 +46,7 @@ function fixture() {
         calls.push({ method: 'findMany', input });
         if (failure) throw failure;
         return [{
-          id: randomUUID(), nombre: 'Local de prueba', categoria: null, esEco: true,
+          id: randomUUID(), nombre: 'Local de prueba', categoria: 'COMIDA_SALUDABLE', esEco: true,
           zona: { id: randomUUID(), nombreBarrio: 'Zona de prueba' },
           passwordHash: 'must-not-leak', email: 'private@example.test',
         }];
@@ -146,7 +146,8 @@ test('restaurants use active/eco filtering and exclude credentials', async () =>
     assert.equal(response.status, 200);
     const rows = await response.json();
     assert.equal(rows[0].name, 'Local de prueba');
-    assert.equal(rows[0].category, null);
+    assert.equal(rows[0].category, 'Comida saludable');
+    assert.equal(JSON.stringify(rows).includes('COMIDA_SALUDABLE'), false);
     assert.equal(rows[0].isEco, true);
     assert.deepEqual(data.calls[0].input.where, { activo: true, esEco: true });
     assert.equal(data.calls[0].input.select.passwordHash, undefined);
