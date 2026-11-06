@@ -20,7 +20,7 @@ export const Navbar = () => {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#009951]">
+    <header className="sticky top-0 z-50 w-full bg-[#009951] border border-b-white">
       <nav
         aria-label="Navegación principal"
         className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"

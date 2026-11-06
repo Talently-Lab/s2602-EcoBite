@@ -9,6 +9,8 @@ const Auth = lazy(() => import("@/pages/Auth"));
 const Orders = lazy(() => import("@/pages/Orders"));
 const MyImpact = lazy(() => import("@/pages/MyImpact"));
 const ShoppingCart = lazy(() => import("@/pages/ShoppingCart"));
+const Checkout = lazy(() => import('@/pages/Checkout'))
+const Voucher = lazy(() => import('@/pages/Voucher'))
 
 export const mainRouter = createBrowserRouter([
   { path: "/", element: <Navigate to="/home" replace /> },
@@ -19,5 +21,7 @@ export const mainRouter = createBrowserRouter([
   { path: "/orders", element: <Orders /> },
   { path: "/my-impact", element: <MyImpact /> },
   { path: "/cart", element: <ShoppingCart /> },
+  { path: "/checkout", element: <Checkout /> },
+  { path: "/voucher/:id", element: <Voucher /> },
   { path: "*", element: <NotFound /> }
 ])
