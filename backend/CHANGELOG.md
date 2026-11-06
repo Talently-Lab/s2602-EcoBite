@@ -44,6 +44,14 @@ Reglas del archivo:
   `SEED_ADMIN_PASSWORD` están configuradas (nombre opcional con
   `SEED_ADMIN_NAME`).
   ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+- Cuentas demo de verificación (cliente y administrador de restaurante con su
+  solicitud `APROBADA`) cuando `SEED_DEMO_USERS_PASSWORD` está configurada; el
+  restaurante demo queda inactivo y nunca aparece en el catálogo.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- Apagado ordenado: ante `SIGTERM`/`SIGINT` el servidor deja de aceptar
+  conexiones, drena las solicitudes en curso, cierra las keep-alive inactivas
+  y desconecta Prisma; si el drenado supera 10 segundos fuerza la salida.
+  ([Issue #37](https://github.com/Talently-Lab/s2602-EcoBite/issues/37))
 
 ### Changed
 

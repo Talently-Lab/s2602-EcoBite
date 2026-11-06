@@ -50,7 +50,8 @@ su contraseña, rol y estado activo (es idempotente). Con
 `SEED_DEMO_USERS_PASSWORD` crea además las cuentas demo
 `cliente.demo@ecobite.test` (`CLIENTE`) y `restaurante.demo@ecobite.test`
 (`RESTAURANTE_ADMIN`, vinculado a un restaurante aprobado en Palermo); sin la
-variable se omiten.
+variable se omiten. El restaurante demo se siembra inactivo: nunca aparece en
+el catálogo público.
 
 Desde la raíz: `pnpm dev:backend`. Desde `backend/`: `pnpm dev`.
 El servidor valida la configuración y ejecuta `SELECT 1` antes de escuchar.
@@ -306,6 +307,14 @@ en `localStorage`; acordar la estrategia de sesión con frontend antes de produc
   inesperados responden `500`, sin filtrar mensajes internos.
 - Los emails existentes importados por otro mecanismo deben respetar la
   normalización a minúsculas. Este cambio no modifica datos existentes.
+
+## Apagado ordenado
+
+El servidor escucha `SIGTERM` y `SIGINT` (Ctrl+C) y cierra de forma ordenada:
+deja de aceptar conexiones nuevas, drena las solicitudes en curso, cierra las
+conexiones keep-alive inactivas y desconecta Prisma antes de salir con código
+`0`. Si el drenado supera los 10 segundos, cierra las conexiones restantes a la
+fuerza y sale con código `1`.
 
 ## Verificación
 

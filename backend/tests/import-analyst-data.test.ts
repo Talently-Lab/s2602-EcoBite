@@ -169,6 +169,14 @@ test('categoria labels map to the enum tolerating case, accents and whitespace',
   }
 });
 
+test('legacy Restaurantes exports without the direccion column import with an empty address', () => {
+  const data = fixture();
+  delete data.Restaurantes[0].direccion;
+  const plan = prepareImport(validateDataset(data).data,
+    new Map([['Retiro', 'zone-uuid']]), new Map([[packName, 'pack-uuid']]));
+  assert.equal(plan.restaurantes[0].direccion, '');
+});
+
 test('KPI validation catches inconsistent amounts, packaging, CO2, transport and restaurant links', () => {
   const mutations: ((data: Dataset) => void)[] = [
     (data) => { data.Pedidos[0].monto_total = '999'; },

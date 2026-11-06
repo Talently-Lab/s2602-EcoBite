@@ -39,13 +39,33 @@ ALTER TABLE "restaurantes" ALTER COLUMN "direccion" DROP DEFAULT;
 -- change (recreated below, and the analista grant is re-applied at the end).
 DROP VIEW IF EXISTS analytics.restaurantes;
 
--- AlterTable: map existing display labels to the enum; unexpected labels abort
--- the migration at SET NOT NULL instead of being silently reclassified
-ALTER TABLE "restaurantes" ALTER COLUMN "categoria" SET DATA TYPE "categoria_restaurante" USING CASE "categoria"
-    WHEN 'Comida Saludable' THEN 'COMIDA_SALUDABLE'
-    WHEN 'Comida de Estación' THEN 'COMIDA_DE_ESTACION'
-    WHEN 'Comida Vegana' THEN 'COMIDA_VEGANA'
-    WHEN 'Comida Casera' THEN 'COMIDA_CASERA'
+-- Abort early with the offending labels when a stored value cannot be mapped:
+-- the fold below (lowercase, trimmed, accents removed, same as the importer)
+-- already tolerates case/whitespace variants, so anything left over is an
+-- unknown label and must not reach the USING clause as NULL.
+DO $$
+DECLARE
+    offending text;
+BEGIN
+    SELECT string_agg(DISTINCT coalesce(quote_literal("categoria"), 'NULL'), ', ')
+      INTO offending
+      FROM "restaurantes"
+     WHERE "categoria" IS NULL
+        OR lower(btrim(translate("categoria", 'ÁÉÍÓÚÜáéíóúü', 'AEIOUUaeiouu'))) NOT IN (
+            'comida saludable', 'comida de estacion', 'comida vegana', 'comida casera');
+    IF offending IS NOT NULL THEN
+        RAISE EXCEPTION 'restaurantes.categoria has labels that do not map to categoria_restaurante: %', offending;
+    END IF;
+END $$;
+
+-- AlterTable: map existing display labels to the enum after folding them like
+-- the importer does; the guard above keeps SET NOT NULL from failing on NULLs
+-- produced by an unmatched CASE
+ALTER TABLE "restaurantes" ALTER COLUMN "categoria" SET DATA TYPE "categoria_restaurante" USING CASE lower(btrim(translate("categoria", 'ÁÉÍÓÚÜáéíóúü', 'AEIOUUaeiouu')))
+    WHEN 'comida saludable' THEN 'COMIDA_SALUDABLE'
+    WHEN 'comida de estacion' THEN 'COMIDA_DE_ESTACION'
+    WHEN 'comida vegana' THEN 'COMIDA_VEGANA'
+    WHEN 'comida casera' THEN 'COMIDA_CASERA'
 END::"categoria_restaurante";
 ALTER TABLE "restaurantes" ALTER COLUMN "categoria" SET NOT NULL;
 

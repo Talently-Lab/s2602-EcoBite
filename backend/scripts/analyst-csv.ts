@@ -151,12 +151,17 @@ function duplicateIssues(rows: Row[], columns: string[], label: string, issues: 
   }
 }
 
+// Columns a legacy export may omit entirely; prepareImport defaults them to ''.
+const absentOk = new Set(['Restaurantes.direccion']);
+
 export function validateDataset(source: Dataset): { data: Dataset; excludedCouriers: number } {
   const issues: string[] = [];
   for (const sheet of sheets) {
     source[sheet].forEach((row, i) => {
       for (const [field, rule] of Object.entries(fields[sheet])) {
-        if (typeof row[field] !== 'string' || row[field].includes('\u0000') || !rule(row[field])) {
+        const value = row[field];
+        if (value === undefined && absentOk.has(`${sheet}.${field}`)) continue;
+        if (typeof value !== 'string' || value.includes('\u0000') || !rule(value)) {
           issues.push(`${sheet} row ${i + 2}: invalid ${field}`);
         }
       }

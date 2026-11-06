@@ -91,8 +91,10 @@ async function seedAdmin() {
 }
 
 // Cuentas demo para la verificación del PM (workbook decisión 11): un cliente y
-// un restaurante ya aprobado con su usuario RESTAURANTE_ADMIN vinculado. Los
-// emails son fijos y documentados; la contraseña solo vive en el entorno.
+// un restaurante ya aprobado con su usuario RESTAURANTE_ADMIN vinculado. El
+// restaurante se siembra inactivo para que nunca aparezca en el catálogo
+// público. Los emails son fijos y documentados; la contraseña solo vive en el
+// entorno.
 const DEMO_CLIENTE_EMAIL = 'cliente.demo@ecobite.test'
 const DEMO_RESTAURANTE_EMAIL = 'restaurante.demo@ecobite.test'
 
@@ -116,13 +118,14 @@ async function seedDemoUsers() {
 
   const restaurante = await prisma.restaurante.upsert({
     where: { email: DEMO_RESTAURANTE_EMAIL },
-    update: {},
+    update: { activo: false },
     create: {
       nombre: 'Restaurante Demo EcoBite',
       direccion: 'Av. Santa Fe 3000',
       categoria: 'COMIDA_SALUDABLE',
       email: DEMO_RESTAURANTE_EMAIL,
       zonaId: zona.id,
+      activo: false,
     },
   })
 
@@ -141,7 +144,7 @@ async function seedDemoUsers() {
   })
 
   const adminRevisor = process.env.SEED_ADMIN_EMAIL
-    ? await prisma.usuario.findUnique({ where: { email: process.env.SEED_ADMIN_EMAIL }, select: { id: true } })
+    ? await prisma.usuario.findUnique({ where: { email: process.env.SEED_ADMIN_EMAIL.trim().toLowerCase() }, select: { id: true } })
     : null
 
   await prisma.solicitudRestaurante.upsert({
