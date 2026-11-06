@@ -1,4 +1,5 @@
 import type { Login, Register } from "@/schemas/auth.schema";
+import type { LoginResponse } from "@/types/auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -30,7 +31,7 @@ export const register = async (payload: Register) => {
   }
 };
 
-export const login = async (payload: Login) => {
+export const login = async (payload: Login): Promise<LoginResponse> => {
   try {
     const response = await fetch(`${API_URL}/users/login`, {
       method: "POST",
@@ -42,7 +43,7 @@ export const login = async (payload: Login) => {
 
     if (!response.ok) throw new Error("Error al iniciar sesión");
 
-    const data = await response.json();
+    const data = (await response.json()) as LoginResponse;
     return data;
   } catch (error) {
     if (error instanceof Error) throw error;

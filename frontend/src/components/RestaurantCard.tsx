@@ -10,6 +10,7 @@ type RestaurantCardProps = {
   tag?: string;
   className?: string;
   onView?: () => void;
+  zone?: string
 };
 
 export const RestaurantCard = ({
@@ -20,6 +21,7 @@ export const RestaurantCard = ({
   tag = "Eco friendly",
   className,
   onView,
+  zone
 }: RestaurantCardProps) => {
   return (
     <Card
@@ -43,7 +45,7 @@ export const RestaurantCard = ({
           {name}
         </CardTitle>
         <p className="mt-1.5 text-xs text-[#6B6B6B]">
-          {description}
+          {description} {zone}
         </p>
         <Button
           type="button"
