@@ -1,5 +1,6 @@
 import { ArrowUp, Check, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCartStore } from "@/context/cart-store";
 import { useNavigate } from "react-router-dom";
 
 const RECEIPT_ROWS = [
@@ -19,6 +20,7 @@ const IMPACT_BARS = [42, 58, 50, 72, 46, 65, 55, 80, 62, 70, 88, 100];
 
 export default function Voucher() {
   const navigate = useNavigate()
+  const clearCart = useCartStore((s) => s.clear)
 
   return (
     <main className="flex min-h-screen justify-center bg-[#FFFFFF] px-4 py-7 text-foreground">
@@ -118,7 +120,10 @@ export default function Voucher() {
           <Button
             type="button"
             size="xs"
-            onClick={()=>navigate('/catalog')}
+            onClick={() => {
+              clearCart();
+              navigate("/catalog");
+            }}
             className="text-xs p-4 bg-[#009951]! text-[#FFFFFF]!"
           >
             Finalizar

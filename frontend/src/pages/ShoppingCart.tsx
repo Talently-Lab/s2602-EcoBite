@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { MainLayout } from "@/pages/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/context/cart-store";
+import { isAuthenticated } from "@/context/auth-store";
 import { useNavigate } from "react-router-dom";
 
 const DELIVERY_OPTIONS = [
@@ -179,7 +180,13 @@ const ShoppingCart = () => {
           </div>
           <Button
             disabled={items.length === 0}
-            onClick={() => navigate('/checkout')}
+            onClick={() => {
+              if (isAuthenticated()) {
+                navigate("/checkout");
+                return;
+              }
+              navigate("/auth", { state: { from: "/checkout" } });
+            }}
             className="w-full bg-[#009951]! text-[#FFFFFF]! rounded-[8px]! mt-8 py-5"
           >
             Ir a Pagar

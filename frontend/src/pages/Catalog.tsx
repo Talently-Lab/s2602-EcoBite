@@ -30,6 +30,10 @@ const Catalog = () => {
   const [cuisine, setCuisine] = useState<string | null>(null);
   const [zone, setZone] = useState<string | null>(null);
 
+  const filteredRestaurants = restaurants.filter(
+    (restaurant) => !zone || restaurant.zone.name === zone,
+  );
+
   return (
     <MainLayout>
       <section>
@@ -122,20 +126,21 @@ const Catalog = () => {
             </div>
           )}
 
-          {!error && !loading && restaurants.length === 0 && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              No hay restaurantes disponibles por ahora.
+          {!error && !loading && filteredRestaurants.length === 0 && (
+            <p className="my-24 text-center text-sm text-[#545454]">
+              No se encontraron restaurantes.
             </p>
           )}
 
-          {!loading && restaurants.length > 0 && (
+          {!loading && filteredRestaurants.length > 0 && (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {restaurants.map((restaurant) => (
+              {filteredRestaurants.map((restaurant) => (
                 <RestaurantCard
                   key={restaurant.id}
                   name={restaurant.name}
                   description={restaurant.category}
                   onView={() => navigate(`/catalog/${restaurant.id}`)}
+                  zone={restaurant.zone.name}
                 />
               ))}
             </div>

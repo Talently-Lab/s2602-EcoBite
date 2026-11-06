@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLogin } from "@/hooks/useAuth";
 import { loginSchema, type Login } from "@/schemas/auth.schema";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type props = {
   onSwitchToRegister: () => void;
@@ -15,7 +15,10 @@ type props = {
 export const LoginForm = ({ onSwitchToRegister }: props) => {
   const [remembered, setRemembered] = useState<boolean>(false);
   const login = useLogin();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo =
+    (location.state as { from?: string } | null)?.from ?? "/catalog";
 
   const {
     register,
@@ -32,7 +35,7 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
     clearErrors("root.server");
     login.mutate(data, {
       onSuccess: () => {
-        navigate('/catalog')
+        navigate(redirectTo)
       },
       onError: (error) => {
         setError("root.server", {
