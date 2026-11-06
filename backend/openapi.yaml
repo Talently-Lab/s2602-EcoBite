@@ -2,7 +2,7 @@ openapi: 3.1.0
 
 info:
   title: EcoBite API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     API de clientes de **EcoBite**, delivery de comida de restaurantes eco-friendly.
     Los clientes se registran y obtienen un JWT de sesión para consultar su perfil.
