@@ -56,7 +56,7 @@ export function ChangelogRelease({ release }: { release: ChangelogReleaseData })
   return (
     <article aria-labelledby={headingId}>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id={headingId} className="font-mono font-semibold text-heading">
+        <h2 id={headingId} className="font-mono text-lg font-semibold text-heading">
           {release.unreleased ? 'Sin publicar' : `v${release.version}`}
         </h2>
         {links.map((link) => (
@@ -68,12 +68,10 @@ export function ChangelogRelease({ release }: { release: ChangelogReleaseData })
           </Fragment>
         ))}
         {release.unreleased ? (
-          <span className="ml-auto font-mono text-sm text-muted">
-            En desarrollo
-          </span>
+          <span className="ml-auto font-mono text-sm text-muted">En desarrollo</span>
         ) : (
           release.date && (
-            <time dateTime={release.date} className="ml-auto font-mono text-muted">
+            <time dateTime={release.date} className="ml-auto font-mono text-sm text-muted">
               {formatReleaseDate(release.date, 'long')}
             </time>
           )
@@ -93,7 +91,7 @@ export function ChangelogRelease({ release }: { release: ChangelogReleaseData })
         </div>
       )}
       {release.sections.length > 0 && (
-        <ul className="mt-5 space-y-5">
+        <ul className="mt-6 space-y-6">
           {[
             ...release.sections.filter((section) => section.kind === 'security'),
             ...release.sections.filter((section) => section.kind !== 'security'),

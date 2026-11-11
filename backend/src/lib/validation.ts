@@ -99,6 +99,65 @@ export function validateRestaurantRequest(body: unknown) {
   return { name, category, zoneId, address, email };
 }
 
+export function validateProduct(body: unknown) {
+  const input = bodyObject(body);
+  parse(
+    z.strictObject({
+      name: z.unknown(),
+      foodCategory: z.unknown(),
+      price: z.unknown(),
+      available: z.unknown().optional(),
+      packagings: z.unknown(),
+    }),
+    input,
+    'Solo se permiten los campos name, foodCategory, price, available y packagings.',
+  );
+  const name = parse(
+    trimmedText(120),
+    input.name,
+    'El nombre es obligatorio y debe tener como máximo 120 caracteres.',
+  );
+  const foodCategory = parse(
+    trimmedText(100),
+    input.foodCategory,
+    'La categoría de comida es obligatoria y debe tener como máximo 100 caracteres.',
+  );
+  const price = parse(
+    z.number().positive(),
+    input.price,
+    'El precio debe ser un número mayor que cero.',
+  );
+  // String(price) keeps the decimal check exact: floats stringify back to
+  // their JSON form, so 12.999 or 1e-7 fail here without relying on modulo
+  // arithmetic over binary floats.
+  if (!/^\d+(\.\d{1,2})?$/.test(String(price))) {
+    throw new HttpError(400, 'El precio debe tener como máximo 2 decimales.');
+  }
+  if (price > 99999999.99) {
+    throw new HttpError(400, 'El precio no puede superar 99999999.99.');
+  }
+  const available = input.available === undefined
+    ? true
+    : parse(z.boolean(), input.available, 'available debe ser true o false.');
+  const packagings = parse(
+    z.array(z.strictObject({ packagingId: z.unknown(), unitsPerPackage: z.unknown() })).min(1),
+    input.packagings,
+    'packagings debe tener al menos un envase con packagingId y unitsPerPackage.',
+  ).map((item) => ({
+    packagingId: parse(uuid, item.packagingId, 'packagingId debe ser un UUID válido.'),
+    unitsPerPackage: parse(
+      // int4 upper bound keeps absurd-but-valid integers out of a DB overflow.
+      z.number().int().min(1).max(2147483647),
+      item.unitsPerPackage,
+      'unitsPerPackage debe ser un entero de al menos 1.',
+    ),
+  }));
+  if (new Set(packagings.map((item) => item.packagingId)).size !== packagings.length) {
+    throw new HttpError(400, 'Envase duplicado: cada packagingId puede aparecer una sola vez.');
+  }
+  return { name, foodCategory, price, available, packagings };
+}
+
 const requestStatuses = ['PENDIENTE', 'APROBADA', 'RECHAZADA', 'TODAS'] as const;
 
 export function validateRequestStatus(value: unknown) {

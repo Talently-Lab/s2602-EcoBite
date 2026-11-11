@@ -20,9 +20,15 @@ Reglas del archivo:
 - Los enlaces de comparación (`[1.0.0]: url`) y de release (`[1.0.0 release]: url`)
   se agregan al final solo cuando existen el tag o la GitHub Release correspondientes.
 - Referenciar issues con enlaces explícitos, por ejemplo
-  `([Issue #27](https://github.com/Talently-Lab/s2602-EcoBite/issues/27))`.
-- Una entrada por cambio, en una sola línea y escrita desde la perspectiva del
-  lector; el detalle de implementación va en el commit o el PR.
+  `[Issue #27](https://github.com/Talently-Lab/s2602-EcoBite/issues/27)`.
+- Una entrada por cambio, en una sola línea y como máximo dos oraciones
+  cortas, escrita para quien consume la API: qué puede hacer o qué debe
+  hacer distinto. Regla de corte: si el detalle no hace falta para llamar
+  al endpoint correctamente, no va.
+- El mecanismo interno (transacciones, consultas, proveedores, tiempos) no
+  se cuenta: el contrato detallado vive en `openapi.yaml`, la operación en
+  `README.md` y la implementación en el PR. Una variable de entorno que el
+  operador deba configurar sí se nombra, en la misma línea.
 - Las actualizaciones de dependencias solo se listan si corrigen una
   vulnerabilidad, rompen compatibilidad o exigen una acción. Las de toolchain
   que no llegan a producción se agrupan en una sola entrada.
@@ -33,35 +39,48 @@ Reglas del archivo:
 
 ### Added
 
-- `GET /restaurant-categories` (público): las cuatro categorías admitidas para
-  restaurantes aliados con su etiqueta en español; es la fuente de verdad de
-  los valores que acepta `category` en `POST /restaurant-requests`.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
-- `POST /restaurant-requests` (rol `CLIENTE`): solicitud de alta de restaurante
-  con categoría, zona activa, aceptación del compromiso y email único; una sola
-  solicitud pendiente o aprobada por usuario, y un rechazo permite volver a
-  aplicar con otro email.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
-- `GET /restaurant-requests/me`: última solicitud del usuario autenticado,
-  cualquiera sea su rol, o `null` si nunca aplicó; es el aviso en la aplicación
-  de la aprobación.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `GET /restaurant-categories` (público): lista las categorías de
+  restaurantes aliados con su etiqueta en español.
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
+- `POST /restaurant-requests` (rol `CLIENTE`): solicita el alta de un
+  restaurante aliado. Si es rechazada se puede volver a aplicar.
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
+- `GET /restaurant-requests/me`: devuelve la última solicitud propia, o
+  `null` si nunca aplicó.
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
 - `GET /admin/restaurant-requests` y `GET /admin/restaurant-requests/{id}`
   (rol `ADMIN_PLATAFORMA`): listado filtrable por estado y detalle de cada
-  solicitud con el solicitante y el revisor.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+  solicitud.
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
 - `POST /admin/restaurant-requests/{id}/approve` y
-  `POST /admin/restaurant-requests/{id}/reject` (rol `ADMIN_PLATAFORMA`): la
-  aprobación crea el restaurante activo y eco y promueve al solicitante a
-  `RESTAURANTE_ADMIN` en una sola transacción; el rechazo solo cambia el
-  estado. La actualización condicional responde `409` si la solicitud ya fue
-  revisada.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
-- `POST /admin/restaurant-requests/{id}/approve` también dispara un correo
-  transaccional al email de la solicitud al confirmar el alta; el envío es
-  asincrónico (Brevo con `EMAIL_API_KEY`/`EMAIL_FROM` configuradas, o solo
-  registro en el log sin credenciales) y la respuesta no depende del proveedor.
-  ([Issue #54](https://github.com/Talently-Lab/s2602-EcoBite/issues/54))
+  `POST /admin/restaurant-requests/{id}/reject` (rol `ADMIN_PLATAFORMA`):
+  aprueban o rechazan una solicitud. La aprobación crea el restaurante y
+  promueve al solicitante a `RESTAURANTE_ADMIN`; ambas responden `409` si
+  ya fue revisada.
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
+- `POST /admin/restaurant-requests/{id}/approve` envía un correo de
+  confirmación al solicitante. Requiere `EMAIL_API_KEY` y `EMAIL_FROM`;
+  sin credenciales solo queda registrado en el log.
+  [Issue #54](https://github.com/Talently-Lab/s2602-EcoBite/issues/54)
+- `GET /users/me/impact` (autenticado): totales de impacto propios (CO₂
+  ahorrado, envases evitados y pedidos) contando solo pedidos `COMPLETADO`.
+  [Issue #35](https://github.com/Talently-Lab/s2602-EcoBite/issues/35)
+- `GET /packagings` (público): catálogo de los envases EcoBite con el
+  material eco y los gramos de plástico evitados por envase.
+  [Issue #55](https://github.com/Talently-Lab/s2602-EcoBite/issues/55)
+- `POST /restaurants/me/products` y `GET /restaurants/me/products` (rol
+  `RESTAURANTE_ADMIN` con restaurante activo): crea y lista los platillos
+  propios. Un platillo con `available: true` aparece de inmediato en el
+  catálogo público.
+  [Issue #55](https://github.com/Talently-Lab/s2602-EcoBite/issues/55)
+- `GET /restaurants/me` (rol `RESTAURANTE_ADMIN`): datos del propio
+  restaurante, incluido el estado `active`. Responde aunque el local esté
+  inactivo.
+  [Issue #56](https://github.com/Talently-Lab/s2602-EcoBite/issues/56)
+- `GET /restaurants/me/orders` (rol `RESTAURANTE_ADMIN` con restaurante
+  activo): pedidos recibidos del propio local, más recientes primero, con
+  el nombre del cliente para la entrega.
+  [Issue #56](https://github.com/Talently-Lab/s2602-EcoBite/issues/56)
 
 ## [1.2.0] - 2026-11-06
 
@@ -75,55 +94,55 @@ health check y las estadísticas del admin.
 - `GET /health`: chequeo público de salud que ejecuta `SELECT 1` con un límite
   de 2 segundos; ante cualquier error o demora responde `503` sin exponer
   detalles internos.
-  ([Issue #34](https://github.com/Talently-Lab/s2602-EcoBite/issues/34))
+  [Issue #34](https://github.com/Talently-Lab/s2602-EcoBite/issues/34)
 - `GET /dashboard/stats` (solo `ADMIN_PLATAFORMA`): totales globales de pedidos
   en estado `COMPLETADO` (cantidad, ingresos y CO₂ ahorrado).
-  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+  [Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32)
 - El seed crea la cuenta administradora cuando `SEED_ADMIN_EMAIL` y
   `SEED_ADMIN_PASSWORD` están configuradas (nombre opcional con
   `SEED_ADMIN_NAME`).
-  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+  [Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32)
 - Esquema `analytics` de solo lectura: vistas para el equipo de Datos que
   excluyen `password_hash` y la PII de los solicitantes (email y dirección),
   accesibles mediante el rol restringido `analista_datos`.
-  ([Issue #47](https://github.com/Talently-Lab/s2602-EcoBite/issues/47))
+  [Issue #47](https://github.com/Talently-Lab/s2602-EcoBite/issues/47)
 - Cuentas demo de verificación (cliente y administrador de restaurante con su
   solicitud `APROBADA`) cuando `SEED_DEMO_USERS_PASSWORD` está configurada; el
   restaurante demo queda inactivo y nunca aparece en el catálogo.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
 - Apagado ordenado: ante `SIGTERM`/`SIGINT` el servidor deja de aceptar
   conexiones, drena las solicitudes en curso, cierra las keep-alive inactivas
   y desconecta Prisma; si el drenado supera 10 segundos fuerza la salida.
-  ([Issue #37](https://github.com/Talently-Lab/s2602-EcoBite/issues/37))
+  [Issue #37](https://github.com/Talently-Lab/s2602-EcoBite/issues/37)
 
 ### Changed
 
 - `GET /restaurants` y `GET /restaurants/{id}`: `category` ya no admite `null`
   y siempre devuelve una de las cuatro etiquetas (`Comida saludable`,
   `Comida de estación`, `Comida vegana`, `Comida casera`).
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
 
 ### Security
 
 - El rol administrativo nunca se lee del JWT: `GET /dashboard/stats` consulta
   `activo` y `rol` en la base en cada solicitud, así que un token sigue válido
   pero pierde el acceso apenas se degrada el rol o se desactiva la cuenta.
-  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+  [Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32)
 - La columna `restaurantes.password_hash` se eliminó de la base: los
   administradores de restaurante se autentican con su cuenta `usuario`, como el
   resto de los roles; ya no existe una credencial separada por restaurante.
-  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+  [Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41)
 - Al ejecutarse con credenciales configuradas, el seed reemplaza también la
   contraseña, el rol y el estado de la cuenta administradora: un registro
   previo con ese email no conserva su propia contraseña al ser promovido.
-  ([Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32))
+  [Issue #32](https://github.com/Talently-Lab/s2602-EcoBite/issues/32)
 
 ## [1.1.0] - 2026-10-23
 
 Esta versión introduce los pedidos de delivery sustentable: el cliente arma su
 pedido y el servidor calcula el total, los envases y el plástico evitados, la
 distancia estimada y el CO₂ ahorrado.
-([Issue #27](https://github.com/Talently-Lab/s2602-EcoBite/issues/27))
+[Issue #27](https://github.com/Talently-Lab/s2602-EcoBite/issues/27)
 
 ### Added
 
@@ -168,16 +187,16 @@ distancia estimada y el CO₂ ahorrado.
 ### Added
 
 - `POST /users/register`: registro de clientes con rol `CLIENTE`.
-  ([Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5))
+  [Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5)
 - `POST /users/login`: emite un `accessToken` JWT HS256 con una hora de duración
   para los endpoints protegidos.
-  ([Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5))
+  [Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5)
 - `GET /users/me` (autenticado): perfil del cliente sin datos sensibles.
-  ([Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5))
+  [Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5)
 - `GET /restaurants`: lista de restaurantes activos y eco-friendly.
-  ([Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5))
+  [Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5)
 - Referencia OpenAPI 3.1 publicada en `/api/openapi.yaml` y renderizada con Scalar
-  en `/docs`. ([Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5))
+  en `/docs`. [Issue #5](https://github.com/Talently-Lab/s2602-EcoBite/issues/5)
 
 ### Security
 

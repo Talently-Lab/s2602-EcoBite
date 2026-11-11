@@ -14,7 +14,7 @@ function userResponse(user: PublicUser) {
   return { id: user.id, name: user.nombreCompleto, email: user.email, role: user.rol, createdAt: user.fechaRegistro };
 }
 
-export function createUserService(db: Pick<PrismaClient, 'usuario'>, jwtSecret: string) {
+export function createUserService(db: Pick<PrismaClient, 'usuario' | 'pedido'>, jwtSecret: string) {
   return {
     async register(input: ReturnType<typeof validateRegistration>) {
       const passwordHash = await bcrypt.hash(input.password, 12);
@@ -63,6 +63,25 @@ export function createUserService(db: Pick<PrismaClient, 'usuario'>, jwtSecret: 
       });
       if (!user || !user.activo) throw new HttpError(401, 'Sesión inválida o vencida.');
       return userResponse(user);
+    },
+
+    async impact(userId: string) {
+      const user = await db.usuario.findUnique({
+        where: { id: userId },
+        select: { activo: true },
+      });
+      if (!user || !user.activo) throw new HttpError(401, 'Sesión inválida o vencida.');
+      // Same KPI rule as the dashboard: only COMPLETADO orders count.
+      const aggregate = await db.pedido.aggregate({
+        where: { usuarioId: userId, estado: 'COMPLETADO' },
+        _count: { _all: true },
+        _sum: { co2AhorradoKg: true, totalEnvasesEvitados: true },
+      });
+      return {
+        totalCo2SavedKg: Number(aggregate._sum.co2AhorradoKg ?? 0),
+        totalContainersAvoided: Number(aggregate._sum.totalEnvasesEvitados ?? 0),
+        totalOrders: aggregate._count._all,
+      };
     },
   };
 }
