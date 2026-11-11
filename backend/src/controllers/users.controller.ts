@@ -13,5 +13,8 @@ export function createUserController(service: ReturnType<typeof createUserServic
   const me: RequestHandler = async (_req, res) => {
     res.json({ user: await service.currentUser(res.locals.userId) });
   };
-  return { register, login, me };
+  const impact: RequestHandler = async (_req, res) => {
+    res.json({ impact: await service.impact(res.locals.userId) });
+  };
+  return { register, login, me, impact };
 }

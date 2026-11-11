@@ -291,6 +291,27 @@ al cerrar sesión; un token robado permanece válido hasta su vencimiento salvo
 desactivación de la cuenta o rotación del secreto. No persistirlo por defecto
 en `localStorage`; acordar la estrategia de sesión con frontend antes de producción.
 
+### `GET /api/users/me/impact`
+
+Protegido: `Authorization: Bearer <accessToken>` (cualquier rol; la cuenta debe
+seguir activa). Devuelve el impacto acumulado del propio usuario: el
+`usuarioId` sale del token, nunca de parámetros.
+
+```ts
+{
+  impact: {
+    totalCo2SavedKg: number;        // suma de co2_ahorrado_kg
+    totalContainersAvoided: number; // suma de total_envases_evitados
+    totalOrders: number;            // cantidad de pedidos COMPLETADO
+  };
+}
+```
+
+Solo cuentan los pedidos `COMPLETADO` (la misma regla que
+`GET /api/dashboard/stats`); `PENDIENTE`, `EN_PREPARACION` y `CANCELADO` se
+excluyen. Sin pedidos completados, los tres totales responden `0`.
+`401`: token ausente, inválido, vencido o usuario eliminado/inactivo.
+
 ### `GET /api/restaurant-categories`
 
 Público. Devuelve las cuatro categorías admitidas para restaurantes aliados;

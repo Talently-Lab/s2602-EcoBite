@@ -62,6 +62,11 @@ Reglas del archivo:
   asincrónico (Brevo con `EMAIL_API_KEY`/`EMAIL_FROM` configuradas, o solo
   registro en el log sin credenciales) y la respuesta no depende del proveedor.
   ([Issue #54](https://github.com/Talently-Lab/s2602-EcoBite/issues/54))
+- `GET /users/me/impact` (autenticado, cualquier rol activo): totales de
+  impacto del propio usuario (CO₂ ahorrado, envases evitados y cantidad de
+  pedidos) sumando solo pedidos en estado `COMPLETADO`, la misma regla que el
+  dashboard.
+  ([Issue #35](https://github.com/Talently-Lab/s2602-EcoBite/issues/35))
 
 ## [1.2.0] - 2026-11-06
 

@@ -823,6 +823,71 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /users/me/impact:
+    get:
+      tags:
+        - users
+      summary: Obtener el impacto ambiental acumulado del usuario autenticado
+      description: |
+        Devuelve los totales de impacto del propio usuario: el `usuarioId` se
+        toma siempre del token, nunca de parámetros, así que solo se exponen
+        datos propios.
+
+        Solo suma pedidos en estado `COMPLETADO` (alineado con la regla del
+        dashboard); `PENDIENTE`, `EN_PREPARACION` y `CANCELADO` no cuentan. Un
+        usuario sin pedidos completados recibe los tres totales en `0`.
+
+        Cualquier rol activo puede consultarlo. La cuenta se consulta en cada
+        llamada: si el usuario fue eliminado o desactivado, el acceso se
+        invalida de inmediato aunque el token no haya vencido.
+      operationId: getCurrentUserImpact
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      responses:
+        '200':
+          description: Totales de impacto del usuario autenticado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserImpactEnvelope'
+              example:
+                impact:
+                  totalCo2SavedKg: 1.632
+                  totalContainersAvoided: 5
+                  totalOrders: 2
+        '401':
+          description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /restaurant-categories:
     get:
       tags:
@@ -2185,6 +2250,37 @@ components:
       properties:
         user:
           $ref: '#/components/schemas/PublicUser'
+      additionalProperties: false
+
+    UserImpact:
+      type: object
+      description: Totales de impacto del usuario; solo suma pedidos en estado COMPLETADO (alineado con la regla del dashboard).
+      required:
+        - totalCo2SavedKg
+        - totalContainersAvoided
+        - totalOrders
+      properties:
+        totalCo2SavedKg:
+          type: number
+          description: Suma del CO₂ ahorrado (kg) de los pedidos COMPLETADO del usuario.
+          examples: [1.632]
+        totalContainersAvoided:
+          type: integer
+          description: Suma de los envases evitados de los pedidos COMPLETADO del usuario.
+          examples: [5]
+        totalOrders:
+          type: integer
+          description: Cantidad de pedidos del usuario en estado COMPLETADO.
+          examples: [2]
+      additionalProperties: false
+
+    UserImpactEnvelope:
+      type: object
+      required:
+        - impact
+      properties:
+        impact:
+          $ref: '#/components/schemas/UserImpact'
       additionalProperties: false
 
     RegisterRequest:

@@ -64,6 +64,7 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig, deps?: ApiD
   apiRouter.post('/users/register', authLimiter, users.register);
   apiRouter.post('/users/login', authLimiter, users.login);
   apiRouter.get('/users/me', auth, users.me);
+  apiRouter.get('/users/me/impact', auth, users.impact);
   apiRouter.get('/dashboard/stats', auth, requireRole(db, 'ADMIN_PLATAFORMA'), dashboard.stats);
   apiRouter.get('/restaurant-categories', restaurantRequests.categories);
   apiRouter.post('/restaurant-requests', auth, requireRole(db, 'CLIENTE'), restaurantRequests.submit);
