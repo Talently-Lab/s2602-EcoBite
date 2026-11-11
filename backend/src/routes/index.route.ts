@@ -8,6 +8,7 @@ import { createEmailService, type EmailService } from '../lib/email';
 import { createDashboardController } from '../controllers/dashboard.controller';
 import { createHealthController } from '../controllers/health.controller';
 import { createOrderController } from '../controllers/orders.controller';
+import { createProductController } from '../controllers/products.controller';
 import { createRestaurantRequestController } from '../controllers/restaurant-requests.controller';
 import { createRestaurantController } from '../controllers/restaurants.controller';
 import { createUserController } from '../controllers/users.controller';
@@ -16,6 +17,7 @@ import { authenticate, requireRole } from '../middlewares/auth.middleware';
 import { createDashboardService } from '../services/dashboard.service';
 import { createHealthService } from '../services/health.service';
 import { createOrderService } from '../services/orders.service';
+import { createProductService } from '../services/products.service';
 import { createRestaurantRequestService } from '../services/restaurant-requests.service';
 import { createRestaurantService } from '../services/restaurants.service';
 import { createUserService } from '../services/users.service';
@@ -32,6 +34,7 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig, deps?: ApiD
   const restaurants = createRestaurantController(createRestaurantService(db));
   const zones = createZoneController(createZoneService(db));
   const orders = createOrderController(createOrderService(db));
+  const products = createProductController(createProductService(db));
   const restaurantRequests = createRestaurantRequestController(
     createRestaurantRequestService(db, emailService));
   const dashboard = createDashboardController(createDashboardService(db));
@@ -56,8 +59,12 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig, deps?: ApiD
   });
   apiRouter.get('/health', health.check);
   apiRouter.get('/restaurants', restaurants.list);
+  const restaurantAdmin = requireRole(db, 'RESTAURANTE_ADMIN');
+  apiRouter.get('/restaurants/me/products', auth, restaurantAdmin, products.listMine);
+  apiRouter.post('/restaurants/me/products', auth, restaurantAdmin, products.create);
   apiRouter.get('/restaurants/:id', restaurants.getById);
   apiRouter.get('/zones', zones.list);
+  apiRouter.get('/packagings', products.listPackagings);
   apiRouter.post('/orders', auth, orders.create);
   apiRouter.get('/orders', auth, orders.list);
   apiRouter.get('/orders/:id', auth, orders.getById);

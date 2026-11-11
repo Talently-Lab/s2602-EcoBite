@@ -67,6 +67,15 @@ Reglas del archivo:
   pedidos) sumando solo pedidos en estado `COMPLETADO`, la misma regla que el
   dashboard.
   ([Issue #35](https://github.com/Talently-Lab/s2602-EcoBite/issues/35))
+- `GET /packagings` (público): catálogo de los envases EcoBite con el material
+  tradicional que reemplazan, el material eco y los gramos de plástico
+  evitados por envase; alimenta el formulario de carga de platillos.
+  ([Issue #55](https://github.com/Talently-Lab/s2602-EcoBite/issues/55))
+- `POST /restaurants/me/products` y `GET /restaurants/me/products` (rol
+  `RESTAURANTE_ADMIN` con restaurante activo): carga de platillos con sus
+  envases (`envases_por_unidad >= 1`) y listado propio; un platillo con
+  `available: true` aparece de inmediato en el menú público.
+  ([Issue #55](https://github.com/Talently-Lab/s2602-EcoBite/issues/55))
 
 ## [1.2.0] - 2026-11-06
 

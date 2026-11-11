@@ -163,6 +163,80 @@ nombre e ID. No incluye email ni contraseña del restaurante.
   (la misma respuesta, sin distinguir el motivo; el `id` inválido ni siquiera
   consulta la base).
 
+### `GET /api/packagings`
+
+Público. Devuelve el catálogo acotado de envases EcoBite (8 filas de seed,
+ordenadas por nombre e ID) que un restaurante puede asignar a sus platillos;
+el formulario de carga de platillos lo consume para armar `packagings`.
+
+```ts
+{
+  packagings: Array<{
+    id: string;
+    name: string;
+    traditionalMaterial: string;  // material tradicional que reemplaza
+    ecoMaterial: string;          // material EcoBite del envase
+    gramsPlasticAvoided: number;  // peso_base_g − peso_ecobite_g
+    usualUse: string | null;
+  }>;
+}
+```
+
+### `POST /api/restaurants/me/products`
+
+Protegido: `Authorization: Bearer <accessToken>` y la cuenta debe tener rol
+`RESTAURANTE_ADMIN` (verificado en la base en cada solicitud, nunca desde el
+JWT) con un restaurante activo vinculado; sin local asignado o con el local
+inactivo también responde `403`. El `restauranteId` se toma del usuario
+autenticado, nunca del cuerpo.
+
+```json
+{
+  "name": "Bowl andino",
+  "foodCategory": "Bowls",
+  "price": 12500.00,
+  "available": true,
+  "packagings": [{ "packagingId": "<uuid>", "unitsPerPackage": 2 }]
+}
+```
+
+- `price` positivo con máximo 2 decimales y `<= 99999999.99` (Decimal(10,2)).
+- `packagings` exige al menos un envase (`packagingId` UUID, `unitsPerPackage`
+  entero `>= 1` — la base lo garantiza además con un CHECK — y sin
+  `packagingId` repetidos). Todos los envases deben existir en el catálogo de
+  `GET /api/packagings`.
+- `available` es opcional (`true` por defecto): con `false` el platillo se
+  crea igualmente pero no aparece en el menú público de
+  `GET /api/restaurants/:id` hasta habilitarlo.
+- El platillo y sus `producto_empaque` se crean en una sola operación.
+- `201`: `{"product":{...}}`. `400`: campos faltantes o adicionales, datos
+  inválidos o envases inexistentes.
+- `401`: sesión ausente/inválida. `403`: otro rol o restaurante no habilitado.
+
+El producto devuelto sigue la misma forma que el menú público (`id`, `name`,
+`category`, `price`, `available`) y agrega `packagings` para que el frontend
+consuma una sola forma:
+
+```ts
+{
+  product: {
+    id: string;
+    name: string;
+    category: string;
+    price: number;
+    available: boolean;
+    packagings: Array<{ id: string; name: string; unitsPerPackage: number }>;
+  };
+}
+```
+
+### `GET /api/restaurants/me/products`
+
+Mismas reglas de acceso que el POST (`RESTAURANTE_ADMIN` con restaurante
+activo). Devuelve `{"products":[...]}` solo con los platillos del propio
+restaurante, del más reciente al más antiguo, incluyendo los de
+`available: false`; cada entrada trae el `packagings` configurado.
+
 ### `POST /api/orders`
 
 Protegido: `Authorization: Bearer <accessToken>`. Crea un pedido para el
