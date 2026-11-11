@@ -54,6 +54,67 @@ export function validateRegistration(body: unknown) {
   return { name, ...credentials };
 }
 
+const requestCategories = ['COMIDA_SALUDABLE', 'COMIDA_DE_ESTACION', 'COMIDA_VEGANA', 'COMIDA_CASERA'] as const;
+
+export function validateRestaurantRequest(body: unknown) {
+  const input = bodyObject(body);
+  parse(
+    z.strictObject({
+      name: z.unknown(),
+      category: z.unknown(),
+      zoneId: z.unknown(),
+      address: z.unknown(),
+      email: z.unknown(),
+      commitmentAccepted: z.unknown(),
+    }),
+    input,
+    'Solo se permiten los campos name, category, zoneId, address, email y commitmentAccepted.',
+  );
+  const name = parse(
+    trimmedText(120),
+    input.name,
+    'El nombre del restaurante es obligatorio y debe tener como máximo 120 caracteres.',
+  );
+  const category = parse(
+    z.enum(requestCategories),
+    input.category,
+    `category debe ser una de: ${requestCategories.join(', ')}.`,
+  );
+  const zoneId = parse(uuid, input.zoneId, 'zoneId debe ser un UUID válido.');
+  const address = parse(
+    trimmedText(200),
+    input.address,
+    'La dirección del restaurante es obligatoria y debe tener como máximo 200 caracteres.',
+  );
+  const email = parse(
+    credentialsSchema.shape.email,
+    input.email,
+    'El email del restaurante debe ser válido.',
+  );
+  parse(
+    z.literal(true),
+    input.commitmentAccepted,
+    'Debés aceptar el compromiso de buenas prácticas para enviar la solicitud.',
+  );
+  return { name, category, zoneId, address, email };
+}
+
+const requestStatuses = ['PENDIENTE', 'APROBADA', 'RECHAZADA', 'TODAS'] as const;
+
+export function validateRequestStatus(value: unknown) {
+  return parse(
+    z.enum(requestStatuses),
+    value ?? 'PENDIENTE',
+    `status debe ser una de: ${requestStatuses.join(', ')}.`,
+  );
+}
+
+export function validateEmptyBody(body: unknown) {
+  const empty = body === undefined || body === null ||
+    (typeof body === 'object' && !Array.isArray(body) && Object.keys(body).length === 0);
+  if (!empty) throw new HttpError(400, 'Esta acción no acepta campos.');
+}
+
 export function validateOrder(body: unknown) {
   const input = bodyObject(body);
   parse(

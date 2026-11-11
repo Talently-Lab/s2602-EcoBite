@@ -52,9 +52,15 @@ tags:
   - name: users
     x-displayName: Usuarios
     description: Perfil del cliente autenticado.
+  - name: restaurant-requests
+    x-displayName: Solicitudes de restaurante
+    description: Solicitudes de alta de restaurantes aliados.
   - name: dashboard
     x-displayName: Dashboard
     description: Métricas globales de plataforma, solo para administradores.
+  - name: admin
+    x-displayName: Administración
+    description: Operaciones internas de plataforma, solo para `ADMIN_PLATAFORMA`.
   - name: ops
     x-displayName: Operación
     description: Estado operativo del servicio.
@@ -817,6 +823,298 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /restaurant-categories:
+    get:
+      tags:
+        - restaurant-requests
+      summary: Listar las categorías de restaurante admitidas
+      description: |
+        Fuente de verdad de las cuatro categorías que acepta
+        `POST /restaurant-requests` en `category`: cada entrada expone el `key`
+        del enum y su `label` en español, en el orden del enum.
+      operationId: listRestaurantCategories
+      security: []
+      x-badges:
+        - name: Público
+          position: after
+      responses:
+        '200':
+          description: Categorías admitidas para restaurantes aliados.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantCategoryListResponse'
+              example:
+                categories:
+                  - key: COMIDA_SALUDABLE
+                    label: Comida saludable
+                  - key: COMIDA_DE_ESTACION
+                    label: Comida de estación
+                  - key: COMIDA_VEGANA
+                    label: Comida vegana
+                  - key: COMIDA_CASERA
+                    label: Comida casera
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /restaurant-requests:
+    post:
+      tags:
+        - restaurant-requests
+      summary: Enviar una solicitud de restaurante aliado
+      description: |
+        Requiere el JWT de una cuenta activa con rol `CLIENTE`. El rol se
+        verifica en la base de datos en cada solicitud, nunca desde el token;
+        otros roles responden `403`. El solicitante se toma del token, nunca
+        del cuerpo.
+
+        - `commitmentAccepted` debe ser `true`: la aceptación del compromiso de
+          buenas prácticas queda registrada con la fecha del servidor.
+        - La `zoneId` debe existir y estar activa.
+        - Solo una solicitud `PENDIENTE` o `APROBADA` por usuario. Una solicitud
+          `RECHAZADA` no bloquea: el usuario puede volver a aplicar con otro
+          `email`.
+        - El `email` debe ser único entre las solicitudes y los restaurantes
+          dados de alta; al aprobarse, el restaurante usa esa misma dirección.
+        - Las solicitudes del mismo usuario se serializan en la base (advisory
+          lock de transacción PostgreSQL), así que un envío concurrente no
+          genera solicitudes duplicadas.
+      operationId: createRestaurantRequest
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantRequestCreate'
+            example:
+              name: Verde Bistró
+              category: COMIDA_SALUDABLE
+              zoneId: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+              address: Av. Santa Fe 1234
+              email: contacto@verdebistro.test
+              commitmentAccepted: true
+      responses:
+        '201':
+          description: Solicitud creada con `status` = `PENDIENTE`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantRequestEnvelope'
+              example:
+                request:
+                  id: 4f8c2b7a-9d1e-4f6a-b3c5-8e2a1d4f6b7c
+                  status: PENDIENTE
+                  restaurant:
+                    name: Verde Bistró
+                    address: Av. Santa Fe 1234
+                    email: contacto@verdebistro.test
+                    category: Comida saludable
+                  zone:
+                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                    name: Palermo
+                  commitmentAcceptedAt: '2026-02-10T15:30:00.000Z'
+                  submittedAt: '2026-02-10T15:30:00.000Z'
+                  reviewedAt: null
+        '400':
+          description: Datos inválidos o zona inexistente/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                camposAdicionales:
+                  summary: Campo no permitido (incluye `status` o `usuarioId`)
+                  value:
+                    error: Solo se permiten los campos name, category, zoneId, address, email y commitmentAccepted.
+                nombreInvalido:
+                  summary: Nombre vacío, con controles o mayor a 120 caracteres
+                  value:
+                    error: El nombre del restaurante es obligatorio y debe tener como máximo 120 caracteres.
+                categoriaInvalida:
+                  summary: category fuera del enum
+                  value:
+                    error: 'category debe ser una de: COMIDA_SALUDABLE, COMIDA_DE_ESTACION, COMIDA_VEGANA, COMIDA_CASERA.'
+                zonaInvalida:
+                  summary: zoneId no es un UUID
+                  value:
+                    error: zoneId debe ser un UUID válido.
+                direccionInvalida:
+                  summary: Dirección vacía, con controles o mayor a 200 caracteres
+                  value:
+                    error: La dirección del restaurante es obligatoria y debe tener como máximo 200 caracteres.
+                emailInvalido:
+                  summary: Email mal formado
+                  value:
+                    error: El email del restaurante debe ser válido.
+                compromisoNoAceptado:
+                  summary: commitmentAccepted ausente o distinto de `true`
+                  value:
+                    error: Debés aceptar el compromiso de buenas prácticas para enviar la solicitud.
+                zonaNoDisponible:
+                  summary: Zona inexistente o inactiva
+                  value:
+                    error: La zona seleccionada no está disponible.
+        '401':
+          description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '403':
+          description: La cuenta no tiene rol `CLIENTE`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No tenés permisos para acceder a este recurso.
+        '409':
+          description: Conflicto con una solicitud existente o un email ya registrado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                solicitudExistente:
+                  summary: Ya existe una solicitud PENDIENTE o APROBADA del usuario
+                  value:
+                    error: Ya tenés una solicitud pendiente o aprobada.
+                emailEnUso:
+                  summary: El email ya pertenece a un restaurante o a otra solicitud
+                  value:
+                    error: Ya existe un restaurante o solicitud con ese email.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /restaurant-requests/me:
+    get:
+      tags:
+        - restaurant-requests
+      summary: Consultar la última solicitud del usuario autenticado
+      description: |
+        Devuelve la solicitud más reciente del usuario del token, cualquiera sea
+        su estado y su rol: un `RESTAURANTE_ADMIN` aprobado sigue viendo la
+        solicitud que lo habilitó, que es el aviso en la aplicación de la
+        aprobación. `request` es `null` cuando el usuario nunca aplicó.
+        La cuenta se consulta en cada llamada: si fue eliminada o desactivada
+        responde `401`.
+      operationId: getMyRestaurantRequest
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      responses:
+        '200':
+          description: Última solicitud del usuario o `null` si no tiene ninguna.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyRestaurantRequestEnvelope'
+              examples:
+                sinSolicitud:
+                  summary: El usuario nunca envió una solicitud
+                  value:
+                    request: null
+                conSolicitud:
+                  summary: Última solicitud del usuario
+                  value:
+                    request:
+                      id: 4f8c2b7a-9d1e-4f6a-b3c5-8e2a1d4f6b7c
+                      status: APROBADA
+                      restaurant:
+                        name: Verde Bistró
+                        address: Av. Santa Fe 1234
+                        email: contacto@verdebistro.test
+                        category: Comida saludable
+                      zone:
+                        id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                        name: Palermo
+                      commitmentAcceptedAt: '2026-02-10T15:30:00.000Z'
+                      submittedAt: '2026-02-10T15:30:00.000Z'
+                      reviewedAt: '2026-02-12T10:05:00.000Z'
+        '401':
+          description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /health:
     get:
       tags:
@@ -909,6 +1207,477 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: No tenés permisos para acceder a este recurso.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/restaurant-requests:
+    get:
+      tags:
+        - admin
+      summary: Listar solicitudes de restaurante por estado
+      description: |
+        Requiere el JWT de una cuenta activa con rol `ADMIN_PLATAFORMA`. El rol
+        se verifica en la base de datos en cada solicitud, nunca desde el token;
+        otros roles responden `403`.
+
+        `status` filtra por estado (`PENDIENTE` por defecto); `TODAS` devuelve
+        la lista sin filtrar. Orden: más antiguas primero. Cada entrada incluye
+        el solicitante y el administrador revisor cuando existe.
+      operationId: listRestaurantRequests
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Estado por el que filtrar; `TODAS` omite el filtro.
+          schema:
+            type: string
+            enum:
+              - PENDIENTE
+              - APROBADA
+              - RECHAZADA
+              - TODAS
+            default: PENDIENTE
+      responses:
+        '200':
+          description: Solicitudes en el estado pedido, más antiguas primero.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRestaurantRequestListResponse'
+              example:
+                requests:
+                  - id: 4f8c2b7a-9d1e-4f6a-b3c5-8e2a1d4f6b7c
+                    status: PENDIENTE
+                    restaurant:
+                      name: Verde Bistró
+                      address: Av. Santa Fe 1234
+                      email: contacto@verdebistro.test
+                      category: Comida saludable
+                    zone:
+                      id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                      name: Palermo
+                    applicant:
+                      id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                      name: María Fernández
+                      email: maria.fernandez@ecobite.test
+                    reviewedBy: null
+                    commitmentAcceptedAt: '2026-02-10T15:30:00.000Z'
+                    submittedAt: '2026-02-10T15:30:00.000Z'
+                    reviewedAt: null
+        '400':
+          description: '`status` fuera del enum o no es un único valor de texto.'
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'status debe ser una de: PENDIENTE, APROBADA, RECHAZADA, TODAS.'
+        '401':
+          description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Sesión inválida o vencida.
+        '403':
+          description: La cuenta no tiene rol `ADMIN_PLATAFORMA`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No tenés permisos para acceder a este recurso.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/restaurant-requests/{id}:
+    get:
+      tags:
+        - admin
+      summary: Ver el detalle de una solicitud
+      description: |
+        Requiere el JWT de una cuenta activa con rol `ADMIN_PLATAFORMA`,
+        verificado en la base en cada solicitud. Incluye el solicitante y el
+        administrador revisor cuando existe.
+      operationId: getRestaurantRequest
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de la solicitud.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle de la solicitud con solicitante y revisor.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRestaurantRequestEnvelope'
+              example:
+                request:
+                  id: 4f8c2b7a-9d1e-4f6a-b3c5-8e2a1d4f6b7c
+                  status: APROBADA
+                  restaurant:
+                    name: Verde Bistró
+                    address: Av. Santa Fe 1234
+                    email: contacto@verdebistro.test
+                    category: Comida saludable
+                  zone:
+                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                    name: Palermo
+                  applicant:
+                    id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                    name: María Fernández
+                    email: maria.fernandez@ecobite.test
+                  reviewedBy:
+                    id: 2f6b0f5a-7a2b-4d4a-9f8e-1c2d3e4f5a6b
+                    name: Admin Plataforma
+                  commitmentAcceptedAt: '2026-02-10T15:30:00.000Z'
+                  submittedAt: '2026-02-10T15:30:00.000Z'
+                  reviewedAt: '2026-02-12T10:05:00.000Z'
+        '404':
+          description: La solicitud no existe o el `id` no es un UUID.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Solicitud no encontrada.
+        '401':
+          description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Sesión inválida o vencida.
+        '403':
+          description: La cuenta no tiene rol `ADMIN_PLATAFORMA`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No tenés permisos para acceder a este recurso.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/restaurant-requests/{id}/approve:
+    post:
+      tags:
+        - admin
+      summary: Aprobar una solicitud pendiente
+      description: |
+        Requiere el JWT de una cuenta activa con rol `ADMIN_PLATAFORMA`,
+        verificado en la base en cada solicitud.
+
+        En una sola transacción: marca la solicitud `APROBADA` con la fecha de
+        revisión y el administrador revisor, crea el restaurante (activo y eco)
+        con los datos de la solicitud y promueve al solicitante a
+        `RESTAURANTE_ADMIN` asignándole el restaurante creado.
+
+        - Si la solicitud ya fue revisada (por ejemplo, dos administradores
+          actuando a la vez) responde `409`: la actualización condicional en la
+          base garantiza que solo una revisión gana.
+        - El solicitante debe seguir activo y con rol `CLIENTE`; si no, responde
+          `409` y no se crea nada.
+        - El cuerpo debe estar vacío (`{}` o ausente): la acción no acepta
+          campos.
+      operationId: approveRestaurantRequest
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de la solicitud pendiente.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              description: Sin campos; enviar `{}` con `Content-Type: application/json` (sin ese encabezado responde `415`).
+      responses:
+        '200':
+          description: Solicitud aprobada; restaurante creado y solicitante promovido.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRestaurantRequestEnvelope'
+        '400':
+          description: El cuerpo trajo campos.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Esta acción no acepta campos.
+        '401':
+          description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Sesión inválida o vencida.
+        '403':
+          description: La cuenta no tiene rol `ADMIN_PLATAFORMA`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No tenés permisos para acceder a este recurso.
+        '404':
+          description: La solicitud no existe o el `id` no es un UUID.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Solicitud no encontrada.
+        '409':
+          description: La solicitud no está pendiente o el alta no es posible.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                yaRevisada:
+                  summary: La solicitud ya fue aprobada o rechazada
+                  value:
+                    error: La solicitud ya fue revisada.
+                solicitanteNoHabilitable:
+                  summary: El solicitante está inactivo o ya no tiene rol CLIENTE
+                  value:
+                    error: El solicitante no puede ser habilitado como restaurante.
+                emailEnUso:
+                  summary: Ya existe un restaurante con ese email
+                  value:
+                    error: Ya existe un restaurante con ese email.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/restaurant-requests/{id}/reject:
+    post:
+      tags:
+        - admin
+      summary: Rechazar una solicitud pendiente
+      description: |
+        Requiere el JWT de una cuenta activa con rol `ADMIN_PLATAFORMA`,
+        verificado en la base en cada solicitud.
+
+        Marca la solicitud `RECHAZADA` con la fecha de revisión y el
+        administrador revisor. No crea restaurante ni modifica el rol del
+        solicitante, y el rechazo no registra motivo: el cuerpo debe estar
+        vacío (`{}` o ausente). El solicitante puede volver a aplicar con otro
+        email de restaurante. Si la solicitud ya fue revisada, responde `409`.
+      operationId: rejectRestaurantRequest
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de la solicitud pendiente.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              description: Sin campos; enviar `{}` con `Content-Type: application/json` (sin ese encabezado responde `415`).
+      responses:
+        '200':
+          description: Solicitud rechazada.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRestaurantRequestEnvelope'
+        '400':
+          description: El cuerpo trajo campos.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Esta acción no acepta campos.
+        '401':
+          description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Sesión inválida o vencida.
+        '403':
+          description: La cuenta no tiene rol `ADMIN_PLATAFORMA`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: No tenés permisos para acceder a este recurso.
+        '404':
+          description: La solicitud no existe o el `id` no es un UUID.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Solicitud no encontrada.
+        '409':
+          description: La solicitud ya fue revisada.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: La solicitud ya fue revisada.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
@@ -1528,6 +2297,297 @@ components:
           type: number
           description: Suma del CO₂ ahorrado (kg) de los pedidos COMPLETADO.
           examples: [1.582]
+      additionalProperties: false
+
+    RestaurantCategory:
+      type: object
+      description: Categoría admitida para restaurantes aliados; `key` es el valor del enum que acepta `POST /restaurant-requests`.
+      required:
+        - key
+        - label
+      properties:
+        key:
+          type: string
+          enum:
+            - COMIDA_SALUDABLE
+            - COMIDA_DE_ESTACION
+            - COMIDA_VEGANA
+            - COMIDA_CASERA
+        label:
+          type: string
+          enum:
+            - Comida saludable
+            - Comida de estación
+            - Comida vegana
+            - Comida casera
+          description: Etiqueta en español para mostrar al usuario.
+      additionalProperties: false
+
+    RestaurantCategoryListResponse:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestaurantCategory'
+      additionalProperties: false
+
+    RestaurantRequestCreate:
+      type: object
+      required:
+        - name
+        - category
+        - zoneId
+        - address
+        - email
+        - commitmentAccepted
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[^\u0000-\u001f\u007f]+$'
+          description: Nombre comercial del restaurante; se recorta; sin caracteres de control.
+          examples: [Verde Bistró]
+        category:
+          type: string
+          enum:
+            - COMIDA_SALUDABLE
+            - COMIDA_DE_ESTACION
+            - COMIDA_VEGANA
+            - COMIDA_CASERA
+          description: Una sola categoría; los valores vigentes los publica `GET /restaurant-categories`.
+        zoneId:
+          type: string
+          format: uuid
+          description: Zona activa de CABA donde operará el restaurante.
+        address:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[^\u0000-\u001f\u007f]+$'
+          description: Dirección del local; se recorta; sin caracteres de control.
+          examples: [Av. Santa Fe 1234]
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Se recorta y convierte a minúsculas; único entre solicitudes y restaurantes.
+          examples: [contacto@verdebistro.test]
+        commitmentAccepted:
+          type: boolean
+          const: true
+          description: Aceptación del compromiso de buenas prácticas; obligatoria.
+      additionalProperties: false
+
+    RestaurantRequest:
+      type: object
+      description: Solicitud de alta de un restaurante aliado; nunca incluye credenciales.
+      required:
+        - id
+        - status
+        - restaurant
+        - zone
+        - commitmentAcceptedAt
+        - submittedAt
+        - reviewedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - PENDIENTE
+            - APROBADA
+            - RECHAZADA
+          x-enum-descriptions:
+            PENDIENTE: Esperando revisión del administrador.
+            APROBADA: Aprobada; el restaurante ya existe y el solicitante es RESTAURANTE_ADMIN.
+            RECHAZADA: Rechazada; el solicitante puede volver a aplicar con otro email.
+        restaurant:
+          type: object
+          required:
+            - name
+            - address
+            - email
+            - category
+          properties:
+            name:
+              type: string
+              examples: [Verde Bistró]
+            address:
+              type: string
+              examples: [Av. Santa Fe 1234]
+            email:
+              type: string
+              format: email
+              examples: [contacto@verdebistro.test]
+            category:
+              type: string
+              enum:
+                - Comida saludable
+                - Comida de estación
+                - Comida vegana
+                - Comida casera
+              description: Etiqueta en español de la categoría.
+          additionalProperties: false
+        zone:
+          $ref: '#/components/schemas/Zone'
+        commitmentAcceptedAt:
+          type: string
+          format: date-time
+          description: Fecha del servidor en la que se registró la aceptación del compromiso.
+        submittedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: Fecha de revisión; `null` mientras siga `PENDIENTE`.
+      additionalProperties: false
+
+    AdminRestaurantRequest:
+      type: object
+      description: Solicitud con los datos del solicitante y del revisor; nunca incluye credenciales.
+      required:
+        - id
+        - status
+        - restaurant
+        - zone
+        - applicant
+        - reviewedBy
+        - commitmentAcceptedAt
+        - submittedAt
+        - reviewedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - PENDIENTE
+            - APROBADA
+            - RECHAZADA
+        restaurant:
+          type: object
+          required:
+            - name
+            - address
+            - email
+            - category
+          properties:
+            name:
+              type: string
+              examples: [Verde Bistró]
+            address:
+              type: string
+              examples: [Av. Santa Fe 1234]
+            email:
+              type: string
+              format: email
+              examples: [contacto@verdebistro.test]
+            category:
+              type: string
+              enum:
+                - Comida saludable
+                - Comida de estación
+                - Comida vegana
+                - Comida casera
+          additionalProperties: false
+        zone:
+          $ref: '#/components/schemas/Zone'
+        applicant:
+          type: object
+          required:
+            - id
+            - name
+            - email
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              examples: [María Fernández]
+            email:
+              type: string
+              format: email
+              examples: [maria.fernandez@ecobite.test]
+          additionalProperties: false
+        reviewedBy:
+          anyOf:
+            - type: object
+              required:
+                - id
+                - name
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  examples: [Admin Plataforma]
+              additionalProperties: false
+            - type: 'null'
+          description: Administrador que revisó la solicitud; `null` mientras siga `PENDIENTE`.
+        commitmentAcceptedAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      additionalProperties: false
+
+    RestaurantRequestEnvelope:
+      type: object
+      required:
+        - request
+      properties:
+        request:
+          $ref: '#/components/schemas/RestaurantRequest'
+      additionalProperties: false
+
+    MyRestaurantRequestEnvelope:
+      type: object
+      required:
+        - request
+      properties:
+        request:
+          anyOf:
+            - $ref: '#/components/schemas/RestaurantRequest'
+            - type: 'null'
+          description: Última solicitud del usuario; `null` si nunca aplicó.
+      additionalProperties: false
+
+    AdminRestaurantRequestEnvelope:
+      type: object
+      required:
+        - request
+      properties:
+        request:
+          $ref: '#/components/schemas/AdminRestaurantRequest'
+      additionalProperties: false
+
+    AdminRestaurantRequestListResponse:
+      type: object
+      required:
+        - requests
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminRestaurantRequest'
       additionalProperties: false
 
   responses:

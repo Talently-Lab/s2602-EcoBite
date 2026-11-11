@@ -288,6 +288,77 @@ al cerrar sesión; un token robado permanece válido hasta su vencimiento salvo
 desactivación de la cuenta o rotación del secreto. No persistirlo por defecto
 en `localStorage`; acordar la estrategia de sesión con frontend antes de producción.
 
+### `GET /api/restaurant-categories`
+
+Público. Devuelve las cuatro categorías admitidas para restaurantes aliados;
+es la fuente de verdad de los valores que acepta `category` en
+`POST /api/restaurant-requests`. Cada entrada trae el `key` del enum y su
+`label` en español.
+
+```ts
+{ categories: Array<{ key: string; label: string }> }
+```
+
+### `POST /api/restaurant-requests`
+
+Protegido: `Authorization: Bearer <accessToken>` y la cuenta debe tener rol
+`CLIENTE` y estar activa (el rol se verifica en la base en cada solicitud).
+Crea una solicitud de alta para el usuario del token.
+
+```json
+{
+  "name": "Verde Bistró",
+  "category": "COMIDA_SALUDABLE",
+  "zoneId": "uuid",
+  "address": "Av. Santa Fe 1234",
+  "email": "contacto@verdebistro.test",
+  "commitmentAccepted": true
+}
+```
+
+- `201`: `{"request":{...}}` con `status` `PENDIENTE` y la aceptación del
+  compromiso registrada con la fecha del servidor.
+- `400`: campos faltantes o adicionales, `category` inválida, `zoneId` no UUID,
+  `commitmentAccepted` distinto de `true`, o zona inexistente/inactiva.
+- `401`/`403`: sesión inválida o rol distinto de `CLIENTE`.
+- `409`: ya existe una solicitud `PENDIENTE`/`APROBADA` del usuario, o el email
+  pertenece a otro restaurante o solicitud. Un rechazo no bloquea: se puede
+  volver a aplicar con otro email.
+
+### `GET /api/restaurant-requests/me`
+
+Protegido (cualquier rol; la cuenta debe seguir activa). Devuelve
+`{"request":{...}}` con la solicitud más reciente del usuario o
+`{"request":null}` si nunca aplicó. Es la vía por la que un
+`RESTAURANTE_ADMIN` recién aprobado ve el estado `APROBADA` en la aplicación.
+
+### `GET /api/admin/restaurant-requests?status=`
+
+Solo `ADMIN_PLATAFORMA` (rol verificado en la base en cada llamada).
+`status` admite `PENDIENTE` (por defecto), `APROBADA`, `RECHAZADA` y `TODAS`
+(sin filtro). Devuelve `{"requests":[...]}` de más antigua a más reciente;
+cada entrada incluye `applicant` y `reviewedBy`. `400` si `status` no es un
+único valor válido.
+
+### `GET /api/admin/restaurant-requests/:id`
+
+Solo `ADMIN_PLATAFORMA`. Detalle completo de la solicitud. `404` tanto para un
+`id` inexistente como para uno que no es UUID.
+
+### `POST /api/admin/restaurant-requests/:id/approve`
+
+Solo `ADMIN_PLATAFORMA`. El cuerpo debe estar vacío (`{}` o ausente; `400` si
+trae campos). En una sola transacción: marca la solicitud `APROBADA` con fecha
+y revisor, crea el restaurante (activo y eco) con los datos de la solicitud y
+promueve al solicitante a `RESTAURANTE_ADMIN` asignándole el restaurante.
+`404` si no existe; `409` si ya fue revisada, si el solicitante está inactivo
+o cambió de rol, o si ya existe un restaurante con ese email.
+
+### `POST /api/admin/restaurant-requests/:id/reject`
+
+Solo `ADMIN_PLATAFORMA`. Misma forma que approve — cuerpo vacío — pero no crea
+restaurante ni cambia roles, y no registra motivo. `409` si ya fue revisada.
+
 ## Límites operativos
 
 - Registro y login comparten 20 intentos por IP cada 15 minutos (`429` con

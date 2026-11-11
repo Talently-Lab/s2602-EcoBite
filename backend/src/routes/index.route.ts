@@ -7,6 +7,7 @@ import type { ApiConfig } from '../lib/config';
 import { createDashboardController } from '../controllers/dashboard.controller';
 import { createHealthController } from '../controllers/health.controller';
 import { createOrderController } from '../controllers/orders.controller';
+import { createRestaurantRequestController } from '../controllers/restaurant-requests.controller';
 import { createRestaurantController } from '../controllers/restaurants.controller';
 import { createUserController } from '../controllers/users.controller';
 import { createZoneController } from '../controllers/zones.controller';
@@ -14,6 +15,7 @@ import { authenticate, requireRole } from '../middlewares/auth.middleware';
 import { createDashboardService } from '../services/dashboard.service';
 import { createHealthService } from '../services/health.service';
 import { createOrderService } from '../services/orders.service';
+import { createRestaurantRequestService } from '../services/restaurant-requests.service';
 import { createRestaurantService } from '../services/restaurants.service';
 import { createUserService } from '../services/users.service';
 import { createZoneService } from '../services/zones.service';
@@ -24,6 +26,7 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig) {
   const restaurants = createRestaurantController(createRestaurantService(db));
   const zones = createZoneController(createZoneService(db));
   const orders = createOrderController(createOrderService(db));
+  const restaurantRequests = createRestaurantRequestController(createRestaurantRequestService(db));
   const dashboard = createDashboardController(createDashboardService(db));
   const health = createHealthController(createHealthService(db, config.healthCheckTimeoutMs));
   const auth = authenticate(config.jwtSecret);
@@ -55,6 +58,14 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig) {
   apiRouter.post('/users/login', authLimiter, users.login);
   apiRouter.get('/users/me', auth, users.me);
   apiRouter.get('/dashboard/stats', auth, requireRole(db, 'ADMIN_PLATAFORMA'), dashboard.stats);
+  apiRouter.get('/restaurant-categories', restaurantRequests.categories);
+  apiRouter.post('/restaurant-requests', auth, requireRole(db, 'CLIENTE'), restaurantRequests.submit);
+  apiRouter.get('/restaurant-requests/me', auth, restaurantRequests.mine);
+  const adminOnly = requireRole(db, 'ADMIN_PLATAFORMA');
+  apiRouter.get('/admin/restaurant-requests', auth, adminOnly, restaurantRequests.list);
+  apiRouter.get('/admin/restaurant-requests/:id', auth, adminOnly, restaurantRequests.getById);
+  apiRouter.post('/admin/restaurant-requests/:id/approve', auth, adminOnly, restaurantRequests.approve);
+  apiRouter.post('/admin/restaurant-requests/:id/reject', auth, adminOnly, restaurantRequests.reject);
 
   return apiRouter;
 }
