@@ -535,7 +535,7 @@ test('GET /orders paginates with page/limit and rejects invalid params before th
 test('OpenAPI documents the new contract accurately', async () => {
   await serve(async (url) => {
     const spec = await (await fetch(`${url}/openapi.yaml`)).text();
-    assert.match(spec, /version: 1\.2\.0/);
+    assert.match(spec, /version: 2\.0\.0/);
     for (const path of ['/zones:', '/restaurants/{id}:', '/orders:', '/orders/{id}:']) {
       assert.match(spec, new RegExp(`  ${path.replace(/[/.]/g, '\\$&')}$`, 'm'));
     }

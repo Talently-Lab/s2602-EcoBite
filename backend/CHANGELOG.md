@@ -35,7 +35,13 @@ Reglas del archivo:
 - En `Security`, nombrar el paquete, la versión corregida y el tipo de falla,
   enlazando el advisory (CVE/GHSA) cuando exista.
 
-## [Unreleased]
+## [2.0.0] - 2026-11-11
+
+Esta versión suma el flujo completo de solicitudes de restaurante con revisión
+del admin y correo de aprobación, la carga de platillos con envases, el impacto
+acumulado del cliente y los pedidos entrantes del restaurante, y **rompe
+compatibilidad**: los endpoints de listado adoptan el sobre paginado
+`{data, pagination}`.
 
 ### Added
 
@@ -218,6 +224,7 @@ distancia estimada y el CO₂ ahorrado.
   `Content-Type: application/json` (`415` si no coincide) y el cuerpo se limita a
   16 KiB (`413` si se excede).
 
+[2.0.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/49c4611...HEAD
 [1.2.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/1cbcffe...HEAD
 [1.1.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/fd39d6c...1cbcffe
 [1.0.0]: https://github.com/Talently-Lab/s2602-EcoBite/compare/7c458ba...fd39d6c
