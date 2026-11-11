@@ -40,6 +40,7 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig, deps?: ApiD
   const dashboard = createDashboardController(createDashboardService(db));
   const health = createHealthController(createHealthService(db, config.healthCheckTimeoutMs));
   const auth = authenticate(config.jwtSecret);
+  // In-memory per-process store: correct while Render runs one instance (see README "Límites operativos"; #39).
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 20,

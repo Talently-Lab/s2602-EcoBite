@@ -45,11 +45,24 @@ function fixture() {
       async findMany(input: any) {
         calls.push({ method: 'findMany', input });
         if (failure) throw failure;
-        return [{
-          id: randomUUID(), nombre: 'Local de prueba', categoria: 'COMIDA_SALUDABLE', esEco: true,
-          zona: { id: randomUUID(), nombreBarrio: 'Zona de prueba' },
-          passwordHash: 'must-not-leak', email: 'private@example.test',
-        }];
+        const rows = [
+          {
+            id: randomUUID(), nombre: 'Local de prueba', categoria: 'COMIDA_SALUDABLE', esEco: true,
+            zona: { id: randomUUID(), nombreBarrio: 'Zona de prueba' },
+            passwordHash: 'must-not-leak', email: 'private@example.test',
+          },
+          {
+            id: randomUUID(), nombre: 'Segundo local', categoria: 'COMIDA_VEGANA', esEco: true,
+            zona: { id: randomUUID(), nombreBarrio: 'Zona de prueba' },
+          },
+        ];
+        const start = input?.skip ?? 0;
+        return rows.slice(start, input?.take === undefined ? undefined : start + input.take);
+      },
+      async count(input: any) {
+        calls.push({ method: 'count', input });
+        if (failure) throw failure;
+        return 2;
       },
     },
     async $queryRaw(...args: any[]) {
@@ -144,15 +157,53 @@ test('restaurants use active/eco filtering and exclude credentials', async () =>
   await serve(async (url, data) => {
     const response = await fetch(`${url}/restaurants`);
     assert.equal(response.status, 200);
-    const rows = await response.json();
+    const body = await response.json();
+    const rows = body.data;
     assert.equal(rows[0].name, 'Local de prueba');
     assert.equal(rows[0].category, 'Comida saludable');
-    assert.equal(JSON.stringify(rows).includes('COMIDA_SALUDABLE'), false);
+    assert.equal(JSON.stringify(body).includes('COMIDA_SALUDABLE'), false);
     assert.equal(rows[0].isEco, true);
+    // Default pagination: page 1, limit 20, applied over the same filter as count.
+    assert.deepEqual(body.pagination, { page: 1, limit: 20, total: 2, totalPages: 1 });
     assert.deepEqual(data.calls[0].input.where, { activo: true, esEco: true });
+    assert.equal(data.calls[0].input.skip, 0);
+    assert.equal(data.calls[0].input.take, 20);
+    assert.deepEqual(data.calls[1].input.where, { activo: true, esEco: true });
     assert.equal(data.calls[0].input.select.passwordHash, undefined);
     assert.equal(data.calls[0].input.select.email, undefined);
-    assert.equal(JSON.stringify(rows).includes('must-not-leak'), false);
+    assert.equal(JSON.stringify(body).includes('must-not-leak'), false);
+  });
+});
+
+test('GET /restaurants paginates with page/limit and rejects invalid params before the DB', async () => {
+  await serve(async (url, data) => {
+    const second = await fetch(`${url}/restaurants?page=2&limit=1`);
+    assert.equal(second.status, 200);
+    const secondBody = await second.json();
+    assert.equal(secondBody.data.length, 1);
+    assert.equal(secondBody.data[0].name, 'Segundo local');
+    assert.deepEqual(secondBody.pagination, { page: 2, limit: 1, total: 2, totalPages: 2 });
+    assert.equal(data.calls[0].input.skip, 1);
+    assert.equal(data.calls[0].input.take, 1);
+
+    // A page beyond the range is not an error: data comes back empty.
+    const beyond = await fetch(`${url}/restaurants?page=9&limit=5`);
+    assert.equal(beyond.status, 200);
+    assert.deepEqual(await beyond.json(), {
+      data: [],
+      pagination: { page: 9, limit: 5, total: 2, totalPages: 1 },
+    });
+
+    const calls = data.calls.length;
+    for (const bad of [
+      'page=0', 'page=-1', 'page=abc', 'page=1.5', 'page=', 'page=1&page=2',
+      'limit=0', 'limit=101', 'limit=1.5', 'limit=abc', 'limit=',
+    ]) {
+      const response = await fetch(`${url}/restaurants?${bad}`);
+      assert.equal(response.status, 400, bad);
+      assert.match((await response.json()).error, /page|limit/, bad);
+    }
+    assert.equal(data.calls.length, calls);
   });
 });
 
@@ -383,7 +434,7 @@ test('native deployment CLI is read-only by default and rejects unknown flags be
     const origin = new URL(url).origin;
     const result = await run(process.execPath, [script, origin, '--require-data']);
     assert.match(result.stdout, /PASS GET \/api\/restaurants \(200\)/);
-    assert.ok(data.calls.every((call) => call.method === 'findMany'));
+    assert.ok(data.calls.every((call) => call.method === 'findMany' || call.method === 'count'));
     const count = data.calls.length;
     await assert.rejects(run(process.execPath, [script, origin, '--unsupported']),
       (error: any) => error.code === 1 && error.stderr.includes('Usage:'));

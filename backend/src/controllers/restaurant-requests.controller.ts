@@ -1,5 +1,7 @@
 import type { RequestHandler } from 'express';
-import { validateEmptyBody, validateRequestStatus, validateRestaurantRequest } from '../lib/validation';
+import {
+  validateEmptyBody, validatePagination, validateRequestStatus, validateRestaurantRequest,
+} from '../lib/validation';
 import type { createRestaurantRequestService } from '../services/restaurant-requests.service';
 
 export function createRestaurantRequestController(
@@ -16,7 +18,8 @@ export function createRestaurantRequestController(
     res.json({ request: await service.mine(res.locals.userId) });
   };
   const list: RequestHandler = async (req, res) => {
-    res.json({ requests: await service.list(validateRequestStatus(req.query.status)) });
+    res.json(await service.list(
+      validateRequestStatus(req.query.status), validatePagination(req.query)));
   };
   const getById: RequestHandler = async (req, res) => {
     res.json({ request: await service.getById(String(req.params.id)) });

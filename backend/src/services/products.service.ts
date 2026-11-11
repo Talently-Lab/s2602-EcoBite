@@ -1,6 +1,7 @@
 import { Prisma } from '../generated/prisma/client';
 import type { PrismaClient } from '../generated/prisma/client';
 import { HttpError } from '../lib/http-error';
+import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import type { validateProduct } from '../lib/validation';
 
 const productSelect = {
@@ -99,14 +100,22 @@ export function createProductService(
       return toProductResponse(product);
     },
 
-    async listMine(userId: string) {
+    async listMine(userId: string, pagination: Pagination) {
       const restauranteId = await requireOperableRestaurant(userId);
-      const products = await db.producto.findMany({
-        where: { restauranteId },
-        orderBy: [{ fechaCreacion: 'desc' }, { id: 'asc' }],
-        select: productSelect,
-      });
-      return products.map(toProductResponse);
+      const where: Prisma.ProductoWhereInput = { restauranteId };
+      const [products, total] = await Promise.all([
+        db.producto.findMany({
+          where,
+          orderBy: [{ fechaCreacion: 'desc' }, { id: 'asc' }],
+          ...paginationArgs(pagination),
+          select: productSelect,
+        }),
+        db.producto.count({ where }),
+      ]);
+      return {
+        data: products.map(toProductResponse),
+        pagination: paginationMeta(total, pagination),
+      };
     },
   };
 }

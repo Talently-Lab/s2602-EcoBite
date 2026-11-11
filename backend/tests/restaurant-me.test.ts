@@ -229,8 +229,14 @@ function fixture() {
     pedido: {
       async findMany(input: any) {
         calls.push({ method: 'pedido.findMany', input });
-        return sortRows(pedidos.filter((row) => matches(row, input.where)), input.orderBy)
+        const rows = sortRows(pedidos.filter((row) => matches(row, input.where)), input.orderBy);
+        const start = input?.skip ?? 0;
+        return rows.slice(start, input?.take === undefined ? undefined : start + input.take)
           .map(withOrderRelations);
+      },
+      async count(input: any) {
+        calls.push({ method: 'pedido.count', input });
+        return pedidos.filter((row) => matches(row, input?.where)).length;
       },
     },
   };
@@ -353,15 +359,16 @@ test('GET /restaurants/me/orders returns the own queue, newest first, without cu
     const response = await get(`${url}/restaurants/me/orders`, ownerToken());
     assert.equal(response.status, 200);
     const body = await response.json();
-    assert.deepEqual(Object.keys(body), ['orders']);
-    assert.equal(body.orders.length, 3);
+    assert.deepEqual(Object.keys(body).sort(), ['data', 'pagination']);
+    assert.equal(body.data.length, 3);
+    assert.deepEqual(body.pagination, { page: 1, limit: 20, total: 3, totalPages: 1 });
 
     // Every pedido_estado rides along, newest first; no state filter applies.
-    assert.deepEqual(body.orders.map((order: any) => order.status), [
+    assert.deepEqual(body.data.map((order: any) => order.status), [
       'EN_PREPARACION', 'CANCELADO', 'COMPLETADO',
     ]);
     assert.deepEqual(
-      body.orders.map((order: any) => order.id),
+      body.data.map((order: any) => order.id),
       [
         'dd5b017d-9b09-4f4e-9f6a-1e0d8f9e0002',
         'dd5b017d-9b09-4f4e-9f6a-1e0d8f9e0003',
@@ -369,7 +376,7 @@ test('GET /restaurants/me/orders returns the own queue, newest first, without cu
       ],
     );
 
-    const order = body.orders[0];
+    const order = body.data[0];
     assert.deepEqual(Object.keys(order).sort(), [
       'createdAt', 'customer', 'deliveryAddress', 'destinationZone', 'id',
       'items', 'status', 'total', 'transportType',
@@ -388,7 +395,7 @@ test('GET /restaurants/me/orders returns the own queue, newest first, without cu
     ]);
     assert.equal(typeof order.items[0].unitPrice, 'number');
     assert.equal(typeof order.items[0].subtotal, 'number');
-    assert.deepEqual(body.orders[2].customer, { name: 'Ana Cliente' });
+    assert.deepEqual(body.data[2].customer, { name: 'Ana Cliente' });
 
     const text = JSON.stringify(body);
     for (const leak of ['ana@example.test', 'beto@example.test', 'hash-must-not-leak', 'passwordHash']) {
@@ -400,17 +407,41 @@ test('GET /restaurants/me/orders returns the own queue, newest first, without cu
 test('GET /restaurants/me/orders never lists other restaurants and tolerates an empty queue', async () => {
   await serve(async (url) => {
     const mine = await (await get(`${url}/restaurants/me/orders`, ownerToken())).json();
-    assert.equal(mine.orders.some((order: any) => order.id === 'dd5b017d-9b09-4f4e-9f6a-1e0d8f9e0004'), false);
+    assert.equal(mine.data.some((order: any) => order.id === 'dd5b017d-9b09-4f4e-9f6a-1e0d8f9e0004'), false);
 
     const other = await (await get(
       `${url}/restaurants/me/orders`, createToken(otherOwnerId, secret))).json();
-    assert.deepEqual(other.orders.map((order: any) => order.id), [
+    assert.deepEqual(other.data.map((order: any) => order.id), [
       'dd5b017d-9b09-4f4e-9f6a-1e0d8f9e0004',
     ]);
-    assert.deepEqual(other.orders[0].customer, { name: 'Ana Cliente' });
+    assert.deepEqual(other.data[0].customer, { name: 'Ana Cliente' });
 
     const empty = await get(`${url}/restaurants/me/orders`, createToken(emptyOwnerId, secret));
     assert.equal(empty.status, 200);
-    assert.deepEqual(await empty.json(), { orders: [] });
+    assert.deepEqual(await empty.json(), {
+      data: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+  });
+});
+
+test('GET /restaurants/me/orders paginates with page/limit and rejects invalid params', async () => {
+  await serve(async (url) => {
+    const page2 = await get(`${url}/restaurants/me/orders?page=2&limit=2`, ownerToken());
+    assert.equal(page2.status, 200);
+    const page2Body = await page2.json();
+    assert.deepEqual(page2Body.data.map((order: any) => order.id), [
+      'dd5b017d-9b09-4f4e-9f6a-1e0d8f9e0001',
+    ]);
+    assert.deepEqual(page2Body.pagination, { page: 2, limit: 2, total: 3, totalPages: 2 });
+
+    // A page beyond the range is not an error: data comes back empty.
+    const beyond = await get(`${url}/restaurants/me/orders?page=9&limit=2`, ownerToken());
+    assert.equal(beyond.status, 200);
+    assert.deepEqual((await beyond.json()).data, []);
+
+    for (const bad of ['page=0', 'page=abc', 'limit=0', 'limit=101', 'limit=1.5']) {
+      assert.equal((await get(`${url}/restaurants/me/orders?${bad}`, ownerToken())).status, 400, bad);
+    }
   });
 });

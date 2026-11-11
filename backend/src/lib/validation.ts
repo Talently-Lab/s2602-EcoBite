@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { HttpError } from './http-error';
+import type { Pagination } from './pagination';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const noControlChars = /^[^\u0000-\u001f\u007f]+$/;
@@ -166,6 +167,23 @@ export function validateRequestStatus(value: unknown) {
     value ?? 'PENDIENTE',
     `status debe ser una de: ${requestStatuses.join(', ')}.`,
   );
+}
+
+// Query params arrive as strings (or arrays when repeated); only digits are
+// accepted, so `1.5`, `abc`, `0`, negatives and arrays all fail into the 400.
+// The int4 cap keeps absurd offsets the database cannot resolve out.
+const pageSchema = z.string().regex(/^\d+$/).transform(Number)
+  .pipe(z.number().int().min(1).max(2147483647));
+const limitSchema = z.string().regex(/^\d+$/).transform(Number)
+  .pipe(z.number().int().min(1).max(100));
+
+export function validatePagination(query: unknown): Pagination {
+  const input = query && typeof query === 'object' && !Array.isArray(query)
+    ? query as Record<string, unknown>
+    : {};
+  const page = parse(pageSchema, input.page ?? '1', 'page debe ser un entero de al menos 1.');
+  const limit = parse(limitSchema, input.limit ?? '20', 'limit debe ser un entero entre 1 y 100.');
+  return { page, limit };
 }
 
 export function validateEmptyBody(body: unknown) {

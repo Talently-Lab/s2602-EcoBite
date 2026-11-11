@@ -2,6 +2,7 @@ import { Prisma } from '../generated/prisma/client';
 import type { PrismaClient } from '../generated/prisma/client';
 import { categoriaLabels } from '../lib/categories';
 import { HttpError } from '../lib/http-error';
+import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import { isUuid } from '../lib/validation';
 
 // The restaurant sees its full incoming queue, so the select adds the customer
@@ -60,22 +61,30 @@ export function createRestaurantService(
   }
 
   return {
-    async list() {
-      const restaurants = await db.restaurante.findMany({
-        where: { activo: true, esEco: true },
-        orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
-        select: {
-          id: true, nombre: true, categoria: true, esEco: true,
-          zona: { select: { id: true, nombreBarrio: true } },
-        },
-      });
-      return restaurants.map((restaurant) => ({
-        id: restaurant.id,
-        name: restaurant.nombre,
-        category: categoriaLabels[restaurant.categoria],
-        isEco: restaurant.esEco,
-        zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
-      }));
+    async list(pagination: Pagination) {
+      const where: Prisma.RestauranteWhereInput = { activo: true, esEco: true };
+      const [restaurants, total] = await Promise.all([
+        db.restaurante.findMany({
+          where,
+          orderBy: [{ nombre: 'asc' }, { id: 'asc' }],
+          ...paginationArgs(pagination),
+          select: {
+            id: true, nombre: true, categoria: true, esEco: true,
+            zona: { select: { id: true, nombreBarrio: true } },
+          },
+        }),
+        db.restaurante.count({ where }),
+      ]);
+      return {
+        data: restaurants.map((restaurant) => ({
+          id: restaurant.id,
+          name: restaurant.nombre,
+          category: categoriaLabels[restaurant.categoria],
+          isEco: restaurant.esEco,
+          zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
+        })),
+        pagination: paginationMeta(total, pagination),
+      };
     },
 
     async getById(id: string) {
@@ -141,14 +150,22 @@ export function createRestaurantService(
       };
     },
 
-    async listMineOrders(userId: string) {
+    async listMineOrders(userId: string, pagination: Pagination) {
       const restauranteId = await requireOperableRestaurant(userId);
-      const orders = await db.pedido.findMany({
-        where: { restauranteId },
-        orderBy: [{ fechaCreacion: 'desc' }, { id: 'asc' }],
-        select: restaurantOrderSelect,
-      });
-      return orders.map(toRestaurantOrderResponse);
+      const where: Prisma.PedidoWhereInput = { restauranteId };
+      const [orders, total] = await Promise.all([
+        db.pedido.findMany({
+          where,
+          orderBy: [{ fechaCreacion: 'desc' }, { id: 'asc' }],
+          ...paginationArgs(pagination),
+          select: restaurantOrderSelect,
+        }),
+        db.pedido.count({ where }),
+      ]);
+      return {
+        data: orders.map(toRestaurantOrderResponse),
+        pagination: paginationMeta(total, pagination),
+      };
     },
   };
 }

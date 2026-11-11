@@ -82,6 +82,17 @@ Reglas del archivo:
   el nombre del cliente para la entrega.
   [Issue #56](https://github.com/Talently-Lab/s2602-EcoBite/issues/56)
 
+### Changed
+
+- **Cambio incompatible**: `GET /restaurants`, `GET /orders`,
+  `GET /restaurants/me/products`, `GET /restaurants/me/orders` y
+  `GET /admin/restaurant-requests` responden ahora el sobre paginado
+  `{data: [...], pagination: {page, limit, total, totalPages}}`; la clave
+  nombrada anterior (`restaurants`/`orders`/`products`/`requests`) desaparece.
+  Aceptan `page` (entero desde 1, por defecto 1) y `limit` (1–100, por
+  defecto 20); una página fuera de rango devuelve `data` vacía.
+  [Issue #38](https://github.com/Talently-Lab/s2602-EcoBite/issues/38)
+
 ## [1.2.0] - 2026-11-06
 
 Esta versión suma la base del flujo de restaurantes aliados (solicitudes con
