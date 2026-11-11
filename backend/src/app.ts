@@ -5,9 +5,9 @@ import type { PrismaClient } from './generated/prisma/client';
 import type { ApiConfig } from './lib/config';
 import { HttpError } from './lib/http-error';
 import { handleError } from './middlewares/error.middleware';
-import { createApiRouter } from './routes/index.route';
+import { createApiRouter, type ApiDeps } from './routes/index.route';
 
-export function createApp(db: PrismaClient, config: ApiConfig) {
+export function createApp(db: PrismaClient, config: ApiConfig, deps?: ApiDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxyHops);
@@ -25,7 +25,7 @@ export function createApp(db: PrismaClient, config: ApiConfig) {
     next();
   });
   app.use(express.json({ limit: '16kb' }));
-  app.use('/api', createApiRouter(db, config));
+  app.use('/api', createApiRouter(db, config, deps));
   app.use('/docs', apiReference({
     pageTitle: 'EcoBite API Reference',
     url: '/api/openapi.yaml',

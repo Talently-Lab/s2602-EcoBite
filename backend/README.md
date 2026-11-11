@@ -28,6 +28,9 @@ valores ni versionar el archivo `.env`.
 | `SEED_ADMIN_PASSWORD` | Opcional. Mismas reglas que el registro: al menos 8 caracteres y máximo 72 bytes UTF-8 (bcrypt costo 12). Debe configurarse junto con `SEED_ADMIN_EMAIL`; si solo hay una, el seed falla. |
 | `SEED_ADMIN_NAME` | Opcional. Nombre visible de la cuenta administradora cuando el seed la crea; por defecto `Administrador EcoBite`. |
 | `SEED_DEMO_USERS_PASSWORD` | Opcional. Si se define, el seed crea las cuentas demo del PM con esta contraseña (mínimo 8 caracteres): `cliente.demo@ecobite.test` (`CLIENTE`) y `restaurante.demo@ecobite.test` (`RESTAURANTE_ADMIN` + restaurante aprobado). |
+| `EMAIL_API_KEY` | Opcional. Clave de la API de Brevo para correos transaccionales; debe configurarse junto con `EMAIL_FROM` (si solo hay una, el servidor no arranca). Sin credenciales, los correos solo se registran en el log. |
+| `EMAIL_FROM` | Opcional. Remitente verificado en la cuenta de Brevo; debe configurarse junto con `EMAIL_API_KEY`. |
+| `EMAIL_FROM_NAME` | Opcional. Nombre visible del remitente; por defecto `EcoBite`. |
 
 Generar el secreto con un gestor de secretos o `openssl rand -hex 32` y guardarlo
 directamente en `.env` o Doppler; no pegarlo en chat ni documentación.
@@ -287,6 +290,82 @@ No hay refresh tokens ni endpoint de logout. El frontend debe desechar el token
 al cerrar sesión; un token robado permanece válido hasta su vencimiento salvo
 desactivación de la cuenta o rotación del secreto. No persistirlo por defecto
 en `localStorage`; acordar la estrategia de sesión con frontend antes de producción.
+
+### `GET /api/restaurant-categories`
+
+Público. Devuelve las cuatro categorías admitidas para restaurantes aliados;
+es la fuente de verdad de los valores que acepta `category` en
+`POST /api/restaurant-requests`. Cada entrada trae el `key` del enum y su
+`label` en español.
+
+```ts
+{ categories: Array<{ key: string; label: string }> }
+```
+
+### `POST /api/restaurant-requests`
+
+Protegido: `Authorization: Bearer <accessToken>` y la cuenta debe tener rol
+`CLIENTE` y estar activa (el rol se verifica en la base en cada solicitud).
+Crea una solicitud de alta para el usuario del token.
+
+```json
+{
+  "name": "Verde Bistró",
+  "category": "COMIDA_SALUDABLE",
+  "zoneId": "uuid",
+  "address": "Av. Santa Fe 1234",
+  "email": "contacto@verdebistro.test",
+  "commitmentAccepted": true
+}
+```
+
+- `201`: `{"request":{...}}` con `status` `PENDIENTE` y la aceptación del
+  compromiso registrada con la fecha del servidor.
+- `400`: campos faltantes o adicionales, `category` inválida, `zoneId` no UUID,
+  `commitmentAccepted` distinto de `true`, o zona inexistente/inactiva.
+- `401`/`403`: sesión inválida o rol distinto de `CLIENTE`.
+- `409`: ya existe una solicitud `PENDIENTE`/`APROBADA` del usuario, o el email
+  pertenece a otro restaurante o solicitud. Un rechazo no bloquea: se puede
+  volver a aplicar con otro email.
+
+### `GET /api/restaurant-requests/me`
+
+Protegido (cualquier rol; la cuenta debe seguir activa). Devuelve
+`{"request":{...}}` con la solicitud más reciente del usuario o
+`{"request":null}` si nunca aplicó. Es la vía por la que un
+`RESTAURANTE_ADMIN` recién aprobado ve el estado `APROBADA` en la aplicación.
+
+### `GET /api/admin/restaurant-requests?status=`
+
+Solo `ADMIN_PLATAFORMA` (rol verificado en la base en cada llamada).
+`status` admite `PENDIENTE` (por defecto), `APROBADA`, `RECHAZADA` y `TODAS`
+(sin filtro). Devuelve `{"requests":[...]}` de más antigua a más reciente;
+cada entrada incluye `applicant` y `reviewedBy`. `400` si `status` no es un
+único valor válido.
+
+### `GET /api/admin/restaurant-requests/:id`
+
+Solo `ADMIN_PLATAFORMA`. Detalle completo de la solicitud. `404` tanto para un
+`id` inexistente como para uno que no es UUID.
+
+### `POST /api/admin/restaurant-requests/:id/approve`
+
+Solo `ADMIN_PLATAFORMA`. El cuerpo debe estar vacío (`{}` o ausente; `400` si
+trae campos). En una sola transacción: marca la solicitud `APROBADA` con fecha
+y revisor, crea el restaurante (activo y eco) con los datos de la solicitud y
+promueve al solicitante a `RESTAURANTE_ADMIN` asignándole el restaurante.
+`404` si no existe; `409` si ya fue revisada, si el solicitante está inactivo
+o cambió de rol, o si ya existe un restaurante con ese email.
+
+Aprobar también dispara un correo transaccional al email de la solicitud
+(Brevo si `EMAIL_API_KEY`/`EMAIL_FROM` están configuradas; si no, solo se
+registra en el log). El envío es asincrónico: la respuesta nunca espera ni
+depende del proveedor, y un fallo del envío no revierte la aprobación.
+
+### `POST /api/admin/restaurant-requests/:id/reject`
+
+Solo `ADMIN_PLATAFORMA`. Misma forma que approve — cuerpo vacío — pero no crea
+restaurante ni cambia roles, y no registra motivo. `409` si ya fue revisada.
 
 ## Límites operativos
 

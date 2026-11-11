@@ -29,6 +29,40 @@ Reglas del archivo:
 - En `Security`, nombrar el paquete, la versión corregida y el tipo de falla,
   enlazando el advisory (CVE/GHSA) cuando exista.
 
+## [Unreleased]
+
+### Added
+
+- `GET /restaurant-categories` (público): las cuatro categorías admitidas para
+  restaurantes aliados con su etiqueta en español; es la fuente de verdad de
+  los valores que acepta `category` en `POST /restaurant-requests`.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `POST /restaurant-requests` (rol `CLIENTE`): solicitud de alta de restaurante
+  con categoría, zona activa, aceptación del compromiso y email único; una sola
+  solicitud pendiente o aprobada por usuario, y un rechazo permite volver a
+  aplicar con otro email.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `GET /restaurant-requests/me`: última solicitud del usuario autenticado,
+  cualquiera sea su rol, o `null` si nunca aplicó; es el aviso en la aplicación
+  de la aprobación.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `GET /admin/restaurant-requests` y `GET /admin/restaurant-requests/{id}`
+  (rol `ADMIN_PLATAFORMA`): listado filtrable por estado y detalle de cada
+  solicitud con el solicitante y el revisor.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `POST /admin/restaurant-requests/{id}/approve` y
+  `POST /admin/restaurant-requests/{id}/reject` (rol `ADMIN_PLATAFORMA`): la
+  aprobación crea el restaurante activo y eco y promueve al solicitante a
+  `RESTAURANTE_ADMIN` en una sola transacción; el rechazo solo cambia el
+  estado. La actualización condicional responde `409` si la solicitud ya fue
+  revisada.
+  ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `POST /admin/restaurant-requests/{id}/approve` también dispara un correo
+  transaccional al email de la solicitud al confirmar el alta; el envío es
+  asincrónico (Brevo con `EMAIL_API_KEY`/`EMAIL_FROM` configuradas, o solo
+  registro en el log sin credenciales) y la respuesta no depende del proveedor.
+  ([Issue #54](https://github.com/Talently-Lab/s2602-EcoBite/issues/54))
+
 ## [1.2.0] - 2026-11-06
 
 Esta versión suma la base del flujo de restaurantes aliados (solicitudes con
