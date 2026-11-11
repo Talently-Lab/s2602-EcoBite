@@ -32,21 +32,31 @@ export const register = async (payload: Register) => {
 };
 
 export const login = async (payload: Login): Promise<LoginResponse> => {
+  let response: Response;
+
   try {
-    const response = await fetch(`${API_URL}/users/login`, {
+    response = await fetch(`${API_URL}/users/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
-
-    if (!response.ok) throw new Error("Error al iniciar sesión");
-
-    const data = (await response.json()) as LoginResponse;
-    return data;
   } catch (error) {
-    if (error instanceof Error) throw error;
-    throw new Error("Error al iniciar sesión");
+    throw new Error("Error de servidor", { cause: error });
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Correo o contraseña inválidos");
+    }
+
+    throw new Error("Error de servidor");
+  }
+
+  try {
+    return (await response.json()) as LoginResponse;
+  } catch (error) {
+    throw new Error("Error de servidor", { cause: error });
   }
 };

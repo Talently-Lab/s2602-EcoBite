@@ -13,7 +13,7 @@ const Checkout = lazy(() => import('@/pages/Checkout'))
 const Voucher = lazy(() => import('@/pages/Voucher'))
 
 export const mainRouter = createBrowserRouter([
-  { path: "/", element: <Navigate to="/home" replace /> },
+  { path: "/", element: <Navigate to="/catalog" replace /> },
   { path: "/home", element: <Home /> },
   { path: "/catalog", element: <Catalog /> },
   { path: "/catalog/:id", element: <RestaurantDetail /> },

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -16,22 +14,23 @@ import { useZones } from "@/hooks/useFilters";
 import { MainLayout } from "@/pages/layout/MainLayout";
 
 const categoryOptions = [
-  { value: "saludable", label: "Comida saludable" },
-  { value: "estacion", label: "Cocina de estación" },
-  { value: "vegana", label: "Comida vegana" },
-  { value: "casera", label: "Comida casera" },
+  { value: "COMIDA_SALUDABLE", label: "Comida saludable" },
+  { value: "COMIDA_DE_ESTACION", label: "Cocina de estación" },
+  { value: "COMIDA_VEGANA", label: "Comida vegana" },
+  { value: "COMIDA_CASERA", label: "Comida casera" },
 ];
 
 const Catalog = () => {
   const { restaurants, loading, error, refetch } = useRestaurants();
   const { zones } = useZones();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [cuisine, setCuisine] = useState<string | null>(null);
-  const [zone, setZone] = useState<string | null>(null);
+  const [cuisine, setCuisine] = useState("Todos");
+  const [zone, setZone] = useState("Todos");
 
   const filteredRestaurants = restaurants.filter(
-    (restaurant) => !zone || restaurant.zone.name === zone,
+    (restaurant) =>
+      (zone === "Todos" || restaurant.zone.name === zone) &&
+      (cuisine === "Todos" || restaurant.category === cuisine),
   );
 
   return (
@@ -41,41 +40,23 @@ const Catalog = () => {
         <p className="mt-1 text-[#2C2C2A]">
           Encontrá restaurantes y conocé qué prácticas ambientales implementan.
         </p>
-
-        <div className="mt-4">
-          <label htmlFor="search" className="text-[13px] font-normal text-[#0A0D0A]">
-            Explorar opciones
-          </label>
-          <div className="relative mt-2">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#8C8C8C]"
-              aria-hidden="true"
-            />
-            <Input
-              id="search"
-              type="search"
-              placeholder="Escribe aquí..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-10 rounded-lg"
-            />
-          </div>
-        </div>
-
         <div>
-          <p className="mt-8 mb-3 text-[13px] font-semibold text-[#2C2C2A]">Filtra por:</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 mt-4">
             <div>
               <label htmlFor="filter-category" className="text-[13px] text-[#0A0D0A]">
                 Categoria
               </label>
-              <Select value={cuisine} onValueChange={(v) => setCuisine(v)}>
+              <Select
+                value={cuisine}
+                onValueChange={(value) => setCuisine(value ?? "Todos")}
+              >
                 <SelectTrigger id="filter-category" className="rounded-lg w-full mt-1">
                   <SelectValue placeholder="Selecciona aqui..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Todos">Todos</SelectItem>
                   {categoryOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value} value={opt.label}>
                       {opt.label}
                     </SelectItem>
                   ))}
@@ -87,11 +68,15 @@ const Catalog = () => {
               <label htmlFor="filter-zone" className="text-[13px] text-[#0A0D0A]">
                 Zona
               </label>
-              <Select value={zone} onValueChange={(v) => setZone(v)}>
+              <Select
+                value={zone}
+                onValueChange={(value) => setZone(value ?? "Todos")}
+              >
                 <SelectTrigger id="filter-zone" className="rounded-lg w-full mt-1">
                   <SelectValue placeholder="Selecciona aqui..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Todos">Todos</SelectItem>
                   {zones.map((opt) => (
                     <SelectItem key={opt.id} value={opt.name}>
                       {opt.name}
@@ -140,7 +125,6 @@ const Catalog = () => {
                   name={restaurant.name}
                   description={restaurant.category}
                   onView={() => navigate(`/catalog/${restaurant.id}`)}
-                  zone={restaurant.zone.name}
                 />
               ))}
             </div>

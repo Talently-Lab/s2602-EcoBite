@@ -7,10 +7,8 @@ type RestaurantCardProps = {
   description?: string;
   imageSrc?: string;
   imageAlt?: string;
-  tag?: string;
   className?: string;
   onView?: () => void;
-  zone?: string
 };
 
 export const RestaurantCard = ({
@@ -18,10 +16,8 @@ export const RestaurantCard = ({
   description = "Comida saludable",
   imageSrc = "/images/image-restaurant-02.png",
   imageAlt = "Interior del restaurante",
-  tag = "Eco friendly",
   className,
   onView,
-  zone
 }: RestaurantCardProps) => {
   return (
     <Card
@@ -37,15 +33,15 @@ export const RestaurantCard = ({
           loading="lazy"
           className="h-40 w-full object-cover rounded-[8px]"
         />
-        <span className="flex items-center gap-1 rounded-full bg-[#E6FDEF] text-[#009951] px-2 py-1 text-[11px] font-bold mt-3">
+        {/* <span className="flex items-center gap-1 rounded-full bg-[#E6FDEF] text-[#009951] px-2 py-1 text-[11px] font-bold mt-3">
           <span className="h-2 w-2 rounded-full bg-[#FFFFFFCC] block"/>
           {tag}
-        </span>
-        <CardTitle className="text-[#000000] text-xl font-extrabold tracking-[0.010em]">
+        </span> */}
+        <CardTitle className="text-[#000000] text-xl mt-2 font-extrabold tracking-[0.010em]">
           {name}
         </CardTitle>
         <p className="mt-1.5 text-xs text-[#6B6B6B]">
-          {description} {zone}
+          {description}
         </p>
         <Button
           type="button"
