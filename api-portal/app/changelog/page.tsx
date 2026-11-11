@@ -11,13 +11,13 @@ export default async function ChangelogPage() {
   const { releases } = await getChangelog();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-5 py-10 md:px-10 md:py-14">
-      <h1 className="text-2xl font-semibold text-heading">Novedades</h1>
+    <div className="mx-auto w-full max-w-5xl px-4 py-12 text-sm md:px-8 md:py-16">
+      <h1 className="text-xl font-semibold text-heading">Novedades</h1>
       <p className="mt-3 text-muted">
         Historial de versiones de la API de EcoBite. Desde la primera versión hasta la más reciente,
         cada cambio queda documentado aquí, junto con enlaces para compararlo en GitHub.
       </p>
-      <div className="mt-10 space-y-12">
+      <div className="mt-12 space-y-32">
         {releases.map((release) => (
           <ChangelogRelease key={release.version} release={release} />
         ))}

@@ -60,6 +60,10 @@ export function createApiRouter(db: PrismaClient, config: ApiConfig, deps?: ApiD
   apiRouter.get('/health', health.check);
   apiRouter.get('/restaurants', restaurants.list);
   const restaurantAdmin = requireRole(db, 'RESTAURANTE_ADMIN');
+  // The /restaurants/me* routes must stay above /restaurants/:id: otherwise
+  // Express matches "me" as the :id parameter and they can never be reached.
+  apiRouter.get('/restaurants/me', auth, restaurantAdmin, restaurants.me);
+  apiRouter.get('/restaurants/me/orders', auth, restaurantAdmin, restaurants.listMineOrders);
   apiRouter.get('/restaurants/me/products', auth, restaurantAdmin, products.listMine);
   apiRouter.post('/restaurants/me/products', auth, restaurantAdmin, products.create);
   apiRouter.get('/restaurants/:id', restaurants.getById);

@@ -237,6 +237,63 @@ activo). Devuelve `{"products":[...]}` solo con los platillos del propio
 restaurante, del más reciente al más antiguo, incluyendo los de
 `available: false`; cada entrada trae el `packagings` configurado.
 
+### `GET /api/restaurants/me`
+
+Protegido: `Authorization: Bearer <accessToken>` y rol `RESTAURANTE_ADMIN`
+(verificado en la base en cada solicitud). Devuelve `{"restaurant":{...}}` con
+el registro del restaurante vinculado a la cuenta, incluyendo `address` y
+`email`, que el catálogo público no expone. A diferencia de los endpoints
+operativos `/restaurants/me/*`, responde también con el local inactivo — el
+dueño necesita ver su `active: false` — así que el `403` solo aplica a otros
+roles o a una cuenta sin restaurante vinculado (o con la fila inexistente).
+
+```ts
+{
+  restaurant: {
+    id: string;
+    name: string;
+    address: string;
+    email: string;
+    category: string;         // etiqueta en español
+    isEco: boolean;
+    active: boolean;
+    zone: { id: string; name: string };
+    createdAt: string;
+  };
+}
+```
+
+### `GET /api/restaurants/me/orders`
+
+Protegido con las mismas reglas de acceso que `/restaurants/me/products`
+(`RESTAURANTE_ADMIN` con restaurante **activo**; local inactivo o ausente
+responde `403`). Devuelve `{"orders":[...]}` con la cola completa del propio
+restaurante — todos los `pedido_estado`, sin filtro — del más reciente al más
+antiguo. Incluye `customer.name` para la entrega; nunca el email del cliente ni
+pedidos de otros locales. Sin pedidos responde `{"orders":[]}`.
+
+```ts
+{
+  orders: Array<{
+    id: string;
+    status: 'PENDIENTE' | 'EN_PREPARACION' | 'COMPLETADO' | 'CANCELADO';
+    createdAt: string;
+    customer: { name: string };       // solo el nombre; nunca el email
+    deliveryAddress: string;
+    destinationZone: { id: string; name: string };
+    transportType: 'BICICLETA' | 'VEHICULO_ELECTRICO';
+    total: number;
+    items: Array<{                    // ordenados por name e id
+      productId: string;
+      name: string;                   // copia histórica del nombre
+      quantity: number;
+      unitPrice: number;              // copia histórica del precio
+      subtotal: number;
+    }>;
+  }>;
+}
+```
+
 ### `POST /api/orders`
 
 Protegido: `Authorization: Bearer <accessToken>`. Crea un pedido para el

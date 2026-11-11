@@ -174,6 +174,203 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /restaurants/me:
+    get:
+      tags:
+        - restaurants
+      summary: Ver el propio restaurante del usuario autenticado
+      description: |
+        Requiere el JWT de una cuenta activa con rol `RESTAURANTE_ADMIN`. El
+        rol se verifica en la base de datos en cada solicitud, nunca desde el
+        token; otros roles responden `403`. La cuenta debe estar vinculada a
+        un restaurante: sin local asignado o con una fila inexistente también
+        responde `403`.
+
+        A diferencia de los endpoints operativos (`/restaurants/me/products`,
+        `/restaurants/me/orders`), devuelve el registro aunque el restaurante
+        esté inactivo: el dueño necesita ver su local y su estado
+        `active: false`. La respuesta incluye `address` y `email`, que el
+        catálogo público (`GET /restaurants`, `GET /restaurants/{id}`) no
+        expone.
+      operationId: getMyRestaurant
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      responses:
+        '200':
+          description: Registro del propio restaurante, esté activo o no.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantMeEnvelope'
+              example:
+                restaurant:
+                  id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                  name: Verde Bistró
+                  address: Av. Santa Fe 1234
+                  email: contacto@verdebistro.test
+                  category: Comida saludable
+                  isEco: true
+                  active: true
+                  zone:
+                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                    name: Palermo
+                  createdAt: '2026-01-15T10:00:00.000Z'
+        '401':
+          description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '403':
+          description: Otro rol, o `RESTAURANTE_ADMIN` sin restaurante vinculado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rolIncorrecto:
+                  summary: 'La cuenta no tiene rol `RESTAURANTE_ADMIN`'
+                  value:
+                    error: No tenés permisos para acceder a este recurso.
+                restauranteNoVinculado:
+                  summary: Sin restaurante vinculado o con la fila inexistente
+                  value:
+                    error: El restaurante no está habilitado para operar.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /restaurants/me/orders:
+    get:
+      tags:
+        - restaurants
+      summary: Listar los pedidos recibidos por el propio restaurante
+      description: |
+        Requiere el JWT de una cuenta activa con rol `RESTAURANTE_ADMIN`,
+        verificado en la base de datos en cada solicitud, y un restaurante
+        activo vinculado a la cuenta: sin local asignado o con el local
+        inactivo responde `403`.
+
+        Devuelve la cola completa del propio restaurante — todos los estados
+        de `pedido_estado`, sin filtro — del más reciente al más antiguo. Cada
+        pedido incluye el nombre del cliente para la preparación de la entrega,
+        nunca su email ni otros datos de contacto, y nunca los pedidos de
+        otros locales. Sin pedidos, `orders` llega como lista vacía.
+      operationId: listMyRestaurantOrders
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      responses:
+        '200':
+          description: Pedidos recibidos por el propio restaurante, más recientes primero.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantOrderListResponse'
+              example:
+                orders:
+                  - id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    status: EN_PREPARACION
+                    createdAt: '2026-02-10T15:30:00.000Z'
+                    customer:
+                      name: Ana Cliente
+                    deliveryAddress: Av. Corrientes 1234
+                    destinationZone:
+                      id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                      name: Palermo
+                    transportType: BICICLETA
+                    total: 36800.00
+                    items:
+                      - productId: 2f6b0f5a-7a2b-4d4a-9f8e-1c2d3e4f5a6b
+                        name: Bowl andino
+                        quantity: 2
+                        unitPrice: 12500.00
+                        subtotal: 25000.00
+                      - productId: 3a7c1e6b-8b3c-4e5b-af9f-2d3e4f5a6b7c
+                        name: Wrap verde
+                        quantity: 1
+                        unitPrice: 11800.00
+                        subtotal: 11800.00
+        '401':
+          description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '403':
+          description: Otro rol, o `RESTAURANTE_ADMIN` sin restaurante activo vinculado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rolIncorrecto:
+                  summary: 'La cuenta no tiene rol `RESTAURANTE_ADMIN`'
+                  value:
+                    error: No tenés permisos para acceder a este recurso.
+                restauranteNoHabilitado:
+                  summary: Sin restaurante vinculado o con el local inactivo
+                  value:
+                    error: El restaurante no está habilitado para operar.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /restaurants/me/products:
     get:
       tags:
@@ -2472,6 +2669,69 @@ components:
             $ref: '#/components/schemas/Product'
       additionalProperties: false
 
+    RestaurantMe:
+      type: object
+      description: |
+        Registro del propio restaurante para `RESTAURANTE_ADMIN`; a diferencia
+        del catálogo público incluye `address`, `email`, `active` y `createdAt`.
+      required:
+        - id
+        - name
+        - address
+        - email
+        - category
+        - isEco
+        - active
+        - zone
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          examples: [Verde Bistró]
+        address:
+          type: string
+          description: Dirección del local.
+          examples: [Av. Santa Fe 1234]
+        email:
+          type: string
+          format: email
+          description: Email de contacto del restaurante.
+          examples: [contacto@verdebistro.test]
+        category:
+          type: string
+          enum:
+            - Comida saludable
+            - Comida de estación
+            - Comida vegana
+            - Comida casera
+          description: Categoría del restaurante.
+          examples: [Comida saludable]
+        isEco:
+          type: boolean
+          description: Si el restaurante opera como 100% eco-friendly.
+        active:
+          type: boolean
+          description: '`false` cuando el local está pendiente o inhabilitado; este endpoint lo devuelve igual.'
+        zone:
+          $ref: '#/components/schemas/Zone'
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de alta del restaurante.
+      additionalProperties: false
+
+    RestaurantMeEnvelope:
+      type: object
+      required:
+        - restaurant
+      properties:
+        restaurant:
+          $ref: '#/components/schemas/RestaurantMe'
+      additionalProperties: false
+
     OrderItemRequest:
       type: object
       required:
@@ -2676,6 +2936,117 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Order'
+      additionalProperties: false
+
+    RestaurantOrderItem:
+      type: object
+      description: Ítem del pedido visto por el restaurante; sin campos de impacto.
+      required:
+        - productId
+        - name
+        - quantity
+        - unitPrice
+        - subtotal
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Copia histórica del nombre del producto al momento del pedido.
+          examples: [Bowl andino]
+        quantity:
+          type: integer
+          examples: [2]
+        unitPrice:
+          type: number
+          multipleOf: 0.01
+          description: Copia histórica del precio del producto.
+          examples: [12500.00]
+        subtotal:
+          type: number
+          multipleOf: 0.01
+          description: '`quantity × unitPrice`.'
+          examples: [25000.00]
+      additionalProperties: false
+
+    RestaurantOrder:
+      type: object
+      description: Pedido recibido por el restaurante, con el nombre del cliente pero sin su email.
+      required:
+        - id
+        - status
+        - createdAt
+        - customer
+        - deliveryAddress
+        - destinationZone
+        - transportType
+        - total
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - PENDIENTE
+            - COMPLETADO
+            - CANCELADO
+            - EN_PREPARACION
+          x-enum-descriptions:
+            PENDIENTE: Pedido pendiente.
+            COMPLETADO: Pedido completado.
+            CANCELADO: Pedido cancelado.
+            EN_PREPARACION: Pedido en preparación; estado inicial de los pedidos nuevos.
+          description: Estados posibles del pedido; la cola del restaurante los incluye todos, sin filtro.
+        createdAt:
+          type: string
+          format: date-time
+        customer:
+          type: object
+          description: Solo el nombre del cliente para la entrega; nunca su email ni otros datos.
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: Nombre completo del cliente que hizo el pedido.
+              examples: [Ana Cliente]
+          additionalProperties: false
+        deliveryAddress:
+          type: string
+        destinationZone:
+          $ref: '#/components/schemas/Zone'
+        transportType:
+          type: string
+          enum:
+            - BICICLETA
+            - VEHICULO_ELECTRICO
+          x-enum-descriptions:
+            BICICLETA: Entrega en bicicleta.
+            VEHICULO_ELECTRICO: Entrega en vehículo eléctrico.
+        total:
+          type: number
+          multipleOf: 0.01
+          description: Σ `quantity × unitPrice`; calculado en el servidor con decimales.
+          examples: [36800.00]
+        items:
+          type: array
+          description: Ítems ordenados por nombre de producto e ID.
+          items:
+            $ref: '#/components/schemas/RestaurantOrderItem'
+      additionalProperties: false
+
+    RestaurantOrderListResponse:
+      type: object
+      required:
+        - orders
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestaurantOrder'
       additionalProperties: false
 
     PublicUser:
