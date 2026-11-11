@@ -28,6 +28,9 @@ valores ni versionar el archivo `.env`.
 | `SEED_ADMIN_PASSWORD` | Opcional. Mismas reglas que el registro: al menos 8 caracteres y máximo 72 bytes UTF-8 (bcrypt costo 12). Debe configurarse junto con `SEED_ADMIN_EMAIL`; si solo hay una, el seed falla. |
 | `SEED_ADMIN_NAME` | Opcional. Nombre visible de la cuenta administradora cuando el seed la crea; por defecto `Administrador EcoBite`. |
 | `SEED_DEMO_USERS_PASSWORD` | Opcional. Si se define, el seed crea las cuentas demo del PM con esta contraseña (mínimo 8 caracteres): `cliente.demo@ecobite.test` (`CLIENTE`) y `restaurante.demo@ecobite.test` (`RESTAURANTE_ADMIN` + restaurante aprobado). |
+| `EMAIL_API_KEY` | Opcional. Clave de la API de Brevo para correos transaccionales; debe configurarse junto con `EMAIL_FROM` (si solo hay una, el servidor no arranca). Sin credenciales, los correos solo se registran en el log. |
+| `EMAIL_FROM` | Opcional. Remitente verificado en la cuenta de Brevo; debe configurarse junto con `EMAIL_API_KEY`. |
+| `EMAIL_FROM_NAME` | Opcional. Nombre visible del remitente; por defecto `EcoBite`. |
 
 Generar el secreto con un gestor de secretos o `openssl rand -hex 32` y guardarlo
 directamente en `.env` o Doppler; no pegarlo en chat ni documentación.
@@ -353,6 +356,11 @@ y revisor, crea el restaurante (activo y eco) con los datos de la solicitud y
 promueve al solicitante a `RESTAURANTE_ADMIN` asignándole el restaurante.
 `404` si no existe; `409` si ya fue revisada, si el solicitante está inactivo
 o cambió de rol, o si ya existe un restaurante con ese email.
+
+Aprobar también dispara un correo transaccional al email de la solicitud
+(Brevo si `EMAIL_API_KEY`/`EMAIL_FROM` están configuradas; si no, solo se
+registra en el log). El envío es asincrónico: la respuesta nunca espera ni
+depende del proveedor, y un fallo del envío no revierte la aprobación.
 
 ### `POST /api/admin/restaurant-requests/:id/reject`
 

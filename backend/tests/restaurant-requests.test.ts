@@ -5,6 +5,8 @@ import type { Server } from 'node:http';
 import { test } from 'node:test';
 import { createApp } from '../src/app';
 import type { PrismaClient } from '../src/generated/prisma/client';
+import { readConfig } from '../src/lib/config';
+import { createEmailService, type EmailService } from '../src/lib/email';
 import { createToken } from '../src/lib/tokens';
 
 const secret = randomBytes(32).toString('hex');
@@ -44,6 +46,14 @@ function fixture() {
   const zones = [zone, inactiveZone];
   const restaurantes: any[] = [];
   const solicitudes: any[] = [];
+  const sent: { to: string; subject: string; text: string }[] = [];
+  let failEmail = false;
+  const emailService: EmailService = {
+    async send(message) {
+      sent.push(message);
+      if (failEmail) throw new Error('brevo down');
+    },
+  };
 
   function matches(row: any, where: any): boolean {
     if (!where) return true;
@@ -184,12 +194,18 @@ function fixture() {
       }
     },
   };
-  return { db: db as unknown as PrismaClient, calls, users, restaurantes, solicitudes };
+  return {
+    db: db as unknown as PrismaClient, calls, users, restaurantes, solicitudes, sent, emailService,
+    failEmail() { failEmail = true; },
+  };
 }
 
 async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Promise<void>) {
   const data = fixture();
-  const server: Server = createApp(data.db, { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops: 0 })
+  const server: Server = createApp(
+    data.db,
+    { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops: 0 },
+    { emailService: data.emailService })
     .listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();
@@ -532,4 +548,116 @@ test('reject after approve returns 409 and keeps the assignment', async () => {
     assert.equal(data.solicitudes[0].estado, 'APROBADA');
     assert.equal(data.users.get(applicantId).rol, 'RESTAURANTE_ADMIN');
   });
+});
+
+test('approve sends the approval email to the request address without blocking the response', async () => {
+  await serve(async (url, data) => {
+    const created = await (await post(
+      `${url}/restaurant-requests`, requestBody(), applicantToken())).json();
+    const approved = await post(
+      `${url}/admin/restaurant-requests/${created.request.id}/approve`, {}, adminToken());
+    assert.equal(approved.status, 200);
+    assert.equal(data.sent.length, 1);
+    assert.equal(data.sent[0].to, 'contacto@verdebistro.test');
+    assert.ok(data.sent[0].subject.length > 0);
+    assert.ok(data.sent[0].text.includes('Verde Bistró'));
+
+    await post(
+      `${url}/admin/restaurant-requests/${created.request.id}/reject`, {}, adminToken());
+    assert.equal(data.sent.length, 1, 'reject no dispara correo');
+  });
+});
+
+test('approve still succeeds when the email send fails', async () => {
+  await serve(async (url, data) => {
+    data.failEmail();
+    const errors: unknown[][] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => { errors.push(args); };
+    try {
+      const created = await (await post(
+        `${url}/restaurant-requests`, requestBody(), applicantToken())).json();
+      const approved = await post(
+        `${url}/admin/restaurant-requests/${created.request.id}/approve`, {}, adminToken());
+      assert.equal(approved.status, 200);
+      const body = await approved.json();
+      assert.equal(body.request.status, 'APROBADA');
+      assert.equal(data.solicitudes[0].estado, 'APROBADA');
+      assert.equal(data.restaurantes.length, 1);
+      assert.equal(data.sent.length, 1, 'el envío se intentó');
+      // El .catch del fire-and-forget corre en microtarea; esperar un tick.
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.ok(errors.some((args) => String(args[0]).includes('approval send failed')));
+    } finally {
+      console.error = originalError;
+    }
+  });
+});
+
+test('email config requires EMAIL_API_KEY and EMAIL_FROM together', () => {
+  const base = { JWT_SECRET: secret };
+  assert.throws(() => readConfig({ ...base, EMAIL_API_KEY: 'key-test' }));
+  assert.throws(() => readConfig({ ...base, EMAIL_FROM: 'sender@ecobite.test' }));
+  assert.throws(() => readConfig({ ...base, EMAIL_API_KEY: 'key-test', EMAIL_FROM: 'no-es-email' }));
+  assert.equal(readConfig(base).email, undefined);
+  assert.deepEqual(
+    readConfig({ ...base, EMAIL_API_KEY: 'key-test', EMAIL_FROM: 'sender@ecobite.test' }).email,
+    { apiKey: 'key-test', from: 'sender@ecobite.test', fromName: 'EcoBite' });
+  assert.deepEqual(
+    readConfig({
+      ...base, EMAIL_API_KEY: 'key-test', EMAIL_FROM: 'sender@ecobite.test', EMAIL_FROM_NAME: 'EcoBite Dev',
+    }).email,
+    { apiKey: 'key-test', from: 'sender@ecobite.test', fromName: 'EcoBite Dev' });
+});
+
+test('the brevo transport posts to the API and rejects on non-2xx', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: { url: unknown; init: any }[] = [];
+  let status = 201;
+  try {
+    globalThis.fetch = (async (url: any, init: any) => {
+      requests.push({ url, init });
+      return new Response('{}', { status });
+    }) as typeof fetch;
+    const email = createEmailService({
+      jwtSecret: secret, corsOrigins: [], trustProxyHops: 0,
+      email: { apiKey: 'key-test', from: 'sender@ecobite.test', fromName: 'EcoBite' },
+    });
+    await email.send({ to: 'contacto@verdebistro.test', subject: 'Asunto', text: 'Cuerpo' });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, 'https://api.brevo.com/v3/smtp/email');
+    assert.equal(requests[0].init.method, 'POST');
+    assert.equal(requests[0].init.headers['api-key'], 'key-test');
+    assert.equal(requests[0].init.headers.accept, 'application/json');
+    assert.equal(requests[0].init.headers['content-type'], 'application/json');
+    assert.deepEqual(JSON.parse(requests[0].init.body), {
+      sender: { email: 'sender@ecobite.test', name: 'EcoBite' },
+      to: [{ email: 'contacto@verdebistro.test' }],
+      subject: 'Asunto',
+      textContent: 'Cuerpo',
+    });
+    status = 500;
+    await assert.rejects(
+      () => email.send({ to: 'contacto@verdebistro.test', subject: 'Asunto', text: 'Cuerpo' }), /500/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('the log transport resolves without calling fetch', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  const logs: string[] = [];
+  try {
+    let fetchCalled = false;
+    globalThis.fetch = (async () => { fetchCalled = true; return new Response(); }) as typeof fetch;
+    console.log = (line: unknown) => { logs.push(String(line)); };
+    const email = createEmailService({ jwtSecret: secret, corsOrigins: [], trustProxyHops: 0 });
+    await email.send({ to: 'x@y.test', subject: 'Asunto', text: 'Cuerpo' });
+    assert.equal(fetchCalled, false);
+    assert.deepEqual(logs, ['[email] to=x@y.test subject=Asunto']);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.log = originalLog;
+  }
 });

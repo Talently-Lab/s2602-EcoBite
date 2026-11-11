@@ -57,6 +57,11 @@ Reglas del archivo:
   estado. La actualización condicional responde `409` si la solicitud ya fue
   revisada.
   ([Issue #41](https://github.com/Talently-Lab/s2602-EcoBite/issues/41))
+- `POST /admin/restaurant-requests/{id}/approve` también dispara un correo
+  transaccional al email de la solicitud al confirmar el alta; el envío es
+  asincrónico (Brevo con `EMAIL_API_KEY`/`EMAIL_FROM` configuradas, o solo
+  registro en el log sin credenciales) y la respuesta no depende del proveedor.
+  ([Issue #54](https://github.com/Talently-Lab/s2602-EcoBite/issues/54))
 
 ## [1.2.0] - 2026-11-06
 

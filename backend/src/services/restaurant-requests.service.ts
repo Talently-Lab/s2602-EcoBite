@@ -2,6 +2,7 @@ import { Prisma } from '../generated/prisma/client';
 import type { PrismaClient } from '../generated/prisma/client';
 import type { CategoriaRestaurante } from '../generated/prisma/enums';
 import { categoriaLabels } from '../lib/categories';
+import { restaurantApprovalEmail, type EmailService } from '../lib/email';
 import { HttpError } from '../lib/http-error';
 import { isUuid } from '../lib/validation';
 import type { validateRequestStatus, validateRestaurantRequest } from '../lib/validation';
@@ -61,6 +62,7 @@ async function requireActiveUser(db: Pick<Prisma.TransactionClient, 'usuario'>, 
 
 export function createRestaurantRequestService(
   db: Pick<PrismaClient, 'usuario' | 'zona' | 'restaurante' | 'solicitudRestaurante' | '$transaction' | '$executeRaw'>,
+  emailService: EmailService,
 ) {
   return {
     categories() {
@@ -149,7 +151,7 @@ export function createRestaurantRequestService(
 
     async approve(id: string, adminUserId: string) {
       if (!isUuid(id)) throw new HttpError(404, 'Solicitud no encontrada.');
-      return db.$transaction(async (tx) => {
+      const approved = await db.$transaction(async (tx) => {
         const solicitud = await tx.solicitudRestaurante.findUnique({
           where: { id },
           select: {
@@ -201,6 +203,12 @@ export function createRestaurantRequestService(
         });
         return toAdminRequestResponse(request!);
       });
+      // El correo es fire-and-forget: la aprobación ya quedó confirmada y la
+      // respuesta nunca espera ni depende del proveedor de email.
+      const copy = restaurantApprovalEmail(approved.restaurant.name);
+      void emailService.send({ to: approved.restaurant.email, subject: copy.subject, text: copy.text })
+        .catch((error) => console.error('[email] approval send failed:', error));
+      return approved;
     },
 
     async reject(id: string, adminUserId: string) {

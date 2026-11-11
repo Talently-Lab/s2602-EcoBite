@@ -1435,6 +1435,9 @@ paths:
         con los datos de la solicitud y promueve al solicitante a
         `RESTAURANTE_ADMIN` asignándole el restaurante creado.
 
+        Aprobar también dispara un correo al email de la solicitud; el envío es
+        asincrónico y la respuesta no depende del proveedor de correo.
+
         - Si la solicitud ya fue revisada (por ejemplo, dos administradores
           actuando a la vez) responde `409`: la actualización condicional en la
           base garantiza que solo una revisión gana.

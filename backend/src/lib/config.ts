@@ -3,9 +3,16 @@ export interface ApiConfig {
   corsOrigins: string[];
   trustProxyHops: 0 | 1;
   healthCheckTimeoutMs?: number;
+  email?: {
+    apiKey: string;
+    from: string;
+    fromName: string;
+  };
 }
 
 export class ConfigError extends Error {}
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function readConfig(env: NodeJS.ProcessEnv): ApiConfig {
   const jwtSecret = env.JWT_SECRET;
@@ -29,5 +36,19 @@ export function readConfig(env: NodeJS.ProcessEnv): ApiConfig {
   if (proxyHops !== '0' && proxyHops !== '1') {
     throw new ConfigError('TRUST_PROXY_HOPS debe ser 0 (directo) o 1 (un proxy controlado).');
   }
-  return { jwtSecret, corsOrigins, trustProxyHops: proxyHops === '1' ? 1 : 0 };
+
+  const emailApiKey = env.EMAIL_API_KEY;
+  const emailFrom = env.EMAIL_FROM;
+  if (Boolean(emailApiKey) !== Boolean(emailFrom)) {
+    throw new ConfigError('EMAIL_API_KEY y EMAIL_FROM deben configurarse juntos.');
+  }
+  let email: ApiConfig['email'];
+  if (emailApiKey && emailFrom) {
+    if (!emailPattern.test(emailFrom)) {
+      throw new ConfigError('EMAIL_FROM debe ser una dirección de email válida.');
+    }
+    email = { apiKey: emailApiKey, from: emailFrom, fromName: env.EMAIL_FROM_NAME || 'EcoBite' };
+  }
+
+  return { jwtSecret, corsOrigins, trustProxyHops: proxyHops === '1' ? 1 : 0, email };
 }
