@@ -10,7 +10,7 @@ services:
     # Free services have no pre-deploy command. Pending migrations block startup;
     # this never resets the database and deliberately does not run the seed.
     startCommand: corepack pnpm --filter backend prisma:deploy && corepack pnpm --filter backend start
-    healthCheckPath: /api
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "22"

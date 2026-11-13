@@ -29,6 +29,8 @@ export async function checkDeployment(baseUrl, { auth = false, requireData = fal
 
   const root = await request('/api', 200);
   expect((await root.json()).message === 'API is working!', 'Unexpected API response; the service may still be waking.');
+  const health = await request('/api/health', 200);
+  expect((await health.json()).status === 'ok', 'Health check did not report the database as ok.');
   const spec = await (await request('/api/openapi.yaml', 200)).text();
   expect(/^openapi: 3\.1/m.test(spec) && /- url: \/api\s*$/m.test(spec),
     'OpenAPI must use the deployed server, not localhost.');

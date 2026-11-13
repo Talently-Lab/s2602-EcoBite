@@ -76,8 +76,9 @@ setting in Render after importing the blueprint; do not replace it with
 unconditional commit-triggered deploys. The initial deployment should use a
 commit whose existing CI checks have succeeded.
 
-The `/api` health check is process liveness only. The deployment smoke test also
-queries `/api/restaurants` to exercise the real database.
+Render's health check is `GET /api/health`, which reports `503` unless the
+database answers in time. The deployment smoke test verifies it and also queries
+`/api/restaurants` to exercise the real data path.
 
 Render Free sleeps when idle and may restart; allow about a minute for a cold
 start. This does not delete Neon data. Do not store application data or backups
