@@ -1198,6 +1198,9 @@ paths:
                   email: maria.fernandez@ecobite.test
                   role: CLIENTE
                   createdAt: '2026-02-10T15:30:00.000Z'
+                  phone: null
+                  address: null
+                  habitualZone: null
         '400':
           description: Datos inválidos, campos adicionales o JSON malformado.
           headers:
@@ -1314,6 +1317,9 @@ paths:
                   email: maria.fernandez@ecobite.test
                   role: CLIENTE
                   createdAt: '2026-02-10T15:30:00.000Z'
+                  phone: '+54 11 5555 1234'
+                  address: null
+                  habitualZone: null
         '400':
           description: Datos faltantes o inválidos, o JSON malformado.
           headers:
@@ -1402,6 +1408,11 @@ paths:
                   email: maria.fernandez@ecobite.test
                   role: CLIENTE
                   createdAt: '2026-02-10T15:30:00.000Z'
+                  phone: '+54 11 5555 1234'
+                  address: Av. Corrientes 1234
+                  habitualZone:
+                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                    name: Palermo
         '401':
           description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
           headers:
@@ -1422,6 +1433,117 @@ paths:
                   summary: Token inválido, vencido o cuenta inactiva
                   value:
                     error: Sesión inválida o vencida.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags:
+        - users
+      summary: Actualizar los datos de perfil del cliente autenticado
+      description: |
+        Actualiza `phone`, `address` o `zoneId` del perfil. Al menos un campo es
+        obligatorio y no se admiten campos adicionales: un campo ausente se deja
+        intacto y un `null` explícito borra el valor guardado.
+
+        `zoneId` debe ser una zona activa del catálogo de `GET /zones`. La
+        cuenta se consulta en cada llamada: si el usuario fue eliminado o
+        desactivado, el acceso se invalida de inmediato aunque el token no haya
+        vencido.
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: []
+      x-badges:
+        - name: JWT
+          position: after
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+            example:
+              phone: '+54 11 5555 1234'
+              address: Av. Corrientes 1234
+              zoneId: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+      responses:
+        '200':
+          description: Perfil actualizado, sin contraseñas ni hashes.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+              example:
+                user:
+                  id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                  name: María Fernández
+                  email: maria.fernandez@ecobite.test
+                  role: CLIENTE
+                  createdAt: '2026-02-10T15:30:00.000Z'
+                  phone: '+54 11 5555 1234'
+                  address: null
+                  habitualZone:
+                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                    name: Palermo
+        '400':
+          description: |
+            Datos inválidos, campos adicionales, cuerpo sin campos actualizables,
+            zona inexistente/inactiva o JSON malformado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                camposAdicionales:
+                  summary: Campo no permitido o tipo de dato inválido
+                  value:
+                    error: Solo se permiten los campos phone, address y zoneId.
+                sinCampos:
+                  summary: Cuerpo sin ningún campo actualizable
+                  value:
+                    error: Incluye al menos un campo para actualizar.
+                zonaNoDisponible:
+                  summary: Zona inexistente o inactiva
+                  value:
+                    error: La zona no está disponible.
+                jsonInvalido:
+                  summary: Cuerpo que no es JSON válido
+                  value:
+                    error: JSON inválido.
+        '401':
+          description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tokenAusente:
+                  summary: 'Sin encabezado `Authorization: Bearer`'
+                  value:
+                    error: Se requiere un token Bearer.
+                sesionInvalida:
+                  summary: Token inválido, vencido o cuenta inactiva
+                  value:
+                    error: Sesión inválida o vencida.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
@@ -3242,6 +3364,9 @@ components:
         - email
         - role
         - createdAt
+        - phone
+        - address
+        - habitualZone
       properties:
         id:
           type: string
@@ -3268,6 +3393,25 @@ components:
           type: string
           format: date-time
           examples: ['2026-02-10T15:30:00.000Z']
+        phone:
+          anyOf:
+            - type: string
+              maxLength: 30
+            - type: 'null'
+          description: Teléfono de contacto; `null` cuando no está definido.
+          examples: ['+54 11 5555 1234']
+        address:
+          anyOf:
+            - type: string
+              maxLength: 200
+            - type: 'null'
+          description: Dirección habitual de entrega; `null` cuando no está definida.
+          examples: ['Av. Corrientes 1234']
+        habitualZone:
+          anyOf:
+            - $ref: '#/components/schemas/Zone'
+            - type: 'null'
+          description: Zona habitual de entrega; `null` cuando no está definida.
       additionalProperties: false
 
     UserEnvelope:
@@ -3391,6 +3535,40 @@ components:
         user:
           $ref: '#/components/schemas/PublicUser'
       additionalProperties: false
+
+    ProfileUpdateRequest:
+      type: object
+      description: |
+        Campos editables del perfil. Al menos uno es obligatorio y no se admiten
+        campos adicionales: un campo ausente se deja intacto y un `null`
+        explícito borra el valor guardado.
+      additionalProperties: false
+      properties:
+        phone:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 30
+              pattern: '^[^\u0000-\u001f\u007f]+$'
+            - type: 'null'
+          description: Teléfono de contacto. Se recorta espacio en blanco al inicio y al final.
+          examples: ['+54 11 5555 1234']
+        address:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 200
+              pattern: '^[^\u0000-\u001f\u007f]+$'
+            - type: 'null'
+          description: Dirección habitual de entrega. Se recorta espacio en blanco al inicio y al final.
+          examples: ['Av. Corrientes 1234']
+        zoneId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+          description: Zona habitual de entrega; debe ser una zona activa del catálogo de `GET /zones`.
+          examples: ['5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31']
 
     HealthStatus:
       type: object

@@ -2,19 +2,30 @@ import bcrypt from 'bcrypt';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 import { HttpError } from '../lib/http-error';
 import { createToken, tokenLifetimeSeconds } from '../lib/tokens';
-import type { validateCredentials, validateRegistration } from '../lib/validation';
+import type { validateCredentials, validateProfileUpdate, validateRegistration } from '../lib/validation';
 
 const publicUserSelect = {
   id: true, nombreCompleto: true, email: true, rol: true, fechaRegistro: true,
+  telefono: true, direccionHabitual: true,
+  zonaHabitual: { select: { id: true, nombreBarrio: true } },
 } as const;
 
 type PublicUser = Prisma.UsuarioGetPayload<{ select: typeof publicUserSelect }>;
 
 function userResponse(user: PublicUser) {
-  return { id: user.id, name: user.nombreCompleto, email: user.email, role: user.rol, createdAt: user.fechaRegistro };
+  return {
+    id: user.id, name: user.nombreCompleto, email: user.email, role: user.rol,
+    createdAt: user.fechaRegistro, phone: user.telefono, address: user.direccionHabitual,
+    habitualZone: user.zonaHabitual
+      ? { id: user.zonaHabitual.id, name: user.zonaHabitual.nombreBarrio }
+      : null,
+  };
 }
 
-export function createUserService(db: Pick<PrismaClient, 'usuario' | 'pedido'>, jwtSecret: string) {
+export function createUserService(
+  db: Pick<PrismaClient, 'usuario' | 'pedido' | 'zona'>,
+  jwtSecret: string,
+) {
   return {
     async register(input: ReturnType<typeof validateRegistration>) {
       const passwordHash = await bcrypt.hash(input.password, 12);
@@ -63,6 +74,32 @@ export function createUserService(db: Pick<PrismaClient, 'usuario' | 'pedido'>, 
       });
       if (!user || !user.activo) throw new HttpError(401, 'Sesión inválida o vencida.');
       return userResponse(user);
+    },
+
+    async update(userId: string, input: ReturnType<typeof validateProfileUpdate>) {
+      const user = await db.usuario.findUnique({
+        where: { id: userId },
+        select: { activo: true },
+      });
+      if (!user || !user.activo) throw new HttpError(401, 'Sesión inválida o vencida.');
+      // `null` clears the habitual zone; only a real zoneId needs the lookup.
+      if (typeof input.zoneId === 'string') {
+        const zone = await db.zona.findFirst({
+          where: { id: input.zoneId, activo: true },
+          select: { id: true },
+        });
+        if (!zone) throw new HttpError(400, 'La zona no está disponible.');
+      }
+      const updated = await db.usuario.update({
+        where: { id: userId },
+        data: {
+          ...(input.phone !== undefined && { telefono: input.phone }),
+          ...(input.address !== undefined && { direccionHabitual: input.address }),
+          ...(input.zoneId !== undefined && { zonaHabitualId: input.zoneId }),
+        },
+        select: publicUserSelect,
+      });
+      return userResponse(updated);
     },
 
     async impact(userId: string) {

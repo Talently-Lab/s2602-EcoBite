@@ -55,6 +55,25 @@ export function validateRegistration(body: unknown) {
   return { name, ...credentials };
 }
 
+// Every key is optional but at least one must arrive: `undefined` leaves the
+// field untouched while explicit `null` clears it in the database.
+export function validateProfileUpdate(body: unknown) {
+  const input = bodyObject(body);
+  const profile = parse(
+    z.strictObject({
+      phone: trimmedText(30).nullable().optional(),
+      address: trimmedText(200).nullable().optional(),
+      zoneId: uuid.nullable().optional(),
+    }),
+    input,
+    'Solo se permiten los campos phone, address y zoneId.',
+  );
+  if (profile.phone === undefined && profile.address === undefined && profile.zoneId === undefined) {
+    throw new HttpError(400, 'Incluye al menos un campo para actualizar.');
+  }
+  return profile;
+}
+
 const requestCategories = ['COMIDA_SALUDABLE', 'COMIDA_DE_ESTACION', 'COMIDA_VEGANA', 'COMIDA_CASERA'] as const;
 
 export function validateRestaurantRequest(body: unknown) {

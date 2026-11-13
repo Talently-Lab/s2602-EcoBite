@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { validateCredentials, validateRegistration } from '../lib/validation';
+import { validateCredentials, validateProfileUpdate, validateRegistration } from '../lib/validation';
 import type { createUserService } from '../services/users.service';
 
 export function createUserController(service: ReturnType<typeof createUserService>) {
@@ -13,8 +13,11 @@ export function createUserController(service: ReturnType<typeof createUserServic
   const me: RequestHandler = async (_req, res) => {
     res.json({ user: await service.currentUser(res.locals.userId) });
   };
+  const updateMe: RequestHandler = async (req, res) => {
+    res.json({ user: await service.update(res.locals.userId, validateProfileUpdate(req.body)) });
+  };
   const impact: RequestHandler = async (_req, res) => {
     res.json({ impact: await service.impact(res.locals.userId) });
   };
-  return { register, login, me, impact };
+  return { register, login, me, updateMe, impact };
 }
