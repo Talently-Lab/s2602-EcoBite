@@ -406,6 +406,7 @@ test('deployment smoke checks cover docs, data and optional auth without logging
     const logs: string[] = [];
     await checkDeployment(new URL(url).origin, { auth: true, requireData: true, log: (line: string) => logs.push(line) });
     const output = logs.join('\n');
+    assert.match(output, /GET \/api\/health \(200\)/);
     assert.match(output, /GET \/api\/users\/me \(401\)/);
     assert.match(output, /GET \/api\/users\/me \(200\)/);
     assert.doesNotMatch(output, /eyJ|smoke-[a-f0-9-]+@|passwordHash/);
@@ -423,7 +424,7 @@ test('deployment smoke checks reject empty analyst data, unavailable DB and unsa
   });
   await serve(async (url, data) => {
     data.fail({ code: 'P1001' });
-    await assert.rejects(checkDeployment(new URL(url).origin, { log: () => {} }), /expected 200, got 503/);
+    await assert.rejects(checkDeployment(new URL(url).origin, { log: () => {} }), /GET \/api\/health: expected 200, got 503/);
   });
 });
 
@@ -434,7 +435,7 @@ test('native deployment CLI is read-only by default and rejects unknown flags be
     const origin = new URL(url).origin;
     const result = await run(process.execPath, [script, origin, '--require-data']);
     assert.match(result.stdout, /PASS GET \/api\/restaurants \(200\)/);
-    assert.ok(data.calls.every((call) => call.method === 'findMany' || call.method === 'count'));
+    assert.ok(data.calls.every((call) => call.method === 'findMany' || call.method === 'count' || call.method === '$queryRaw'));
     const count = data.calls.length;
     await assert.rejects(run(process.execPath, [script, origin, '--unsupported']),
       (error: any) => error.code === 1 && error.stderr.includes('Usage:'));

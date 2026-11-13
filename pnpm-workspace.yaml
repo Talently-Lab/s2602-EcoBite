@@ -22,6 +22,11 @@ overrides:
   seroval: 1.6.11
   systeminformation: 5.33.16
   '@ts-morph/common@0.27.0>minimatch': 11.0.3
+  # Reached only through the dev-only shadcn CLI (@modelcontextprotocol/sdk).
+  # hono: GHSA-4m76-xfj5-7975, GHSA-h7mg-cq63-vhpq, GHSA-46wx-v44x-9hh2,
+  # GHSA-4h7h-rv7c-7m2v · @hono/node-server: GHSA-qv5m-9pm6-hqp3, GHSA-jpvv-r467-5p4w.
+  hono: 4.13.16
+  '@hono/node-server': 2.1.6
 
 auditConfig:
   ignoreGhsas:

@@ -36,8 +36,9 @@ From the repository root (Node 22+ and pnpm installed):
 pnpm --filter backend check:deployed https://ecobite-api.onrender.com --require-data
 ```
 
-This is read-only. It checks process liveness, same-origin OpenAPI, Scalar HTML,
-real restaurant responses, and a `401` when no bearer token is provided.
+This is read-only. It checks process liveness, database readiness via
+`GET /api/health`, same-origin OpenAPI, Scalar HTML, real restaurant responses,
+and a `401` when no bearer token is provided.
 `--require-data` fails if no restaurants are visible: an empty database is not a
 successful data demonstration.
 
