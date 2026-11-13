@@ -2,7 +2,7 @@ openapi: 3.1.0
 
 info:
   title: EcoBite API
-  version: 1.2.0
+  version: 2.0.0
   description: |
     API de clientes de **EcoBite**, delivery de comida de restaurantes eco-friendly.
     Los clientes se registran y obtienen un JWT de sesión para consultar su perfil.
@@ -30,7 +30,12 @@ info:
       internos. Los mensajes están en español.
     - Registro y login comparten un límite de 20 intentos por IP cada 15 minutos.
       Al agotarse, responden `429` con el encabezado `Retry-After`.
-    - No hay paginación en esta versión: las colecciones se devuelven completas.
+    - Las colecciones sin límite propio se devuelven con el sobre paginado
+      `{"data": [...], "pagination": {"page", "limit", "total", "totalPages"}}`:
+      parámetros `page` (entero desde 1) y `limit` (1–100, 20 por defecto).
+      Una `page` fuera de rango responde `200` con `data` vacía. Los catálogos
+      acotados (`/zones`, `/restaurant-categories`, `/packagings`) se devuelven
+      completos, sin paginar.
 
 servers:
   - url: /api
@@ -72,17 +77,22 @@ paths:
         - restaurants
       summary: Listar restaurantes activos y eco-friendly
       description: |
-        Devuelve un array con únicamente los restaurantes activos y
-        eco-friendly, ordenados por nombre e ID. No incluye email ni credenciales
-        del restaurante. En una base recién inicializada puede devolver `[]`.
+        Devuelve una página de los restaurantes activos y eco-friendly,
+        ordenados por nombre e ID, dentro del sobre paginado
+        `{data, pagination}` (ver Convenciones). No incluye email ni
+        credenciales del restaurante. En una base recién inicializada `data`
+        puede llegar vacía.
       operationId: listRestaurants
       security: []
       x-badges:
         - name: Público
           position: after
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
-          description: Lista de restaurantes activos y eco-friendly.
+          description: Página de restaurantes activos y eco-friendly.
           headers:
             Cache-Control:
               $ref: '#/components/headers/CacheControl'
@@ -91,17 +101,34 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Restaurant'
+                $ref: '#/components/schemas/RestaurantListResponse'
               example:
-                - id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
-                  name: Verde Bistró
-                  category: Comida saludable
-                  isEco: true
-                  zone:
-                    id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
-                    name: Palermo
+                data:
+                  - id: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+                    name: Verde Bistró
+                    category: Comida saludable
+                    isEco: true
+                    zone:
+                      id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
+                      name: Palermo
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 1
+                  totalPages: 1
+        '400':
+          description: '`page` o `limit` inválidos.'
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: limit debe ser un entero entre 1 y 100.
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
@@ -279,17 +306,21 @@ paths:
         activo vinculado a la cuenta: sin local asignado o con el local
         inactivo responde `403`.
 
-        Devuelve la cola completa del propio restaurante — todos los estados
-        de `pedido_estado`, sin filtro — del más reciente al más antiguo. Cada
-        pedido incluye el nombre del cliente para la preparación de la entrega,
-        nunca su email ni otros datos de contacto, y nunca los pedidos de
-        otros locales. Sin pedidos, `orders` llega como lista vacía.
+        Devuelve una página de la cola del propio restaurante — todos los
+        estados de `pedido_estado`, sin filtro — del más reciente al más
+        antiguo, dentro del sobre paginado `{data, pagination}` (ver
+        Convenciones). Cada pedido incluye el nombre del cliente para la
+        preparación de la entrega, nunca su email ni otros datos de contacto,
+        y nunca los pedidos de otros locales. Sin pedidos, `data` llega vacía.
       operationId: listMyRestaurantOrders
       security:
         - bearerAuth: []
       x-badges:
         - name: JWT
           position: after
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
           description: Pedidos recibidos por el propio restaurante, más recientes primero.
@@ -303,7 +334,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RestaurantOrderListResponse'
               example:
-                orders:
+                data:
                   - id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
                     status: EN_PREPARACION
                     createdAt: '2026-02-10T15:30:00.000Z'
@@ -326,6 +357,24 @@ paths:
                         quantity: 1
                         unitPrice: 11800.00
                         subtotal: 11800.00
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 3
+                  totalPages: 1
+        '400':
+          description: '`page` o `limit` inválidos.'
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: page debe ser un entero de al menos 1.
         '401':
           description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
           headers:
@@ -383,16 +432,20 @@ paths:
         vinculada a un restaurante activo (aprobado y habilitado): sin
         restaurante asignado o con el local inactivo también responde `403`.
 
-        Devuelve solo los platillos del propio restaurante, del más reciente al
-        más antiguo, con los envases configurados. A diferencia del menú
-        público de `GET /restaurants/{id}`, también incluye los platillos con
-        `available: false`.
+        Devuelve una página de los platillos del propio restaurante, del más
+        reciente al más antiguo, con los envases configurados, dentro del
+        sobre paginado `{data, pagination}` (ver Convenciones). A diferencia
+        del menú público de `GET /restaurants/{id}`, también incluye los
+        platillos con `available: false`.
       operationId: listMyProducts
       security:
         - bearerAuth: []
       x-badges:
         - name: JWT
           position: after
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
           description: Platillos del propio restaurante, más recientes primero.
@@ -406,7 +459,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductListResponse'
               example:
-                products:
+                data:
                   - id: 2f6b0f5a-7a2b-4d4a-9f8e-1c2d3e4f5a6b
                     name: Bowl andino
                     category: Bowls
@@ -419,6 +472,24 @@ paths:
                       - id: 6a5f4e3d-2c1b-4a9e-8f7d-6c5b4a3e2d1c
                         name: Kit Cubiertos + Bolsa
                         unitsPerPackage: 1
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 1
+                  totalPages: 1
+        '400':
+          description: '`page` o `limit` inválidos.'
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: page debe ser un entero de al menos 1.
         '401':
           description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
           headers:
@@ -730,8 +801,9 @@ paths:
         - orders
       summary: Listar los pedidos del cliente autenticado
       description: |
-        Devuelve solo los pedidos del usuario del token, del más reciente al
-        más antiguo.
+        Devuelve una página de los pedidos del usuario del token, del más
+        reciente al más antiguo, dentro del sobre paginado
+        `{data, pagination}` (ver Convenciones).
         La cuenta se consulta en cada llamada: si fue eliminada o desactivada
         responde `401`.
       operationId: listOrders
@@ -740,6 +812,9 @@ paths:
       x-badges:
         - name: JWT
           position: after
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
           description: Pedidos del usuario autenticado, más recientes primero.
@@ -753,7 +828,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderListResponse'
               example:
-                orders:
+                data:
                   - id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
                     status: EN_PREPARACION
                     createdAt: '2026-02-10T15:30:00.000Z'
@@ -786,6 +861,24 @@ paths:
                         subtotal: 11800.00
                         containersAvoided: 3
                         plasticAvoidedG: 31.00
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 2
+                  totalPages: 1
+        '400':
+          description: '`page` o `limit` inválidos.'
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            X-Content-Type-Options:
+              $ref: '#/components/headers/ContentTypeOptions'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: limit debe ser un entero entre 1 y 100.
         '401':
           description: Token ausente, inválido o vencido, o usuario eliminado/inactivo.
           headers:
@@ -1799,8 +1892,10 @@ paths:
         otros roles responden `403`.
 
         `status` filtra por estado (`PENDIENTE` por defecto); `TODAS` devuelve
-        la lista sin filtrar. Orden: más antiguas primero. Cada entrada incluye
-        el solicitante y el administrador revisor cuando existe.
+        la lista sin filtrar. Orden: más antiguas primero. El filtro se combina
+        con la paginación (`page`/`limit`): `total` cuenta solo las filas que
+        cumplen el estado pedido. Cada entrada incluye el solicitante y el
+        administrador revisor cuando existe.
       operationId: listRestaurantRequests
       security:
         - bearerAuth: []
@@ -1820,6 +1915,8 @@ paths:
               - RECHAZADA
               - TODAS
             default: PENDIENTE
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
           description: Solicitudes en el estado pedido, más antiguas primero.
@@ -1833,7 +1930,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminRestaurantRequestListResponse'
               example:
-                requests:
+                data:
                   - id: 4f8c2b7a-9d1e-4f6a-b3c5-8e2a1d4f6b7c
                     status: PENDIENTE
                     restaurant:
@@ -1852,8 +1949,13 @@ paths:
                     commitmentAcceptedAt: '2026-02-10T15:30:00.000Z'
                     submittedAt: '2026-02-10T15:30:00.000Z'
                     reviewedAt: null
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 1
+                  totalPages: 1
         '400':
-          description: '`status` fuera del enum o no es un único valor de texto.'
+          description: '`status` fuera del enum, no es un único valor de texto, o `page`/`limit` inválidos.'
           headers:
             Cache-Control:
               $ref: '#/components/headers/CacheControl'
@@ -1863,8 +1965,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: 'status debe ser una de: PENDIENTE, APROBADA, RECHAZADA, TODAS.'
+              examples:
+                statusInvalido:
+                  summary: status fuera del enum o repetido
+                  value:
+                    error: 'status debe ser una de: PENDIENTE, APROBADA, RECHAZADA, TODAS.'
+                paginacionInvalida:
+                  summary: page o limit fuera de rango o no enteros
+                  value:
+                    error: limit debe ser un entero entre 1 y 100.
         '401':
           description: Token ausente, inválido o vencido, o cuenta eliminada/inactiva.
           headers:
@@ -2343,7 +2452,59 @@ components:
       schema:
         type: string
 
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: |
+        Número de página, desde `1`. Una página fuera de rango no es un error:
+        `data` llega vacía y `pagination` informa el `total` real.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 2147483647
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Filas por página, entre `1` y `100`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
   schemas:
+    PaginationMeta:
+      type: object
+      description: Metadatos del sobre paginado de los listados.
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Página devuelta, desde `1`.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Filas por página solicitadas.
+        total:
+          type: integer
+          minimum: 0
+          description: Total de filas que cumplen el filtro, en todas las páginas.
+        totalPages:
+          type: integer
+          minimum: 0
+          description: '`Math.ceil(total / limit)`; `0` cuando `total` es `0`.'
+      additionalProperties: false
+
     ErrorResponse:
       type: object
       description: Formato único de error; sin stack traces ni datos internos.
@@ -2607,12 +2768,29 @@ components:
     ProductListResponse:
       type: object
       required:
-        - products
+        - data
+        - pagination
       properties:
-        products:
+        data:
           type: array
           items:
             $ref: '#/components/schemas/Product'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      additionalProperties: false
+
+    RestaurantListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Restaurant'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
       additionalProperties: false
 
     RestaurantRef:
@@ -2930,12 +3108,15 @@ components:
     OrderListResponse:
       type: object
       required:
-        - orders
+        - data
+        - pagination
       properties:
-        orders:
+        data:
           type: array
           items:
             $ref: '#/components/schemas/Order'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
       additionalProperties: false
 
     RestaurantOrderItem:
@@ -3041,12 +3222,15 @@ components:
     RestaurantOrderListResponse:
       type: object
       required:
-        - orders
+        - data
+        - pagination
       properties:
-        orders:
+        data:
           type: array
           items:
             $ref: '#/components/schemas/RestaurantOrder'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
       additionalProperties: false
 
     PublicUser:
@@ -3524,12 +3708,15 @@ components:
     AdminRestaurantRequestListResponse:
       type: object
       required:
-        - requests
+        - data
+        - pagination
       properties:
-        requests:
+        data:
           type: array
           items:
             $ref: '#/components/schemas/AdminRestaurantRequest'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
       additionalProperties: false
 
   responses:

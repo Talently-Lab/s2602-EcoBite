@@ -119,7 +119,13 @@ function fixture() {
     restaurante: {
       async findMany(input: any) {
         calls.push({ method: 'restaurante.findMany', input });
-        return sortRows(restaurants.filter((row) => matches(row, input.where)), input.orderBy);
+        const rows = sortRows(restaurants.filter((row) => matches(row, input.where)), input.orderBy);
+        const start = input?.skip ?? 0;
+        return rows.slice(start, input?.take === undefined ? undefined : start + input.take);
+      },
+      async count(input: any) {
+        calls.push({ method: 'restaurante.count', input });
+        return restaurants.filter((row) => matches(row, input?.where)).length;
       },
       async findFirst(input: any) {
         calls.push({ method: 'restaurante.findFirst', input });
@@ -154,11 +160,17 @@ function fixture() {
     pedido: {
       async findMany(input: any) {
         calls.push({ method: 'pedido.findMany', input });
-        return sortRows(orders.filter((row) => matches(row, input.where)), input.orderBy);
+        const rows = sortRows(orders.filter((row) => matches(row, input.where)), input.orderBy);
+        const start = input?.skip ?? 0;
+        return rows.slice(start, input?.take === undefined ? undefined : start + input.take);
       },
       async findFirst(input: any) {
         calls.push({ method: 'pedido.findFirst', input });
         return sortRows(orders.filter((row) => matches(row, input.where)), input.orderBy)[0] ?? null;
+      },
+      async count(input: any) {
+        calls.push({ method: 'pedido.count', input });
+        return orders.filter((row) => matches(row, input?.where)).length;
       },
       async create(input: any) {
         calls.push({ method: 'pedido.create', input });
@@ -256,7 +268,7 @@ test('GET /zones returns active zones with numeric distance', async () => {
 test('restaurant list and detail expose the category label, not the enum constant', async () => {
   await serve(async (url) => {
     const list = await (await fetch(`${url}/restaurants`)).json();
-    assert.deepEqual(list.map((row: any) => row.category), ['Comida vegana', 'Comida saludable']);
+    assert.deepEqual(list.data.map((row: any) => row.category), ['Comida vegana', 'Comida saludable']);
     const detail = await (await fetch(`${url}/restaurants/${restaurantId}`)).json();
     assert.equal(detail.category, 'Comida saludable');
     assert.equal(JSON.stringify({ list, detail }).includes('COMIDA_'), false);
@@ -463,12 +475,13 @@ test('GET /orders and /orders/:id only expose the authenticated user\'s orders',
 
     const list = await authed(`${url}/orders`, token);
     assert.equal(list.status, 200);
-    const { orders } = await list.json();
-    assert.equal(orders.length, 2);
-    assert.equal(orders[0].id, newestId);
+    const listBody = await list.json();
+    assert.equal(listBody.data.length, 2);
+    assert.equal(listBody.data[0].id, newestId);
+    assert.deepEqual(listBody.pagination, { page: 1, limit: 20, total: 2, totalPages: 1 });
     const listCall = data.calls.filter((call) => call.method === 'pedido.findMany').at(-1);
     assert.deepEqual(listCall?.input.where, { usuarioId: userId });
-    assert.equal(JSON.stringify(orders).includes('passwordHash'), false);
+    assert.equal(JSON.stringify(listBody).includes('passwordHash'), false);
 
     const own = await authed(`${url}/orders/${newestId}`, token);
     assert.equal(own.status, 200);
@@ -483,10 +496,46 @@ test('GET /orders and /orders/:id only expose the authenticated user\'s orders',
   });
 });
 
+test('GET /orders paginates with page/limit and rejects invalid params before the DB', async () => {
+  await serve(async (url, data) => {
+    const token = await signIn(url);
+    const first = await post(`${url}/orders`, orderBody(), token);
+    const firstId = (await first.json()).order.id;
+    await post(`${url}/orders`, orderBody({
+      items: [{ productId: productA.id, quantity: 1 }],
+    }), token);
+
+    // Default page/limit (1/20) returns the full history; page 2 slices it.
+    const page2 = await authed(`${url}/orders?page=2&limit=1`, token);
+    assert.equal(page2.status, 200);
+    const page2Body = await page2.json();
+    assert.deepEqual(page2Body.data.map((order: any) => order.id), [firstId]);
+    assert.deepEqual(page2Body.pagination, { page: 2, limit: 1, total: 2, totalPages: 2 });
+    const pageCall = data.calls.filter((call) => call.method === 'pedido.findMany').at(-1);
+    assert.equal(pageCall?.input.skip, 1);
+    assert.equal(pageCall?.input.take, 1);
+
+    // A page beyond the range is not an error: data comes back empty.
+    const beyond = await authed(`${url}/orders?page=9&limit=1`, token);
+    assert.equal(beyond.status, 200);
+    assert.deepEqual(await beyond.json(), {
+      data: [],
+      pagination: { page: 9, limit: 1, total: 2, totalPages: 2 },
+    });
+
+    const calls = data.calls.length;
+    for (const bad of ['page=0', 'page=abc', 'limit=0', 'limit=101', 'limit=1.5']) {
+      const response = await authed(`${url}/orders?${bad}`, token);
+      assert.equal(response.status, 400, bad);
+    }
+    assert.equal(data.calls.length, calls);
+  });
+});
+
 test('OpenAPI documents the new contract accurately', async () => {
   await serve(async (url) => {
     const spec = await (await fetch(`${url}/openapi.yaml`)).text();
-    assert.match(spec, /version: 1\.2\.0/);
+    assert.match(spec, /version: 2\.0\.0/);
     for (const path of ['/zones:', '/restaurants/{id}:', '/orders:', '/orders/{id}:']) {
       assert.match(spec, new RegExp(`  ${path.replace(/[/.]/g, '\\$&')}$`, 'm'));
     }

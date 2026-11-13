@@ -35,8 +35,14 @@ export async function checkDeployment(baseUrl, { auth = false, requireData = fal
   const docs = await (await request('/docs', 200)).text();
   expect(docs.includes('/api/openapi.yaml'), 'Scalar is not pointing at the API specification.');
 
-  const restaurants = await (await request('/api/restaurants', 200)).json();
-  expect(Array.isArray(restaurants), 'Restaurants must be an array.');
+  const restaurantsPage = await (await request('/api/restaurants', 200)).json();
+  expect(Array.isArray(restaurantsPage?.data)
+    && Number.isInteger(restaurantsPage?.pagination?.total)
+    && Number.isInteger(restaurantsPage?.pagination?.page)
+    && Number.isInteger(restaurantsPage?.pagination?.limit)
+    && Number.isInteger(restaurantsPage?.pagination?.totalPages),
+    'Restaurants must use the {data, pagination} envelope.');
+  const restaurants = restaurantsPage.data;
   expect(restaurants.every((row) => row && typeof row.id === 'string' && typeof row.name === 'string'
     && row.isEco === true && typeof row.zone?.name === 'string'
     && !('passwordHash' in row) && !('email' in row)), 'Unexpected restaurant contract or exposed credentials.');

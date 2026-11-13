@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { validateProduct } from '../lib/validation';
+import { validatePagination, validateProduct } from '../lib/validation';
 import type { createProductService } from '../services/products.service';
 
 export function createProductController(service: ReturnType<typeof createProductService>) {
@@ -10,8 +10,8 @@ export function createProductController(service: ReturnType<typeof createProduct
     const product = await service.create(res.locals.userId, validateProduct(req.body));
     res.status(201).json({ product });
   };
-  const listMine: RequestHandler = async (_req, res) => {
-    res.json({ products: await service.listMine(res.locals.userId) });
+  const listMine: RequestHandler = async (req, res) => {
+    res.json(await service.listMine(res.locals.userId, validatePagination(req.query)));
   };
   return { listPackagings, create, listMine };
 }

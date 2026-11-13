@@ -171,8 +171,14 @@ function fixture() {
     producto: {
       async findMany(input: any) {
         calls.push({ method: 'producto.findMany', input });
-        return sortRows(productos.filter((row) => matches(row, input.where)), input.orderBy)
+        const rows = sortRows(productos.filter((row) => matches(row, input.where)), input.orderBy);
+        const start = input?.skip ?? 0;
+        return rows.slice(start, input?.take === undefined ? undefined : start + input.take)
           .map(withProductRelations);
+      },
+      async count(input: any) {
+        calls.push({ method: 'producto.count', input });
+        return productos.filter((row) => matches(row, input?.where)).length;
       },
       async create(input: any) {
         calls.push({ method: 'producto.create', input });
@@ -327,7 +333,8 @@ test('POST /restaurants/me/products creates the dish with its packagings and pub
     // The owner list shows it and the public menu exposes it right away:
     // /restaurants/:id keeps resolving next to the me/products routes.
     const mine = await (await get(`${url}/restaurants/me/products`, ownerToken())).json();
-    assert.deepEqual(mine.products.map((row: any) => row.id), [product.id]);
+    assert.deepEqual(mine.data.map((row: any) => row.id), [product.id]);
+    assert.equal(mine.pagination.total, 1);
     const detail = await (await get(`${url}/restaurants/${restaurantId}`)).json();
     assert.equal(detail.name, 'Verde Bistró');
     assert.deepEqual(detail.products, [{
@@ -353,7 +360,7 @@ test('a dish created unavailable is listed for the owner but hidden from the pub
     const { product } = await created.json();
     assert.equal(product.available, false);
     const mine = await (await get(`${url}/restaurants/me/products`, ownerToken())).json();
-    assert.deepEqual(mine.products.map((row: any) => row.id), [product.id]);
+    assert.deepEqual(mine.data.map((row: any) => row.id), [product.id]);
     const detail = await (await get(`${url}/restaurants/${restaurantId}`)).json();
     assert.deepEqual(detail.products, []);
   });
@@ -469,18 +476,50 @@ test('GET /restaurants/me/products returns only the own dishes, newest first', a
       `${url}/restaurants/me/products`, productBody({ name: 'Segundo' }), ownerToken())).json();
     const mine = await (await get(`${url}/restaurants/me/products`, ownerToken())).json();
     assert.deepEqual(
-      mine.products.map((row: any) => row.id), [second.product.id, first.product.id]);
-    assert.equal(mine.products[0].packagings.length, 2);
+      mine.data.map((row: any) => row.id), [second.product.id, first.product.id]);
+    assert.deepEqual(mine.pagination, { page: 1, limit: 20, total: 2, totalPages: 1 });
+    assert.equal(mine.data[0].packagings.length, 2);
 
     const other = await (await get(
       `${url}/restaurants/me/products`, createToken(otherOwnerId, secret))).json();
-    assert.deepEqual(other.products.map((row: any) => row.name), ['Menú ajeno']);
-    assert.deepEqual(other.products[0].packagings, [{
+    assert.deepEqual(other.data.map((row: any) => row.name), ['Menú ajeno']);
+    assert.deepEqual(other.data[0].packagings, [{
       id: envase('Caja para Hamburguesa / Sándwich').id,
       name: 'Caja para Hamburguesa / Sándwich',
       unitsPerPackage: 1,
     }]);
     assert.equal(JSON.stringify({ mine, other }).includes('hash-must-not-leak'), false);
     assert.equal(JSON.stringify({ mine, other }).includes('passwordHash'), false);
+  });
+});
+
+test('GET /restaurants/me/products paginates with page/limit and rejects invalid params', async () => {
+  await serve(async (url, data) => {
+    const token = ownerToken();
+    const first = await (await post(
+      `${url}/restaurants/me/products`, productBody({ name: 'Primero' }), token)).json();
+    await post(`${url}/restaurants/me/products`, productBody({ name: 'Segundo' }), token);
+
+    // Newest first: page 2 of 1-per-page holds the older dish.
+    const page2 = await get(`${url}/restaurants/me/products?page=2&limit=1`, token);
+    assert.equal(page2.status, 200);
+    const page2Body = await page2.json();
+    assert.deepEqual(page2Body.data.map((row: any) => row.id), [first.product.id]);
+    assert.deepEqual(page2Body.pagination, { page: 2, limit: 1, total: 2, totalPages: 2 });
+
+    const beyond = await get(`${url}/restaurants/me/products?page=9&limit=1`, token);
+    assert.equal(beyond.status, 200);
+    assert.deepEqual((await beyond.json()).data, []);
+
+    // Invalid params stop at the controller: no product queries run.
+    const calls = data.calls.filter(
+      (call) => call.method === 'producto.findMany' || call.method === 'producto.count').length;
+    for (const bad of ['page=0', 'page=abc', 'limit=0', 'limit=101', 'limit=1.5']) {
+      assert.equal((await get(`${url}/restaurants/me/products?${bad}`, token)).status, 400, bad);
+    }
+    assert.equal(
+      data.calls.filter(
+        (call) => call.method === 'producto.findMany' || call.method === 'producto.count').length,
+      calls);
   });
 });

@@ -4,6 +4,7 @@ import type { CategoriaRestaurante } from '../generated/prisma/enums';
 import { categoriaLabels } from '../lib/categories';
 import { restaurantApprovalEmail, type EmailService } from '../lib/email';
 import { HttpError } from '../lib/http-error';
+import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import { isUuid } from '../lib/validation';
 import type { validateRequestStatus, validateRestaurantRequest } from '../lib/validation';
 
@@ -130,13 +131,22 @@ export function createRestaurantRequestService(
       return request ? toRequestResponse(request) : null;
     },
 
-    async list(status: StatusFilter) {
-      const requests = await db.solicitudRestaurante.findMany({
-        where: status === 'TODAS' ? {} : { estado: status },
-        orderBy: [{ fechaSolicitud: 'asc' }, { id: 'asc' }],
-        select: adminRequestSelect,
-      });
-      return requests.map(toAdminRequestResponse);
+    async list(status: StatusFilter, pagination: Pagination) {
+      const where: Prisma.SolicitudRestauranteWhereInput =
+        status === 'TODAS' ? {} : { estado: status };
+      const [requests, total] = await Promise.all([
+        db.solicitudRestaurante.findMany({
+          where,
+          orderBy: [{ fechaSolicitud: 'asc' }, { id: 'asc' }],
+          ...paginationArgs(pagination),
+          select: adminRequestSelect,
+        }),
+        db.solicitudRestaurante.count({ where }),
+      ]);
+      return {
+        data: requests.map(toAdminRequestResponse),
+        pagination: paginationMeta(total, pagination),
+      };
     },
 
     async getById(id: string) {

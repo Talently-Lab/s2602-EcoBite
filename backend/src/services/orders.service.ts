@@ -1,6 +1,7 @@
 import { Prisma } from '../generated/prisma/client';
 import type { PrismaClient } from '../generated/prisma/client';
 import { HttpError } from '../lib/http-error';
+import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import { isUuid } from '../lib/validation';
 import type { validateOrder } from '../lib/validation';
 
@@ -166,14 +167,22 @@ export function createOrderService(
       });
     },
 
-    async list(userId: string) {
+    async list(userId: string, pagination: Pagination) {
       await requireActiveUser(db, userId);
-      const orders = await db.pedido.findMany({
-        where: { usuarioId: userId },
-        orderBy: [{ fechaCreacion: 'desc' }, { id: 'asc' }],
-        select: orderSelect,
-      });
-      return orders.map(toOrderResponse);
+      const where: Prisma.PedidoWhereInput = { usuarioId: userId };
+      const [orders, total] = await Promise.all([
+        db.pedido.findMany({
+          where,
+          orderBy: [{ fechaCreacion: 'desc' }, { id: 'asc' }],
+          ...paginationArgs(pagination),
+          select: orderSelect,
+        }),
+        db.pedido.count({ where }),
+      ]);
+      return {
+        data: orders.map(toOrderResponse),
+        pagination: paginationMeta(total, pagination),
+      };
     },
 
     async getById(userId: string, id: string) {

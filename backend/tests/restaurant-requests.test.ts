@@ -144,9 +144,15 @@ function fixture() {
       },
       async findMany(input: any) {
         calls.push({ method: 'solicitudRestaurante.findMany', input });
-        return sortRows(
-          solicitudes.filter((entry) => matches(entry, input.where)), input.orderBy)
+        const rows = sortRows(
+          solicitudes.filter((entry) => matches(entry, input.where)), input.orderBy);
+        const start = input?.skip ?? 0;
+        return rows.slice(start, input?.take === undefined ? undefined : start + input.take)
           .map(withRelations);
+      },
+      async count(input: any) {
+        calls.push({ method: 'solicitudRestaurante.count', input });
+        return solicitudes.filter((entry) => matches(entry, input?.where)).length;
       },
       async create(input: any) {
         calls.push({ method: 'solicitudRestaurante.create', input });
@@ -392,24 +398,71 @@ test('GET /admin/restaurant-requests lists by status, oldest first', async () =>
     const pending = await get(`${url}/admin/restaurant-requests`, adminToken());
     assert.equal(pending.status, 200);
     const pendingBody = await pending.json();
-    assert.deepEqual(pendingBody.requests.map((row: any) => row.id), [second.request.id]);
-    assert.equal(pendingBody.requests[0].applicant.email, 'otro@example.test');
-    assert.equal(pendingBody.requests[0].reviewedBy, null);
+    assert.deepEqual(pendingBody.data.map((row: any) => row.id), [second.request.id]);
+    assert.deepEqual(pendingBody.pagination, { page: 1, limit: 20, total: 1, totalPages: 1 });
+    assert.equal(pendingBody.data[0].applicant.email, 'otro@example.test');
+    assert.equal(pendingBody.data[0].reviewedBy, null);
 
     const all = await get(`${url}/admin/restaurant-requests?status=TODAS`, adminToken());
     assert.equal(all.status, 200);
     const allBody = await all.json();
     assert.deepEqual(
-      allBody.requests.map((row: any) => row.id), [first.request.id, second.request.id]);
-    assert.equal(allBody.requests[0].status, 'RECHAZADA');
-    assert.equal(allBody.requests[0].reviewedBy.name, 'Admin Plataforma');
+      allBody.data.map((row: any) => row.id), [first.request.id, second.request.id]);
+    assert.deepEqual(allBody.pagination, { page: 1, limit: 20, total: 2, totalPages: 1 });
+    assert.equal(allBody.data[0].status, 'RECHAZADA');
+    assert.equal(allBody.data[0].reviewedBy.name, 'Admin Plataforma');
 
     const rejectedOnly = await get(`${url}/admin/restaurant-requests?status=RECHAZADA`, adminToken());
-    assert.deepEqual((await rejectedOnly.json()).requests.map((row: any) => row.id), [first.request.id]);
+    assert.deepEqual((await rejectedOnly.json()).data.map((row: any) => row.id), [first.request.id]);
 
     for (const bad of ['status=foo', 'status=PENDIENTE&status=APROBADA', 'status=']) {
       const response = await get(`${url}/admin/restaurant-requests?${bad}`, adminToken());
       assert.equal(response.status, 400, bad);
+    }
+  });
+});
+
+test('GET /admin/restaurant-requests combines the status filter with pagination', async () => {
+  await serve(async (url) => {
+    const first = await (await post(
+      `${url}/restaurant-requests`, requestBody(), applicantToken())).json();
+    const second = await (await post(
+      `${url}/restaurant-requests`,
+      requestBody({ name: 'Otro local', email: 'otro@local.test' }),
+      createToken(applicant2Id, secret))).json();
+    await post(`${url}/admin/restaurant-requests/${first.request.id}/reject`, {}, adminToken());
+    const third = await (await post(
+      `${url}/restaurant-requests`,
+      requestBody({ name: 'Tercer local', email: 'tercero@local.test' }), applicantToken())).json();
+
+    // Oldest first: TODAS has 3 rows; page 2 of 2-per-page holds the newest.
+    const allPage2 = await get(
+      `${url}/admin/restaurant-requests?status=TODAS&page=2&limit=2`, adminToken());
+    assert.equal(allPage2.status, 200);
+    const allPage2Body = await allPage2.json();
+    assert.deepEqual(allPage2Body.data.map((row: any) => row.id), [third.request.id]);
+    assert.deepEqual(allPage2Body.pagination, { page: 2, limit: 2, total: 3, totalPages: 2 });
+
+    // The status filter scopes both the rows and the total.
+    const pendingPage = await get(
+      `${url}/admin/restaurant-requests?status=PENDIENTE&limit=1`, adminToken());
+    const pendingPageBody = await pendingPage.json();
+    assert.deepEqual(pendingPageBody.data.map((row: any) => row.id), [second.request.id]);
+    assert.deepEqual(pendingPageBody.pagination, { page: 1, limit: 1, total: 2, totalPages: 2 });
+
+    const beyond = await get(
+      `${url}/admin/restaurant-requests?status=RECHAZADA&page=5`, adminToken());
+    assert.equal(beyond.status, 200);
+    assert.deepEqual(await beyond.json(), {
+      data: [],
+      pagination: { page: 5, limit: 20, total: 1, totalPages: 1 },
+    });
+
+    for (const bad of [
+      'status=PENDIENTE&page=0', 'status=TODAS&page=abc', 'status=TODAS&limit=0',
+      'status=TODAS&limit=101',
+    ]) {
+      assert.equal((await get(`${url}/admin/restaurant-requests?${bad}`, adminToken())).status, 400, bad);
     }
   });
 });

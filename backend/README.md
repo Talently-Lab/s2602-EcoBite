@@ -67,6 +67,34 @@ Enviar `Content-Type: application/json` en los POST. Límite del cuerpo: 16 KiB.
 Las respuestas no deben almacenarse en caché. Los errores tienen el formato
 `{"error":"mensaje"}` sin stack trace ni datos internos.
 
+### Paginación
+
+Los endpoints que devuelven colecciones sin límite propio responden un sobre
+paginado uniforme:
+
+```ts
+{
+  data: T[];          // filas de la página pedida
+  pagination: {
+    page: number;       // página devuelta (desde 1)
+    limit: number;      // filas por página
+    total: number;      // total de filas que cumplen el filtro
+    totalPages: number; // Math.ceil(total / limit); 0 si no hay resultados
+  };
+}
+```
+
+Parámetros de query: `page` entero desde 1 (por defecto `1`) y `limit` entero
+entre 1 y 100 (por defecto `20`). Valores inválidos (`0`, negativos, decimales
+o no numéricos, `limit` mayor que 100, parámetros repetidos) responden `400`.
+Una `page` fuera de rango responde `200` con `data` vacía, no un error.
+
+Aplica a `GET /api/restaurants`, `GET /api/orders`,
+`GET /api/restaurants/me/products`, `GET /api/restaurants/me/orders` y
+`GET /api/admin/restaurant-requests` (que además conserva su filtro `status`).
+Los catálogos acotados `GET /api/zones`, `GET /api/restaurant-categories` y
+`GET /api/packagings` no se paginan: se devuelven completos.
+
 ### `GET /api/health`
 
 Público. Ejecuta `SELECT 1` contra la base de datos con un límite de
@@ -104,17 +132,21 @@ es la documentación que consume el portal y frontend.
 
 ### `GET /api/restaurants`
 
-Público. Devuelve un array, únicamente restaurantes activos y eco-friendly,
-ordenados por nombre e ID. No incluye email ni contraseña del restaurante.
+Público. Devuelve el sobre paginado (ver **Paginación**) con únicamente
+restaurantes activos y eco-friendly, ordenados por nombre e ID. No incluye
+email ni contraseña del restaurante.
 
 ```ts
-Array<{
-  id: string;
-  name: string;
-  category: string;
-  isEco: boolean;
-  zone: { id: string; name: string };
-}>
+{
+  data: Array<{
+    id: string;
+    name: string;
+    category: string;
+    isEco: boolean;
+    zone: { id: string; name: string };
+  }>;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
 ```
 
 El esquema actual no tiene imágenes ni descripción comercial del restaurante.
@@ -233,9 +265,10 @@ consuma una sola forma:
 ### `GET /api/restaurants/me/products`
 
 Mismas reglas de acceso que el POST (`RESTAURANTE_ADMIN` con restaurante
-activo). Devuelve `{"products":[...]}` solo con los platillos del propio
-restaurante, del más reciente al más antiguo, incluyendo los de
-`available: false`; cada entrada trae el `packagings` configurado.
+activo). Devuelve el sobre paginado `{data:[...], pagination:{...}}` (ver
+**Paginación**) solo con los platillos del propio restaurante, del más reciente
+al más antiguo, incluyendo los de `available: false`; cada entrada trae el
+`packagings` configurado.
 
 ### `GET /api/restaurants/me`
 
@@ -267,14 +300,15 @@ roles o a una cuenta sin restaurante vinculado (o con la fila inexistente).
 
 Protegido con las mismas reglas de acceso que `/restaurants/me/products`
 (`RESTAURANTE_ADMIN` con restaurante **activo**; local inactivo o ausente
-responde `403`). Devuelve `{"orders":[...]}` con la cola completa del propio
-restaurante — todos los `pedido_estado`, sin filtro — del más reciente al más
-antiguo. Incluye `customer.name` para la entrega; nunca el email del cliente ni
-pedidos de otros locales. Sin pedidos responde `{"orders":[]}`.
+responde `403`). Devuelve el sobre paginado (ver **Paginación**) con una
+página de la cola del propio restaurante — todos los `pedido_estado`, sin
+filtro — del más reciente al más antiguo. Incluye `customer.name` para la
+entrega; nunca el email del cliente ni pedidos de otros locales. Sin pedidos
+responde `{"data":[],"pagination":{...,"total":0,"totalPages":0}}`.
 
 ```ts
 {
-  orders: Array<{
+  data: Array<{
     id: string;
     status: 'PENDIENTE' | 'EN_PREPARACION' | 'COMPLETADO' | 'CANCELADO';
     createdAt: string;
@@ -291,6 +325,7 @@ pedidos de otros locales. Sin pedidos responde `{"orders":[]}`.
       subtotal: number;
     }>;
   }>;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 ```
 
@@ -364,9 +399,10 @@ Respuesta (`Order`):
 
 ### `GET /api/orders`
 
-Protegido. Lista solo los pedidos del usuario autenticado, del más reciente
-al más antiguo. La cuenta se consulta en cada llamada: desactivarla invalida
-el acceso de inmediato. `200`: `{"orders": Order[]}`. `401`: sesión o cuenta
+Protegido. Devuelve el sobre paginado (ver **Paginación**) con una página de
+los pedidos del usuario autenticado, del más reciente al más antiguo. La
+cuenta se consulta en cada llamada: desactivarla invalida el acceso de
+inmediato. `200`: `{data: Order[], pagination: {...}}`. `401`: sesión o cuenta
 inválida.
 
 ### `GET /api/orders/:id`
@@ -491,9 +527,11 @@ Protegido (cualquier rol; la cuenta debe seguir activa). Devuelve
 
 Solo `ADMIN_PLATAFORMA` (rol verificado en la base en cada llamada).
 `status` admite `PENDIENTE` (por defecto), `APROBADA`, `RECHAZADA` y `TODAS`
-(sin filtro). Devuelve `{"requests":[...]}` de más antigua a más reciente;
-cada entrada incluye `applicant` y `reviewedBy`. `400` si `status` no es un
-único valor válido.
+(sin filtro) y se combina con `page`/`limit`. Devuelve el sobre paginado
+`{data:[...], pagination:{...}}` (ver **Paginación**) de más antigua a más
+reciente; `total` cuenta solo las filas del estado pedido y cada entrada
+incluye `applicant` y `reviewedBy`. `400` si `status` no es un único valor
+válido o si `page`/`limit` son inválidos.
 
 ### `GET /api/admin/restaurant-requests/:id`
 
@@ -522,8 +560,11 @@ restaurante ni cambia roles, y no registra motivo. `409` si ya fue revisada.
 ## Límites operativos
 
 - Registro y login comparten 20 intentos por IP cada 15 minutos (`429` con
-  `Retry-After`). El store es en memoria: se reinicia con el proceso y no comparte
-  contadores entre réplicas. Usar un store compartido antes de escalar.
+  `Retry-After`). El store es en memoria por proceso, lo cual es correcto porque
+  Render hoy ejecuta una sola instancia de `ecobite-api` (`render.yaml`): los
+  contadores se reinician con el proceso y no se comparten entre réplicas. Si se
+  agrega una segunda instancia hace falta un store compartido (p. ej. Redis);
+  el issue #39 sigue ese trabajo pendiente.
 - Express no confía automáticamente en `X-Forwarded-For`. Tras un proxy,
   configurar `TRUST_PROXY_HOPS=1` solo para un salto controlado; no usar `true` indiscriminadamente.
   Sin configuración, usuarios tras ese proxy podrían compartir un límite.
@@ -531,9 +572,9 @@ restaurante ni cambia roles, y no registra motivo. `409` si ya fue revisada.
   autenticación** ni bloquea clientes como curl.
 - El registro revela duplicados con `409`; el login no distingue si el email existe.
   Revisar esa política si el servicio se abre públicamente.
-- No hay paginación todavía: el alcance inicial del dataset tiene un restaurante.
-  `GET /api/orders` también devuelve el historial completo del usuario; si el
-  volumen crece, evaluar `limit`/cursor en una versión posterior.
+- Los listados usan paginación por `page`/`limit` (offset) con `limit` máximo
+  100; ver **Paginación**. Una `page` fuera de rango responde `data` vacía. Si el
+  volumen crece mucho, evaluar cursor en una versión posterior.
 - Algunos errores de conexión/timeout de Prisma responden `503`. Otros errores
   inesperados responden `500`, sin filtrar mensajes internos.
 - Los emails existentes importados por otro mecanismo deben respetar la
