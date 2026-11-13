@@ -550,7 +550,10 @@ test('OpenAPI documents the new contract accurately', async () => {
 test('unsupported methods on the new routes return 404', async () => {
   await serve(async (url) => {
     assert.equal((await fetch(`${url}/orders`, { method: 'DELETE' })).status, 404);
-    assert.equal((await fetch(`${url}/orders/${randomUUID()}`, { method: 'PATCH' })).status, 404);
+    // A well-formed PATCH still 404s at routing: only /users/me accepts PATCH.
+    assert.equal((await fetch(`${url}/orders/${randomUUID()}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    })).status, 404);
     assert.equal((await fetch(`${url}/restaurants/${restaurantId}`, { method: 'PUT' })).status, 404);
     assert.equal((await fetch(`${url}/zones`, { method: 'DELETE' })).status, 404);
   });

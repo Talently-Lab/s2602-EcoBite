@@ -16,9 +16,14 @@ import { createToken } from '../src/lib/tokens';
 
 const secret = randomBytes(32).toString('hex');
 const userId = randomUUID();
+const zone = { id: randomUUID(), nombreBarrio: 'Palermo', activo: true };
+const inactiveZone = { id: randomUUID(), nombreBarrio: 'Zona inactiva', activo: false };
 const user = {
   id: userId, nombreCompleto: 'Cliente de prueba', email: 'cliente@example.test',
   rol: 'CLIENTE', fechaRegistro: new Date('2026-01-01T00:00:00Z'), activo: true,
+  telefono: null as string | null, direccionHabitual: null as string | null,
+  zonaHabitualId: null as string | null,
+  zonaHabitual: null as { id: string; nombreBarrio: string } | null,
 };
 
 function fixture() {
@@ -39,6 +44,27 @@ function fixture() {
         calls.push({ method: 'findUnique', input });
         if (failure) throw failure;
         return saved && (input.where.id === saved.id || input.where.email === saved.email) ? saved : null;
+      },
+      async update(input: any) {
+        calls.push({ method: 'update', input });
+        if (failure) throw failure;
+        if (!saved || input.where.id !== saved.id) return null;
+        Object.assign(saved, input.data);
+        // Keep the relation in sync like the FK on zonaHabitualId would.
+        if ('zonaHabitualId' in input.data) {
+          saved.zonaHabitual = saved.zonaHabitualId === zone.id
+            ? { id: zone.id, nombreBarrio: zone.nombreBarrio }
+            : null;
+        }
+        return saved;
+      },
+    },
+    zona: {
+      async findFirst(input: any) {
+        calls.push({ method: 'findFirst', input });
+        if (failure) throw failure;
+        return [zone, inactiveZone].find(
+          (row) => row.id === input.where.id && row.activo === input.where.activo) ?? null;
       },
     },
     restaurante: {
@@ -97,6 +123,17 @@ async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Pro
 
 function post(url: string, body: unknown) {
   return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+function patch(url: string, body: unknown, token?: string) {
+  return fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 const registration = { name: 'Cliente de prueba', email: ' Cliente@Example.Test ', password: 'valid-password' };
@@ -242,6 +279,103 @@ test('register -> login -> protected me uses real bcrypt and JWT without leaking
   });
 });
 
+test('PATCH /users/me requires a Bearer token', async () => {
+  await serve(async (url, data) => {
+    const response = await patch(`${url}/users/me`, { phone: '1122334455' });
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), { error: 'Se requiere un token Bearer.' });
+    assert.equal(data.calls.length, 0);
+  });
+});
+
+test('PATCH /users/me rejects unknown fields, empty bodies and invalid values before DB calls', async () => {
+  await serve(async (url, data) => {
+    await post(`${url}/users/register`, registration);
+    const login = await post(`${url}/users/login`, registration);
+    const { accessToken } = await login.json();
+    const calls = data.calls.length;
+    const unknown = await patch(`${url}/users/me`, { email: 'x@example.test' }, accessToken);
+    assert.equal(unknown.status, 400);
+    assert.deepEqual(await unknown.json(), {
+      error: 'Solo se permiten los campos phone, address y zoneId.',
+    });
+    const empty = await patch(`${url}/users/me`, {}, accessToken);
+    assert.equal(empty.status, 400);
+    assert.deepEqual(await empty.json(), { error: 'Incluye al menos un campo para actualizar.' });
+    for (const body of [
+      { role: 'ADMIN_PLATAFORMA' }, { phone: 'x'.repeat(31) }, { phone: '' }, { phone: 1122334455 },
+      { address: '' }, { address: 'x'.repeat(201) }, { zoneId: 'not-a-uuid' }, { zoneId: 123 },
+    ]) {
+      const response = await patch(`${url}/users/me`, body, accessToken);
+      assert.equal(response.status, 400, JSON.stringify(body));
+    }
+    assert.equal(data.calls.length, calls);
+  });
+});
+
+test('PATCH /users/me rejects nonexistent or inactive habitual zones', async () => {
+  await serve(async (url, data) => {
+    await post(`${url}/users/register`, registration);
+    const login = await post(`${url}/users/login`, registration);
+    const { accessToken } = await login.json();
+    for (const zoneId of [randomUUID(), inactiveZone.id]) {
+      const response = await patch(`${url}/users/me`, { zoneId }, accessToken);
+      assert.equal(response.status, 400, zoneId);
+      assert.deepEqual(await response.json(), { error: 'La zona no está disponible.' });
+    }
+    assert.equal(data.calls.some((call) => call.method === 'update'), false);
+  });
+});
+
+test('PATCH /users/me updates profile fields and clears them with explicit null', async () => {
+  await serve(async (url, data) => {
+    const created = await post(`${url}/users/register`, registration);
+    const registered = (await created.json()).user;
+    assert.equal(registered.phone, null);
+    assert.equal(registered.address, null);
+    assert.equal(registered.habitualZone, null);
+    const login = await post(`${url}/users/login`, registration);
+    const session = await login.json();
+    assert.equal(session.user.habitualZone, null);
+
+    const updated = await patch(`${url}/users/me`, {
+      phone: ' 1122334455 ', address: 'Av. Corrientes 1234', zoneId: zone.id,
+    }, session.accessToken);
+    assert.equal(updated.status, 200);
+    const body = await updated.json();
+    assert.equal(body.user.phone, '1122334455');
+    assert.equal(body.user.address, 'Av. Corrientes 1234');
+    assert.deepEqual(body.user.habitualZone, { id: zone.id, name: 'Palermo' });
+    assert.equal(body.user.name, 'Cliente de prueba');
+    assert.equal(body.user.email, 'cliente@example.test');
+    assert.equal(body.user.passwordHash, undefined);
+    assert.equal(JSON.stringify(body).includes('passwordHash'), false);
+    const updateCall = data.calls.find((call) => call.method === 'update');
+    assert.deepEqual(updateCall.input.data, {
+      telefono: '1122334455', direccionHabitual: 'Av. Corrientes 1234', zonaHabitualId: zone.id,
+    });
+
+    // Explicit null clears the stored value; absent keys leave it untouched.
+    const cleared = await patch(`${url}/users/me`,
+      { address: null, zoneId: null }, session.accessToken);
+    assert.equal(cleared.status, 200);
+    const clearedBody = await cleared.json();
+    assert.equal(clearedBody.user.address, null);
+    assert.equal(clearedBody.user.habitualZone, null);
+    assert.equal(clearedBody.user.phone, '1122334455');
+
+    const me = await fetch(`${url}/users/me`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    });
+    assert.equal(me.status, 200);
+    assert.deepEqual((await me.json()).user, clearedBody.user);
+
+    data.deactivate();
+    assert.equal((await patch(`${url}/users/me`,
+      { phone: '1' }, session.accessToken)).status, 401);
+  });
+});
+
 test('registration rejects missing, malformed, too long and privilege-escalation input before DB calls', async () => {
   await serve(async (url, data) => {
     for (const body of [
@@ -313,6 +447,7 @@ test('JSON media type, malformed JSON and body limit use explicit status codes',
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{',
     })).status, 400);
     assert.equal((await post(`${url}/users/register`, { ...registration, name: 'x'.repeat(17000) })).status, 413);
+    assert.equal((await fetch(`${url}/users/me`, { method: 'PATCH', body: 'text' })).status, 415);
   });
 });
 

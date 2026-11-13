@@ -13,13 +13,13 @@ export function createApp(db: PrismaClient, config: ApiConfig, deps?: ApiDeps) {
   app.set('trust proxy', config.trustProxyHops);
   app.use(cors({
     origin: config.corsOrigins,
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
   app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
     res.set('Cache-Control', 'no-store');
-    if (req.method === 'POST' && !req.is('application/json')) {
+    if ((req.method === 'POST' || req.method === 'PATCH') && !req.is('application/json')) {
       throw new HttpError(415, 'Se requiere Content-Type: application/json.');
     }
     next();

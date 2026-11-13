@@ -63,7 +63,7 @@ El servidor valida la configuración y ejecuta `SELECT 1` antes de escuchar.
 
 ## Contrato HTTP
 
-Enviar `Content-Type: application/json` en los POST. Límite del cuerpo: 16 KiB.
+Enviar `Content-Type: application/json` en los POST y PATCH. Límite del cuerpo: 16 KiB.
 Las respuestas no deben almacenarse en caché. Los errores tienen el formato
 `{"error":"mensaje"}` sin stack trace ni datos internos.
 
@@ -424,7 +424,8 @@ ajenos. `401`: sesión o cuenta inválida.
 - Contraseña de al menos 8 caracteres y máximo 72 **bytes UTF-8**, para evitar
   truncamiento silencioso de bcrypt. No se recorta ni modifica.
 - bcrypt con costo 12. El rol siempre es `CLIENTE`; no hay registro público de admins.
-- `201`: `{"user":{id,name,email,role,createdAt}}`.
+- `201`: `{"user":{id,name,email,role,createdAt,phone,address,habitualZone}}`
+  (los campos de perfil responden `null` hasta que se editan).
 - `400`: datos inválidos. `409`: email duplicado (incluye registros concurrentes).
 
 La política de 8 caracteres es el mínimo inicial, no una garantía de fortaleza.
@@ -437,7 +438,7 @@ pendientes antes de una apertura pública.
 { "email": "cliente@example.test", "password": "<contraseña>" }
 ```
 
-`200`: `{accessToken, tokenType:"Bearer", expiresIn:3600, user:{id,name,email,role,createdAt}}`.
+`200`: `{accessToken, tokenType:"Bearer", expiresIn:3600, user:{id,name,email,role,createdAt,phone,address,habitualZone}}`.
 Email desconocido, contraseña incorrecta y cuenta inactiva responden el mismo
 `401`. Datos faltantes o inválidos: `400`. También se realiza trabajo bcrypt
 para emails desconocidos.
@@ -449,7 +450,8 @@ El secreto es exclusivo de la autenticación de clientes, no del OAuth del porta
 ### `GET /api/users/me`
 
 Protegido: `Authorization: Bearer <accessToken>`.
-`200`: `{"user":{id,name,email,role,createdAt}}`.
+`200`: `{"user":{id,name,email,role,createdAt,phone,address,habitualZone}}`;
+`habitualZone` es `{id,name}` o `null`.
 `401`: token ausente, inválido, vencido o usuario eliminado/inactivo.
 La cuenta se consulta nuevamente; desactivarla invalida el acceso inmediatamente.
 
@@ -457,6 +459,25 @@ No hay refresh tokens ni endpoint de logout. El frontend debe desechar el token
 al cerrar sesión; un token robado permanece válido hasta su vencimiento salvo
 desactivación de la cuenta o rotación del secreto. No persistirlo por defecto
 en `localStorage`; acordar la estrategia de sesión con frontend antes de producción.
+
+### `PATCH /api/users/me`
+
+Protegido: `Authorization: Bearer <accessToken>`. Edita los datos de perfil del
+usuario del token. El cuerpo solo admite `phone`, `address` y `zoneId` y al
+menos uno es obligatorio: un campo ausente se deja intacto y un `null`
+explícito borra el valor guardado.
+
+```json
+{ "phone": "+54 11 5555 1234", "address": "Av. Corrientes 1234", "zoneId": "uuid-o-null" }
+```
+
+- `phone`: texto recortado de 1–30 caracteres sin controles, o `null`.
+- `address`: texto recortado de 1–200 caracteres sin controles, o `null`.
+- `zoneId`: UUID de una zona activa (ver `GET /api/zones`), o `null` para
+  desvincular la zona habitual.
+- `200`: `{"user":{id,name,email,role,createdAt,phone,address,habitualZone}}`.
+- `400`: datos inválidos, campos adicionales, cuerpo sin campos o zona
+  inexistente/inactiva. `401`: sesión o cuenta inválida.
 
 ### `GET /api/users/me/impact`
 
