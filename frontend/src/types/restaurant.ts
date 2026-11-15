@@ -13,8 +13,18 @@ export type AllRestaurants = {
   id: string;
   name: string;
   category: string;
-  isEco?: string;
+  isEco: boolean;
   zone: Zone;
+};
+
+export type RestaurantListResponse = {
+  data: AllRestaurants[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 export type RestaurantProduct = {
