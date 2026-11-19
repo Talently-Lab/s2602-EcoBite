@@ -143,16 +143,18 @@ email ni contraseña del restaurante.
     name: string;
     category: string;
     isEco: boolean;
+    description: string | null;
+    imageUrl: string | null;
+    tag: string | null;
     zone: { id: string; name: string };
   }>;
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 ```
 
-El esquema actual no tiene imágenes ni descripción comercial del restaurante.
-El frontend aún espera `description`, `imageSrc` y `tag` en su tipo de tarjeta:
-necesita un adaptador/ajuste de contrato en una tarea posterior. No se inventan
-estos datos ni se modifica el frontend en este cambio.
+`description` e `imageUrl` son nulos cuando el restaurante no los cargó.
+`tag` es la insignia derivada `Envases biodegradables` cuando `isEco` es
+`true`; se calcula en la respuesta, no se guarda en la base.
 
 ### `GET /api/zones`
 
@@ -180,6 +182,9 @@ nombre e ID. No incluye email ni contraseña del restaurante.
   name: string;
   category: string;
   isEco: boolean;
+  description: string | null;
+  imageUrl: string | null;
+  tag: string | null;
   zone: { id: string; name: string };
   products: Array<{
     id: string;
@@ -289,6 +294,9 @@ roles o a una cuenta sin restaurante vinculado (o con la fila inexistente).
     email: string;
     category: string;         // etiqueta en español
     isEco: boolean;
+    description: string | null;
+    imageUrl: string | null;
+    tag: string | null;       // "Envases biodegradables" si isEco
     active: boolean;
     zone: { id: string; name: string };
     createdAt: string;
@@ -380,7 +388,7 @@ Respuesta (`Order`):
   transportType: 'BICICLETA' | 'VEHICULO_ELECTRICO';
   total: number;
   impact: {
-    distanceKm: number;      // copia de distancia_promedio_km de la zona
+    distanceKm: number;      // Haversine centroide restaurante → centroide zona destino; 0.50 km si es la misma zona
     co2SavedKg: number;      // distanceKm × 0.08, 3 decimales
     containersAvoided: number;
     plasticAvoidedG: number;
@@ -523,10 +531,14 @@ Crea una solicitud de alta para el usuario del token.
   "category": "COMIDA_SALUDABLE",
   "zoneId": "uuid",
   "address": "Av. Santa Fe 1234",
+  "description": "Cocina de estación con envases compostables",
   "email": "contacto@verdebistro.test",
   "commitmentAccepted": true
 }
 ```
+
+`description` es opcional (1–500 caracteres, sin controles); al aprobar la
+solicitud se copia al restaurante creado.
 
 - `201`: `{"request":{...}}` con `status` `PENDIENTE` y la aceptación del
   compromiso registrada con la fecha del servidor.
@@ -644,7 +656,8 @@ pnpm --filter backend data:import -- --dry-run
 ```
 
 Este es también el comportamiento por defecto sin argumentos: valida formatos,
-las diez relaciones, unicidad y fórmulas de montos/impacto sin conectarse a la DB.
+las once relaciones, unicidad y fórmulas de montos/impacto sin conectarse a la
+DB. Las filas completamente vacías (` ,,, `) se descartan antes de validar.
 El import excluye únicamente usuarios `REPARTIDOR` por decisión aprobada del MVP;
 si algún pedido los referencia, aborta en lugar de perder ese pedido.
 El dataset entregado conserva **806 usuarios, 1 restaurante, 40 productos,
@@ -655,11 +668,29 @@ Para escribir, primero elegir explícitamente una DB aislada, aplicar migracione
 y ejecutar el seed de referencia. Luego usar `data:import -- --apply`.
 No ejecutar contra Neon sin aprobación del destino y del import.
 La operación resuelve zonas/empaques por nombre contra el seed y verifica sus
-distancias/gramos. Inserta las otras seis tablas en una sola transacción:
+distancias/gramos. Inserta las otras seis tablas en una sola transacción —
+restaurantes antes que usuarios, porque `usuario.id_restaurante` es FK — y
 cualquier fallo revierte todo el import. Los IDs UUID son deterministas por
 entidad/código; repetir no duplica ni sobrescribe filas ya existentes. No es
-un sincronizador: cambios posteriores del CSV no actualizan IDs ya importados.
+un sincronizador: fuera de `--reconcile`, cambios posteriores del CSV no
+actualizan IDs ya importados.
 Conflictos de email con otros IDs abortan, no fusionan cuentas.
+
+`--reconcile` solo es válido junto a `--apply` y corrige **únicamente `rol` e
+`id_restaurante`** de las cuentas del dataset ya importadas, comparando cada
+fila antes de escribir. Los UUID del plan son deterministas por código fuente
+(`sourceId`), así que una cuenta registrada jamás aparece en ese conjunto y el
+reconcile no puede tocar usuarios reales. Existe porque el export V2 corrigió
+los roles del handoff S3 (de 133 `ADMIN_PLATAFORMA` + 119 `RESTAURANTE_ADMIN`
+a 3 + 1, el resto `CLIENTE`) y vinculó USR-8000 → RES-0001; el modo
+insert-only dejaba esos valores obsoletos. Además del conteo de inserts informa
+`usuarios reconciliados: N`. Orden en producción: `data:import -- --apply` y,
+tras confirmar el resultado, `data:import -- --apply --reconcile`.
+
+Columnas opcionales en el export de Restaurantes: `direccion`, `descripcion`,
+`imagen_url` y el legado `password_hash` (ya no se inserta: la autenticación
+vive en `usuario`). Un `Usuarios.id_restaurante` no vacío exige rol
+`RESTAURANTE_ADMIN` y un `RES-*` existente.
 
 Se preservan los hashes originales (los SHA-256 simulados no sirven para login
 bcrypt; registrar una cuenta nueva para probar auth). Se conservan las fechas de

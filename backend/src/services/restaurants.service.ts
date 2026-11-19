@@ -5,6 +5,9 @@ import { HttpError } from '../lib/http-error';
 import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import { isUuid } from '../lib/validation';
 
+// Eco badge shown on catalog cards; computed from es_100_eco, never stored.
+const ECO_TAG = 'Envases biodegradables';
+
 // The restaurant sees its full incoming queue, so the select adds the customer
 // name (never the email) and drops the per-item impact fields of the customer
 // order shape in orders.service.ts.
@@ -70,6 +73,7 @@ export function createRestaurantService(
           ...paginationArgs(pagination),
           select: {
             id: true, nombre: true, categoria: true, esEco: true,
+            descripcion: true, imagenUrl: true,
             zona: { select: { id: true, nombreBarrio: true } },
           },
         }),
@@ -81,6 +85,9 @@ export function createRestaurantService(
           name: restaurant.nombre,
           category: categoriaLabels[restaurant.categoria],
           isEco: restaurant.esEco,
+          description: restaurant.descripcion ?? null,
+          imageUrl: restaurant.imagenUrl ?? null,
+          tag: restaurant.esEco ? ECO_TAG : null,
           zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
         })),
         pagination: paginationMeta(total, pagination),
@@ -93,6 +100,7 @@ export function createRestaurantService(
         where: { id, activo: true, esEco: true },
         select: {
           id: true, nombre: true, categoria: true, esEco: true,
+          descripcion: true, imagenUrl: true,
           zona: { select: { id: true, nombreBarrio: true } },
           productos: {
             where: { disponible: true },
@@ -107,6 +115,9 @@ export function createRestaurantService(
         name: restaurant.nombre,
         category: categoriaLabels[restaurant.categoria],
         isEco: restaurant.esEco,
+        description: restaurant.descripcion ?? null,
+        imageUrl: restaurant.imagenUrl ?? null,
+        tag: restaurant.esEco ? ECO_TAG : null,
         zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
         products: restaurant.productos.map((product) => ({
           id: product.id,
@@ -128,6 +139,7 @@ export function createRestaurantService(
             select: {
               id: true, nombre: true, direccion: true, email: true,
               categoria: true, esEco: true, activo: true, fechaCreacion: true,
+              descripcion: true, imagenUrl: true,
               zona: { select: { id: true, nombreBarrio: true } },
             },
           },
@@ -144,6 +156,9 @@ export function createRestaurantService(
         email: restaurant.email,
         category: categoriaLabels[restaurant.categoria],
         isEco: restaurant.esEco,
+        description: restaurant.descripcion ?? null,
+        imageUrl: restaurant.imagenUrl ?? null,
+        tag: restaurant.esEco ? ECO_TAG : null,
         active: restaurant.activo,
         zone: { id: restaurant.zona.id, name: restaurant.zona.nombreBarrio },
         createdAt: restaurant.fechaCreacion,
