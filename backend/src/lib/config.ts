@@ -1,3 +1,5 @@
+import { DEFAULT_EMAIL_ASSETS, type EmailAssets } from './email-templates';
+
 export interface ApiConfig {
   jwtSecret: string;
   corsOrigins: string[];
@@ -8,6 +10,7 @@ export interface ApiConfig {
     from: string;
     fromName: string;
   };
+  emailAssets?: EmailAssets;
 }
 
 export class ConfigError extends Error {}
@@ -50,5 +53,29 @@ export function readConfig(env: NodeJS.ProcessEnv): ApiConfig {
     email = { apiKey: emailApiKey, from: emailFrom, fromName: env.EMAIL_FROM_NAME || 'EcoBite' };
   }
 
-  return { jwtSecret, corsOrigins, trustProxyHops: proxyHops === '1' ? 1 : 0, email };
+  let emailAssets: ApiConfig['emailAssets'];
+  const emailLogoUrl = env.EMAIL_LOGO_URL;
+  const emailAppUrl = env.EMAIL_APP_URL;
+  if (emailLogoUrl || emailAppUrl) {
+    if (emailLogoUrl && !isHttpsUrl(emailLogoUrl)) {
+      throw new ConfigError('EMAIL_LOGO_URL debe ser una URL HTTPS válida.');
+    }
+    if (emailAppUrl && !isHttpsUrl(emailAppUrl)) {
+      throw new ConfigError('EMAIL_APP_URL debe ser una URL HTTPS válida.');
+    }
+    emailAssets = {
+      logoUrl: emailLogoUrl || DEFAULT_EMAIL_ASSETS.logoUrl,
+      appUrl: (emailAppUrl || DEFAULT_EMAIL_ASSETS.appUrl).replace(/\/+$/, ''),
+    };
+  }
+
+  return { jwtSecret, corsOrigins, trustProxyHops: proxyHops === '1' ? 1 : 0, email, emailAssets };
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }

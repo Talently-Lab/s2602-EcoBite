@@ -31,6 +31,8 @@ valores ni versionar el archivo `.env`.
 | `EMAIL_API_KEY` | Opcional. Clave de la API de Brevo para correos transaccionales; debe configurarse junto con `EMAIL_FROM` (si solo hay una, el servidor no arranca). Sin credenciales, los correos solo se registran en el log. |
 | `EMAIL_FROM` | Opcional. Remitente verificado en la cuenta de Brevo; debe configurarse junto con `EMAIL_API_KEY`. |
 | `EMAIL_FROM_NAME` | Opcional. Nombre visible del remitente; por defecto `EcoBite`. |
+| `EMAIL_LOGO_URL` | Opcional. URL HTTPS del logo en las plantillas de correo; por defecto `https://s2602-ecobite.netlify.app/images/Logo_Eb-circle-green.png`. |
+| `EMAIL_APP_URL` | Opcional. URL HTTPS base de la app para los enlaces de los correos; por defecto `https://s2602-ecobite.netlify.app`. |
 
 Generar el secreto con un gestor de secretos o `openssl rand -hex 32` y guardarlo
 directamente en `.env` o Doppler; no pegarlo en chat ni documentación.
@@ -428,6 +430,9 @@ ajenos. `401`: sesión o cuenta inválida.
   (los campos de perfil responden `null` hasta que se editan).
 - `400`: datos inválidos. `409`: email duplicado (incluye registros concurrentes).
 
+Tras un `201` se envía un correo de bienvenida de forma asincrónica; un fallo de
+entrega nunca afecta la respuesta (ver **Correos transaccionales**).
+
 La política de 8 caracteres es el mínimo inicial, no una garantía de fortaleza.
 La comprobación de contraseñas comprometidas y la verificación de email quedan
 pendientes antes de una apertura pública.
@@ -568,15 +573,29 @@ promueve al solicitante a `RESTAURANTE_ADMIN` asignándole el restaurante.
 `404` si no existe; `409` si ya fue revisada, si el solicitante está inactivo
 o cambió de rol, o si ya existe un restaurante con ese email.
 
-Aprobar también dispara un correo transaccional al email de la solicitud
-(Brevo si `EMAIL_API_KEY`/`EMAIL_FROM` están configuradas; si no, solo se
-registra en el log). El envío es asincrónico: la respuesta nunca espera ni
-depende del proveedor, y un fallo del envío no revierte la aprobación.
+Aprobar también dispara un correo transaccional en HTML al email de la solicitud
+(ver **Correos transaccionales**).
 
 ### `POST /api/admin/restaurant-requests/:id/reject`
 
 Solo `ADMIN_PLATAFORMA`. Misma forma que approve — cuerpo vacío — pero no crea
 restaurante ni cambia roles, y no registra motivo. `409` si ya fue revisada.
+
+## Correos transaccionales
+
+La API envía dos correos con la misma plantilla HTML (más versión de texto
+plano): la **bienvenida** tras un registro `201` y la **aprobación de
+solicitud** tras aprobar un restaurante. Ambos envíos son asincrónicos
+(fire-and-forget): la respuesta nunca espera ni depende del proveedor, y un
+fallo del envío no revierte la operación. Con `EMAIL_API_KEY`/`EMAIL_FROM` se
+usa la API de Brevo; sin ellas, los correos solo se registran en el log con
+destinatario y asunto, nunca el cuerpo.
+
+`EMAIL_LOGO_URL` y `EMAIL_APP_URL` personalizan el logo y los enlaces de las
+plantillas (ambas deben ser HTTPS); sin configurarlas se usan los recursos del
+sitio público en Netlify. El texto de los correos es un placeholder pendiente
+de aprobación de Marketing. `EMAIL_FROM` sigue teniendo que ser un remitente
+verificado en la cuenta de Brevo, dominio incluido.
 
 ## Límites operativos
 

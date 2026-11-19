@@ -114,7 +114,7 @@ test('GET /dashboard/stats re-checks the role in the database on every request',
 
     const cliente = await authed(url, clienteToken);
     assert.equal(cliente.status, 403);
-    assert.deepEqual(await cliente.json(), { error: 'No tenés permisos para acceder a este recurso.' });
+    assert.deepEqual(await cliente.json(), { error: 'No tienes permisos para acceder a este recurso.' });
 
     data.users.set(adminId, { rol: 'RESTAURANTE_ADMIN', activo: true });
     assert.equal((await authed(url, adminToken)).status, 403);

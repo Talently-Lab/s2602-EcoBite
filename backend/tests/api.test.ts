@@ -12,6 +12,7 @@ import { checkDeployment } from '../scripts/check-deployed.mjs';
 import { createApp } from '../src/app';
 import type { PrismaClient } from '../src/generated/prisma/client';
 import { readConfig, type ApiConfig } from '../src/lib/config';
+import type { EmailMessage, EmailService } from '../src/lib/email';
 import { createToken } from '../src/lib/tokens';
 
 const secret = randomBytes(32).toString('hex');
@@ -28,9 +29,17 @@ const user = {
 
 function fixture() {
   const calls: { method: string; input: any }[] = [];
+  const sent: EmailMessage[] = [];
   let saved: typeof user & { passwordHash: string } | null = null;
   let failure: unknown;
   let hangs = false;
+  let failEmail = false;
+  const emailService: EmailService = {
+    async send(message) {
+      sent.push(message);
+      if (failEmail) throw new Error('brevo down');
+    },
+  };
   const db = {
     usuario: {
       async create(input: any) {
@@ -99,16 +108,20 @@ function fixture() {
     },
   };
   return {
-    db: db as unknown as PrismaClient, calls,
+    db: db as unknown as PrismaClient, calls, sent, emailService,
     deactivate() { if (saved) saved.activo = false; },
     fail(error: unknown) { failure = error; },
     hang() { hangs = true; },
+    failEmail() { failEmail = true; },
   };
 }
 
 async function serve(run: (url: string, data: ReturnType<typeof fixture>) => Promise<void>, trustProxyHops: 0 | 1 = 0, overrides: Partial<ApiConfig> = {}) {
   const data = fixture();
-  const server: Server = createApp(data.db, { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops, ...overrides })
+  const server: Server = createApp(
+    data.db,
+    { jwtSecret: secret, corsOrigins: ['http://localhost:5173'], trustProxyHops, ...overrides },
+    { emailService: data.emailService })
     .listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();
@@ -276,6 +289,48 @@ test('register -> login -> protected me uses real bcrypt and JWT without leaking
       headers: { Authorization: `Bearer ${session.accessToken}` },
     })).status, 401);
     assert.equal((await post(`${url}/users/login`, registration)).status, 401);
+  });
+});
+
+test('register sends a welcome email to the new account', async () => {
+  await serve(async (url, data) => {
+    const created = await post(`${url}/users/register`, registration);
+    assert.equal(created.status, 201);
+    assert.equal(data.sent.length, 1);
+    assert.equal(data.sent[0].to, 'cliente@example.test');
+    assert.equal(data.sent[0].subject, 'Te damos la bienvenida a EcoBite');
+    assert.match(data.sent[0].html ?? '', /¡Hola, Cliente de prueba!/);
+    assert.match(data.sent[0].html ?? '', /lang="es"/);
+    assert.match(data.sent[0].html ?? '', /\/catalog/);
+    assert.match(data.sent[0].text, /\/catalog/);
+  });
+});
+
+test('register does not send the welcome email on a 400 or a duplicate', async () => {
+  await serve(async (url, data) => {
+    assert.equal((await post(`${url}/users/register`, registration)).status, 201);
+    assert.equal(data.sent.length, 1);
+    assert.equal((await post(`${url}/users/register`, registration)).status, 409);
+    assert.equal((await post(`${url}/users/register`, { ...registration, password: 'x' })).status, 400);
+    assert.equal(data.sent.length, 1);
+  });
+});
+
+test('register still returns 201 when the welcome email send fails', async () => {
+  await serve(async (url, data) => {
+    data.failEmail();
+    const errors: unknown[][] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => { errors.push(args); };
+    try {
+      assert.equal((await post(`${url}/users/register`, registration)).status, 201);
+      assert.equal(data.sent.length, 1);
+      // El .catch del fire-and-forget corre en microtarea; esperar un tick.
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.ok(errors.some((args) => String(args[0]).includes('welcome send failed')));
+    } finally {
+      console.error = originalError;
+    }
   });
 });
 

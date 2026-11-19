@@ -6,7 +6,10 @@ import { test } from 'node:test';
 import { createApp } from '../src/app';
 import type { PrismaClient } from '../src/generated/prisma/client';
 import { readConfig } from '../src/lib/config';
-import { createEmailService, type EmailService } from '../src/lib/email';
+import { createEmailService, type EmailMessage, type EmailService } from '../src/lib/email';
+import {
+  DEFAULT_EMAIL_ASSETS, escapeHtml, restaurantApprovalEmail, welcomeEmail,
+} from '../src/lib/email-templates';
 import { createToken } from '../src/lib/tokens';
 
 const secret = randomBytes(32).toString('hex');
@@ -46,7 +49,7 @@ function fixture() {
   const zones = [zone, inactiveZone];
   const restaurantes: any[] = [];
   const solicitudes: any[] = [];
-  const sent: { to: string; subject: string; text: string }[] = [];
+  const sent: EmailMessage[] = [];
   let failEmail = false;
   const emailService: EmailService = {
     async send(message) {
@@ -343,7 +346,7 @@ test('POST /restaurant-requests returns 409 on a second pending request', async 
     const second = await post(
       `${url}/restaurant-requests`, requestBody({ email: 'otro@verdebistro.test' }), applicantToken());
     assert.equal(second.status, 409);
-    assert.deepEqual(await second.json(), { error: 'Ya tenés una solicitud pendiente o aprobada.' });
+    assert.deepEqual(await second.json(), { error: 'Ya tienes una solicitud pendiente o aprobada.' });
   });
 });
 
@@ -614,6 +617,7 @@ test('approve sends the approval email to the request address without blocking t
     assert.equal(data.sent[0].to, 'contacto@verdebistro.test');
     assert.ok(data.sent[0].subject.length > 0);
     assert.ok(data.sent[0].text.includes('Verde Bistró'));
+    assert.ok(data.sent[0].html?.includes('Verde Bistró'));
 
     await post(
       `${url}/admin/restaurant-requests/${created.request.id}/reject`, {}, adminToken());
@@ -676,7 +680,7 @@ test('the brevo transport posts to the API and rejects on non-2xx', async () => 
       jwtSecret: secret, corsOrigins: [], trustProxyHops: 0,
       email: { apiKey: 'key-test', from: 'sender@ecobite.test', fromName: 'EcoBite' },
     });
-    await email.send({ to: 'contacto@verdebistro.test', subject: 'Asunto', text: 'Cuerpo' });
+    await email.send({ to: 'contacto@verdebistro.test', subject: 'Asunto', text: 'Cuerpo', html: '<p>Cuerpo</p>' });
     assert.equal(requests.length, 1);
     assert.equal(requests[0].url, 'https://api.brevo.com/v3/smtp/email');
     assert.equal(requests[0].init.method, 'POST');
@@ -688,7 +692,10 @@ test('the brevo transport posts to the API and rejects on non-2xx', async () => 
       to: [{ email: 'contacto@verdebistro.test' }],
       subject: 'Asunto',
       textContent: 'Cuerpo',
+      htmlContent: '<p>Cuerpo</p>',
     });
+    await email.send({ to: 'contacto@verdebistro.test', subject: 'Asunto', text: 'Cuerpo' });
+    assert.equal('htmlContent' in JSON.parse(requests[1].init.body), false);
     status = 500;
     await assert.rejects(
       () => email.send({ to: 'contacto@verdebistro.test', subject: 'Asunto', text: 'Cuerpo' }), /500/);
@@ -706,11 +713,61 @@ test('the log transport resolves without calling fetch', async () => {
     globalThis.fetch = (async () => { fetchCalled = true; return new Response(); }) as typeof fetch;
     console.log = (line: unknown) => { logs.push(String(line)); };
     const email = createEmailService({ jwtSecret: secret, corsOrigins: [], trustProxyHops: 0 });
-    await email.send({ to: 'x@y.test', subject: 'Asunto', text: 'Cuerpo' });
+    await email.send({ to: 'x@y.test', subject: 'Asunto', text: 'Cuerpo', html: '<p>Cuerpo</p>' });
     assert.equal(fetchCalled, false);
     assert.deepEqual(logs, ['[email] to=x@y.test subject=Asunto']);
   } finally {
     globalThis.fetch = originalFetch;
     console.log = originalLog;
   }
+});
+
+test('email templates escape interpolated values in the html body', () => {
+  assert.equal(escapeHtml(`&<>"'`), '&amp;&lt;&gt;&quot;&#39;');
+  const hostile = `<script>alert("x")</script> & 'co'`;
+  for (const content of [
+    welcomeEmail(hostile, DEFAULT_EMAIL_ASSETS),
+    restaurantApprovalEmail(hostile, DEFAULT_EMAIL_ASSETS),
+  ]) {
+    assert.ok(content.html.includes(escapeHtml(hostile)));
+    assert.equal(content.html.includes('<script'), false);
+  }
+});
+
+test('email templates render the shared html layout and plain text', () => {
+  const welcome = welcomeEmail('María Fernández', DEFAULT_EMAIL_ASSETS);
+  assert.equal(welcome.subject, 'Te damos la bienvenida a EcoBite');
+  assert.match(welcome.html, /lang="es"/);
+  assert.ok(welcome.html.includes(DEFAULT_EMAIL_ASSETS.logoUrl));
+  assert.ok(welcome.html.includes(`href="${DEFAULT_EMAIL_ASSETS.appUrl}/catalog"`));
+  assert.match(welcome.html, /¡Hola, María Fernández!/);
+  assert.ok(welcome.text.includes(`${DEFAULT_EMAIL_ASSETS.appUrl}/catalog`));
+  assert.match(welcome.text, /Recibes este correo porque creaste una cuenta/);
+  assert.equal(/<[^>]+>/.test(welcome.text), false);
+
+  const approval = restaurantApprovalEmail('Verde Bistró', DEFAULT_EMAIL_ASSETS);
+  assert.equal(approval.subject, 'Tu solicitud de EcoBite fue aprobada');
+  assert.ok(approval.html.includes(`href="${DEFAULT_EMAIL_ASSETS.appUrl}/auth"`));
+  assert.match(approval.html, /¡Verde Bistró ya es aliado de EcoBite!/);
+  assert.ok(approval.text.includes(`${DEFAULT_EMAIL_ASSETS.appUrl}/auth`));
+  assert.match(approval.text, /Recibes este correo porque solicitaste sumar tu restaurante/);
+  assert.equal(/<[^>]+>/.test(approval.text), false);
+});
+
+test('email assets config requires https URLs and defaults to the shared assets', () => {
+  const base = { JWT_SECRET: secret };
+  assert.throws(() => readConfig({ ...base, EMAIL_LOGO_URL: 'no-es-url' }));
+  assert.throws(() => readConfig({ ...base, EMAIL_LOGO_URL: 'http://cdn.example.test/logo.png' }));
+  assert.throws(() => readConfig({ ...base, EMAIL_APP_URL: 'http://app.example.test' }));
+  assert.equal(readConfig(base).emailAssets, undefined);
+  assert.deepEqual(
+    readConfig({ ...base, EMAIL_APP_URL: 'https://app.example.test/' }).emailAssets,
+    { logoUrl: DEFAULT_EMAIL_ASSETS.logoUrl, appUrl: 'https://app.example.test' });
+  assert.deepEqual(
+    readConfig({
+      ...base,
+      EMAIL_LOGO_URL: 'https://cdn.example.test/logo.png',
+      EMAIL_APP_URL: 'https://app.example.test',
+    }).emailAssets,
+    { logoUrl: 'https://cdn.example.test/logo.png', appUrl: 'https://app.example.test' });
 });
