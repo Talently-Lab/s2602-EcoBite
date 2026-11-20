@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
+import { welcomeEmail, type EmailAssets } from '../lib/email-templates';
+import type { EmailService } from '../lib/email';
 import { HttpError } from '../lib/http-error';
 import { createToken, tokenLifetimeSeconds } from '../lib/tokens';
 import type { validateCredentials, validateProfileUpdate, validateRegistration } from '../lib/validation';
@@ -25,6 +27,8 @@ function userResponse(user: PublicUser) {
 export function createUserService(
   db: Pick<PrismaClient, 'usuario' | 'pedido' | 'zona'>,
   jwtSecret: string,
+  emailService: EmailService,
+  assets: EmailAssets,
 ) {
   return {
     async register(input: ReturnType<typeof validateRegistration>) {
@@ -34,6 +38,10 @@ export function createUserService(
           data: { nombreCompleto: input.name, email: input.email, passwordHash, rol: 'CLIENTE' },
           select: publicUserSelect,
         });
+        // El correo es fire-and-forget como en la aprobación: el 201 nunca
+        // espera ni depende del proveedor de email.
+        void emailService.send({ to: user.email, ...welcomeEmail(user.nombreCompleto, assets) })
+          .catch((error) => console.error('[email] welcome send failed:', error));
         return userResponse(user);
       } catch (error) {
         // The unique constraint also covers concurrent registrations.

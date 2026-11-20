@@ -275,7 +275,7 @@ test('GET /restaurants/me requires auth and RESTAURANTE_ADMIN with a linked rest
       const response = await get(`${url}/restaurants/me`, createToken(userId, secret));
       assert.equal(response.status, 403, userId);
       assert.deepEqual(await response.json(), {
-        error: 'No tenés permisos para acceder a este recurso.',
+        error: 'No tienes permisos para acceder a este recurso.',
       });
     }
     // No restauranteId and a restauranteId whose row is missing share the 403.
@@ -339,7 +339,7 @@ test('GET /restaurants/me/orders requires auth, RESTAURANTE_ADMIN and an operabl
       const response = await get(`${url}/restaurants/me/orders`, createToken(userId, secret));
       assert.equal(response.status, 403, userId);
       assert.deepEqual(await response.json(), {
-        error: 'No tenés permisos para acceder a este recurso.',
+        error: 'No tienes permisos para acceder a este recurso.',
       });
     }
     // Unlike /restaurants/me, the queue also requires the local to be activo.

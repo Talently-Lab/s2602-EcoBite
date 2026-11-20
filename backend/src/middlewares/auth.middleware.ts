@@ -20,7 +20,7 @@ export function requireRole(db: Pick<PrismaClient, 'usuario'>, role: RolUsuario)
     });
     if (!user || !user.activo) throw new HttpError(401, 'Sesión inválida o vencida.');
     if (user.rol !== role) {
-      throw new HttpError(403, 'No tenés permisos para acceder a este recurso.');
+      throw new HttpError(403, 'No tienes permisos para acceder a este recurso.');
     }
     next();
   };

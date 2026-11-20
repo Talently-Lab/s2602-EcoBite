@@ -1159,7 +1159,8 @@ paths:
       description: |
         Crea un usuario con rol `CLIENTE`; no existe registro público de
         administradores. La contraseña se almacena con bcrypt (costo 12) y nunca
-        se devuelve.
+        se devuelve. En caso de éxito se envía un correo de bienvenida de forma
+        asíncrona; un fallo de entrega nunca afecta el `201`.
       operationId: registerUser
       security: []
       x-badges:

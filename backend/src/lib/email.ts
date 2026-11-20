@@ -4,6 +4,7 @@ export interface EmailMessage {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }
 
 export interface EmailService {
@@ -41,6 +42,7 @@ export function createEmailService(config: ApiConfig): EmailService {
           to: [{ email: message.to }],
           subject: message.subject,
           textContent: message.text,
+          ...(message.html !== undefined && { htmlContent: message.html }),
         }),
         signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
       });
@@ -49,15 +51,5 @@ export function createEmailService(config: ApiConfig): EmailService {
         throw new Error(`Brevo respondió ${response.status} al enviar el correo.`);
       }
     },
-  };
-}
-
-// Copy placeholder pendiente de Marketing (decisión 4 de la planilla).
-export function restaurantApprovalEmail(restaurantName: string): { subject: string; text: string } {
-  return {
-    subject: 'Tu solicitud de EcoBite fue aprobada',
-    text: `Hola, ${restaurantName}:\n` +
-      'Tu solicitud para sumarte como restaurante aliado fue aprobada.\n' +
-      'Ya podés entrar a tu panel de restaurante en EcoBite.',
   };
 }

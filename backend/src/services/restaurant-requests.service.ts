@@ -2,7 +2,8 @@ import { Prisma } from '../generated/prisma/client';
 import type { PrismaClient } from '../generated/prisma/client';
 import type { CategoriaRestaurante } from '../generated/prisma/enums';
 import { categoriaLabels } from '../lib/categories';
-import { restaurantApprovalEmail, type EmailService } from '../lib/email';
+import { restaurantApprovalEmail, type EmailAssets } from '../lib/email-templates';
+import type { EmailService } from '../lib/email';
 import { HttpError } from '../lib/http-error';
 import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import { isUuid } from '../lib/validation';
@@ -64,6 +65,7 @@ async function requireActiveUser(db: Pick<Prisma.TransactionClient, 'usuario'>, 
 export function createRestaurantRequestService(
   db: Pick<PrismaClient, 'usuario' | 'zona' | 'restaurante' | 'solicitudRestaurante' | '$transaction' | '$executeRaw'>,
   emailService: EmailService,
+  assets: EmailAssets,
 ) {
   return {
     categories() {
@@ -87,7 +89,7 @@ export function createRestaurantRequestService(
           where: { usuarioId: userId, estado: { in: ['PENDIENTE', 'APROBADA'] } },
           select: { id: true },
         });
-        if (existing) throw new HttpError(409, 'Ya tenés una solicitud pendiente o aprobada.');
+        if (existing) throw new HttpError(409, 'Ya tienes una solicitud pendiente o aprobada.');
         const emailTaken = await tx.restaurante.findFirst({
           where: { email: input.email },
           select: { id: true },
@@ -215,9 +217,10 @@ export function createRestaurantRequestService(
       });
       // El correo es fire-and-forget: la aprobación ya quedó confirmada y la
       // respuesta nunca espera ni depende del proveedor de email.
-      const copy = restaurantApprovalEmail(approved.restaurant.name);
-      void emailService.send({ to: approved.restaurant.email, subject: copy.subject, text: copy.text })
-        .catch((error) => console.error('[email] approval send failed:', error));
+      void emailService.send({
+        to: approved.restaurant.email,
+        ...restaurantApprovalEmail(approved.restaurant.name, assets),
+      }).catch((error) => console.error('[email] approval send failed:', error));
       return approved;
     },
 

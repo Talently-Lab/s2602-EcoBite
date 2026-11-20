@@ -5,6 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import type { PrismaClient } from '../generated/prisma/client';
 import type { ApiConfig } from '../lib/config';
 import { createEmailService, type EmailService } from '../lib/email';
+import { DEFAULT_EMAIL_ASSETS } from '../lib/email-templates';
 import { createDashboardController } from '../controllers/dashboard.controller';
 import { createHealthController } from '../controllers/health.controller';
 import { createOrderController } from '../controllers/orders.controller';
@@ -30,13 +31,14 @@ export interface ApiDeps {
 export function createApiRouter(db: PrismaClient, config: ApiConfig, deps?: ApiDeps) {
   const apiRouter = Router();
   const emailService = deps?.emailService ?? createEmailService(config);
-  const users = createUserController(createUserService(db, config.jwtSecret));
+  const emailAssets = config.emailAssets ?? DEFAULT_EMAIL_ASSETS;
+  const users = createUserController(createUserService(db, config.jwtSecret, emailService, emailAssets));
   const restaurants = createRestaurantController(createRestaurantService(db));
   const zones = createZoneController(createZoneService(db));
   const orders = createOrderController(createOrderService(db));
   const products = createProductController(createProductService(db));
   const restaurantRequests = createRestaurantRequestController(
-    createRestaurantRequestService(db, emailService));
+    createRestaurantRequestService(db, emailService, emailAssets));
   const dashboard = createDashboardController(createDashboardService(db));
   const health = createHealthController(createHealthService(db, config.healthCheckTimeoutMs));
   const auth = authenticate(config.jwtSecret);

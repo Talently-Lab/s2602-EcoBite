@@ -283,7 +283,7 @@ test('POST /restaurants/me/products requires auth, RESTAURANTE_ADMIN and an oper
         `${url}/restaurants/me/products`, productBody(), createToken(userId, secret));
       assert.equal(response.status, 403, userId);
       assert.deepEqual(await response.json(), {
-        error: 'No tenés permisos para acceder a este recurso.',
+        error: 'No tienes permisos para acceder a este recurso.',
       });
     }
     for (const userId of [orphanAdminId, inactiveOwnerId]) {
