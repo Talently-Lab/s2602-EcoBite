@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { createApp } from '../src/app';
 import { Prisma } from '../src/generated/prisma/client';
 import type { PrismaClient } from '../src/generated/prisma/client';
+import { haversineKm } from '../src/lib/distance';
 
 const secret = randomBytes(32).toString('hex');
 const userId = randomUUID();
@@ -18,10 +19,17 @@ const registration = { name: 'Cliente de prueba', email: ' Cliente@Example.Test 
 const zone = {
   id: randomUUID(), nombreBarrio: 'Palermo', comuna: 14, activo: true,
   distanciaPromedioKm: new Prisma.Decimal('4.78'),
+  latitud: new Prisma.Decimal('-34.573855'), longitud: new Prisma.Decimal('-58.422342'),
+};
+const belgrano = {
+  id: randomUUID(), nombreBarrio: 'Belgrano', comuna: 13, activo: true,
+  distanciaPromedioKm: new Prisma.Decimal('8.26'),
+  latitud: new Prisma.Decimal('-34.554763'), longitud: new Prisma.Decimal('-58.450241'),
 };
 const inactiveZone = {
   id: randomUUID(), nombreBarrio: 'Barrio inactivo', comuna: 1, activo: false,
   distanciaPromedioKm: new Prisma.Decimal('2.00'),
+  latitud: new Prisma.Decimal('-34.600000'), longitud: new Prisma.Decimal('-58.400000'),
 };
 const restaurantId = randomUUID();
 const inactiveRestaurantId = randomUUID();
@@ -55,7 +63,9 @@ const productNoPackaging = {
 const restaurant = {
   id: restaurantId, nombre: 'Verde Bistró', categoria: 'COMIDA_SALUDABLE', esEco: true, activo: true,
   zonaId: zone.id, email: 'private@example.test', passwordHash: 'must-not-leak',
-  zona: { id: zone.id, nombreBarrio: 'Palermo' },
+  descripcion: 'Cocina de estación con envases compostables',
+  imagenUrl: 'https://cdn.example.test/verde-bistro.jpg',
+  zona: { id: zone.id, nombreBarrio: 'Palermo', latitud: zone.latitud, longitud: zone.longitud },
   productos: [productB, productC, productA],
 };
 const inactiveRestaurant = {
@@ -72,7 +82,7 @@ function fixture() {
   let saved: (typeof user & { passwordHash: string }) | null = null;
   const orders: any[] = [];
   const restaurants = [restaurant, inactiveRestaurant, otherRestaurant];
-  const zones = [zone, inactiveZone];
+  const zones = [zone, belgrano, inactiveZone];
   const products = [productA, productB, productC, productD, productNoPackaging];
 
   function matches(row: any, where: any): boolean {
@@ -258,7 +268,10 @@ test('GET /zones returns active zones with numeric distance', async () => {
     const response = await fetch(`${url}/zones`);
     assert.equal(response.status, 200);
     const rows = await response.json();
-    assert.deepEqual(rows, [{ id: zone.id, name: 'Palermo', comuna: 14, distanceKm: 4.78 }]);
+    assert.deepEqual(rows, [
+      { id: belgrano.id, name: 'Belgrano', comuna: 13, distanceKm: 8.26 },
+      { id: zone.id, name: 'Palermo', comuna: 14, distanceKm: 4.78 },
+    ]);
     assert.equal(typeof rows[0].distanceKm, 'number');
     const call = data.calls.find((entry) => entry.method === 'zona.findMany');
     assert.deepEqual(call?.input.where, { activo: true });
@@ -272,6 +285,25 @@ test('restaurant list and detail expose the category label, not the enum constan
     const detail = await (await fetch(`${url}/restaurants/${restaurantId}`)).json();
     assert.equal(detail.category, 'Comida saludable');
     assert.equal(JSON.stringify({ list, detail }).includes('COMIDA_'), false);
+  });
+});
+
+test('restaurant list and detail expose description, imageUrl and the eco tag', async () => {
+  await serve(async (url) => {
+    const list = await (await fetch(`${url}/restaurants`)).json();
+    const verde = list.data.find((row: any) => row.name === 'Verde Bistró');
+    const otro = list.data.find((row: any) => row.name === 'Otro local');
+    assert.equal(verde.description, 'Cocina de estación con envases compostables');
+    assert.equal(verde.imageUrl, 'https://cdn.example.test/verde-bistro.jpg');
+    assert.equal(verde.tag, 'Envases biodegradables');
+    assert.equal(otro.description, null);
+    assert.equal(otro.imageUrl, null);
+    assert.equal(otro.tag, 'Envases biodegradables');
+
+    const detail = await (await fetch(`${url}/restaurants/${restaurantId}`)).json();
+    assert.equal(detail.description, 'Cocina de estación con envases compostables');
+    assert.equal(detail.imageUrl, 'https://cdn.example.test/verde-bistro.jpg');
+    assert.equal(detail.tag, 'Envases biodegradables');
   });
 });
 
@@ -324,8 +356,8 @@ test('POST /orders computes totals and impact server-side and stores decimals', 
     assert.equal(order.transportType, 'BICICLETA');
     assert.deepEqual(order.restaurant, { id: restaurantId, name: 'Verde Bistró' });
     assert.deepEqual(order.destinationZone, { id: zone.id, name: 'Palermo' });
-    assert.equal(order.impact.distanceKm, 4.78);
-    assert.equal(order.impact.co2SavedKg, 0.382);
+    assert.equal(order.impact.distanceKm, 0.5);
+    assert.equal(order.impact.co2SavedKg, 0.04);
     assert.equal(order.impact.containersAvoided, 5);
     assert.equal(order.impact.plasticAvoidedG, 68);
     assert.equal(order.items.length, 2);
@@ -346,9 +378,35 @@ test('POST /orders computes totals and impact server-side and stores decimals', 
     assert.equal(created?.input.data.estado, 'EN_PREPARACION');
     assert.ok(created?.input.data.montoTotal instanceof Prisma.Decimal);
     assert.equal(created?.input.data.montoTotal.equals('36800'), true);
-    assert.equal(created?.input.data.co2AhorradoKg.equals('0.382'), true);
+    assert.equal(created?.input.data.distanciaEstimadaKm.equals('0.5'), true);
+    assert.equal(created?.input.data.co2AhorradoKg.equals('0.04'), true);
     assert.equal(JSON.stringify(order).includes('passwordHash'), false);
   });
+});
+
+test('POST /orders uses the centroid Haversine distance between different zones', async () => {
+  await serve(async (url, data) => {
+    const token = await signIn(url);
+    const response = await post(`${url}/orders`, orderBody({ destinationZoneId: belgrano.id }), token);
+    assert.equal(response.status, 201);
+    const { order } = await response.json();
+    // Palermo (-34.573855, -58.422342) → Belgrano (-34.554763, -58.450241)
+    assert.equal(order.impact.distanceKm, 3.32);
+    assert.equal(order.impact.co2SavedKg, 0.266);
+    const created = data.calls.find((call) => call.method === 'pedido.create');
+    assert.equal(created?.input.data.distanciaEstimadaKm.equals('3.32'), true);
+    assert.equal(created?.input.data.co2AhorradoKg.equals('0.266'), true);
+  });
+});
+
+test('haversineKm returns the straight-line distance between zone centroids', () => {
+  const sanNicolas = {
+    latitud: new Prisma.Decimal('-34.603666'), longitud: new Prisma.Decimal('-58.380515'),
+  };
+  const palermo = {
+    latitud: new Prisma.Decimal('-34.573855'), longitud: new Prisma.Decimal('-58.422342'),
+  };
+  assert.equal(haversineKm(sanNicolas, palermo).equals('5.06'), true);
 });
 
 test('repeating the same order within the window returns it instead of duplicating', async () => {
@@ -535,7 +593,7 @@ test('GET /orders paginates with page/limit and rejects invalid params before th
 test('OpenAPI documents the new contract accurately', async () => {
   await serve(async (url) => {
     const spec = await (await fetch(`${url}/openapi.yaml`)).text();
-    assert.match(spec, /version: 2\.0\.0/);
+    assert.match(spec, /version: 2\.1\.0/);
     for (const path of ['/zones:', '/restaurants/{id}:', '/orders:', '/orders/{id}:']) {
       assert.match(spec, new RegExp(`  ${path.replace(/[/.]/g, '\\$&')}$`, 'm'));
     }

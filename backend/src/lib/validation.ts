@@ -84,11 +84,12 @@ export function validateRestaurantRequest(body: unknown) {
       category: z.unknown(),
       zoneId: z.unknown(),
       address: z.unknown(),
+      description: z.unknown().optional(),
       email: z.unknown(),
       commitmentAccepted: z.unknown(),
     }),
     input,
-    'Solo se permiten los campos name, category, zoneId, address, email y commitmentAccepted.',
+    'Solo se permiten los campos name, category, zoneId, address, description, email y commitmentAccepted.',
   );
   const name = parse(
     trimmedText(120),
@@ -106,6 +107,13 @@ export function validateRestaurantRequest(body: unknown) {
     input.address,
     'La dirección del restaurante es obligatoria y debe tener como máximo 200 caracteres.',
   );
+  const description = input.description === undefined
+    ? null
+    : parse(
+      trimmedText(500),
+      input.description,
+      'La descripción debe tener como máximo 500 caracteres.',
+    );
   const email = parse(
     credentialsSchema.shape.email,
     input.email,
@@ -116,7 +124,7 @@ export function validateRestaurantRequest(body: unknown) {
     input.commitmentAccepted,
     'Debés aceptar el compromiso de buenas prácticas para enviar la solicitud.',
   );
-  return { name, category, zoneId, address, email };
+  return { name, category, zoneId, address, description, email };
 }
 
 export function validateProduct(body: unknown) {

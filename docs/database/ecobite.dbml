@@ -1,6 +1,6 @@
 Project EcoBite {
   database_type: 'PostgreSQL'
-  Note: 'Canonical EcoBite DER. Nine tables, 82 fields, and 14 relationships. Solicitud_Restaurante, Usuario.id_restaurante, direccion, and categoria_restaurante land in the restaurant-onboarding migration (S6 wave 2); items marked proposal are new vs. the pre-S6 baseline.'
+  Note: 'Canonical EcoBite DER. Nine tables, 84 fields, and 14 relationships. Solicitud_Restaurante, Usuario.id_restaurante, direccion, and categoria_restaurante land in the restaurant-onboarding migration (S6 wave 2); items marked proposal are new vs. the pre-S6 baseline. The data wave adds Zona latitud/longitud (GCBA barrios.geojson centroids), Restaurantes descripcion/imagen_url, and Solicitud_Restaurante.descripcion.'
 }
 
 enum rol_usuario {
@@ -56,12 +56,16 @@ Table Zona {
   codigo_postal varchar(10) [not null]
   activo_zona boolean [not null, default: true]
   distancia_promedio_km decimal(5,2) [not null, check: `distancia_promedio_km >= 0.5`]
+  latitud decimal(9,6) [not null, note: 'Barrio centroid, GCBA barrios.geojson (WGS84).']
+  longitud decimal(9,6) [not null, note: 'Barrio centroid, GCBA barrios.geojson (WGS84).']
 }
 
 Table Restaurantes {
   id_restaurante uuid [pk]
   nombre_restaurante text [not null]
   direccion text [not null]
+  descripcion text [null]
+  imagen_url text [null]
   categoria categoria_restaurante [not null]
   es_100_eco boolean [not null, default: true]
   activo_restaurante boolean [not null, default: true]
@@ -88,7 +92,7 @@ Table Pedidos {
   id_restaurante uuid [not null]
   direccion_entrega text [not null]
   monto_total decimal(10,2) [not null, note: 'Calculated: sum of item quantities times unit prices.']
-  distancia_estimada_km decimal(5,2) [not null, note: 'Snapshot copied from the destination zone.']
+  distancia_estimada_km decimal(5,2) [not null, note: 'New orders: Haversine between restaurant and destination zone centroids, 0.50 km when same zone. Imported rows keep the destination zone average.']
   tipo_transporte tipo_transporte [not null]
   total_envases_evitados int [not null, default: 0, note: 'Calculated: sum of item packaging counts.']
   co2_ahorrado_kg decimal(6,3) [not null, default: 0, note: 'Calculated: delivery distance times the approved CO2 factor.']
@@ -136,6 +140,7 @@ Table Solicitud_Restaurante [headercolor: #c3f7c8, status: 'proposal'] {
   id_usuario uuid [not null]
   nombre_restaurante text [not null]
   direccion text [not null]
+  descripcion text [null, note: 'Optional applicant free text; copied to the restaurant on approval.']
   email text [unique, not null, note: 'One solicitud per restaurant email; blocks re-application after rejection.']
   categoria categoria_restaurante [not null]
   estado_solicitud estado_solicitud [not null, default: 'PENDIENTE']

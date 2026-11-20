@@ -85,6 +85,8 @@ function fixture() {
       id: restaurantId, nombre: 'Verde Bistró', direccion: 'Av. Santa Fe 1234',
       email: 'local@example.test', categoria: 'COMIDA_SALUDABLE',
       esEco: true, activo: true, zonaId: zone.id,
+      descripcion: 'Cocina de estación con envases compostables',
+      imagenUrl: 'https://cdn.example.test/verde-bistro.jpg',
       fechaCreacion: new Date('2026-01-15T10:00:00.000Z'),
     },
     {
@@ -102,7 +104,7 @@ function fixture() {
     {
       id: inactiveRestaurantId, nombre: 'Local pendiente', direccion: 'Av. Belgrano 1500',
       email: 'pendiente@example.test', categoria: 'COMIDA_DE_ESTACION',
-      esEco: true, activo: false, zonaId: zone.id,
+      esEco: false, activo: false, zonaId: zone.id,
       fechaCreacion: new Date('2026-01-01T10:00:00.000Z'),
     },
   ];
@@ -299,7 +301,8 @@ test('GET /restaurants/me returns the own record and is not swallowed by /restau
     assert.deepEqual(Object.keys(body), ['restaurant']);
     const restaurant = body.restaurant;
     assert.deepEqual(Object.keys(restaurant).sort(), [
-      'active', 'address', 'category', 'createdAt', 'email', 'id', 'isEco', 'name', 'zone',
+      'active', 'address', 'category', 'createdAt', 'description', 'email', 'id',
+      'imageUrl', 'isEco', 'name', 'tag', 'zone',
     ]);
     assert.equal(restaurant.id, restaurantId);
     assert.equal(restaurant.name, 'Verde Bistró');
@@ -307,6 +310,9 @@ test('GET /restaurants/me returns the own record and is not swallowed by /restau
     assert.equal(restaurant.email, 'local@example.test');
     assert.equal(restaurant.category, 'Comida saludable');
     assert.equal(restaurant.isEco, true);
+    assert.equal(restaurant.description, 'Cocina de estación con envases compostables');
+    assert.equal(restaurant.imageUrl, 'https://cdn.example.test/verde-bistro.jpg');
+    assert.equal(restaurant.tag, 'Envases biodegradables');
     assert.equal(restaurant.active, true);
     assert.deepEqual(restaurant.zone, { id: zone.id, name: 'Palermo' });
     assert.equal(restaurant.createdAt, '2026-01-15T10:00:00.000Z');
@@ -326,6 +332,9 @@ test('GET /restaurants/me returns the record even while the restaurant is inacti
     assert.equal(restaurant.id, inactiveRestaurantId);
     assert.equal(restaurant.name, 'Local pendiente');
     assert.equal(restaurant.category, 'Comida de estación');
+    assert.equal(restaurant.isEco, false);
+    assert.equal(restaurant.tag, null);
+    assert.equal(restaurant.description, null);
     assert.equal(restaurant.active, false);
   });
 });

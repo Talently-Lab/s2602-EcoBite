@@ -35,6 +35,31 @@ Reglas del archivo:
 - En `Security`, nombrar el paquete, la versión corregida y el tipo de falla,
   enlazando el advisory (CVE/GHSA) cuando exista.
 
+## [2.1.0] - 2026-11-19
+
+Esta versión expone la descripción e imagen de los restaurantes aliados,
+suma una descripción opcional a la solicitud de alta y calcula la distancia
+de los pedidos nuevos entre centroides de barrio (GCBA).
+
+### Added
+
+- `GET /restaurants`, `GET /restaurants/{id}` y `GET /restaurants/me`
+  devuelven `description`, `imageUrl` y `tag`; los dos primeros pueden ser
+  `null` y `tag` es la etiqueta Eco (`"Envases biodegradables"`) cuando
+  `isEco` es `true`, o `null`.
+  [Issue #9](https://github.com/Talently-Lab/s2602-EcoBite/issues/9)
+- `POST /restaurant-requests` acepta `description` opcional (máximo 500
+  caracteres); la aprobación la copia al restaurante creado.
+  [Issue #9](https://github.com/Talently-Lab/s2602-EcoBite/issues/9)
+
+### Changed
+
+- Los pedidos nuevos calculan `impact.distanceKm` como la distancia
+  Haversine entre el centroide del barrio del restaurante y el del destino
+  (0.50 km si es la misma zona), y `co2SavedKg` sobre esa distancia. Los
+  pedidos importados conservan la distancia promedio de la zona.
+  [Issue #66](https://github.com/Talently-Lab/s2602-EcoBite/issues/66)
+
 ## [2.0.0] - 2026-11-11
 
 Esta versión suma el flujo completo de solicitudes de restaurante con revisión

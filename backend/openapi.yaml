@@ -2,7 +2,7 @@ openapi: 3.1.0
 
 info:
   title: EcoBite API
-  version: 2.0.0
+  version: 2.1.0
   description: |
     API de clientes de **EcoBite**, delivery de comida de restaurantes eco-friendly.
     Los clientes se registran y obtienen un JWT de sesión para consultar su perfil.
@@ -108,6 +108,9 @@ paths:
                     name: Verde Bistró
                     category: Comida saludable
                     isEco: true
+                    description: Cocina de estación con envases compostables
+                    imageUrl: 'https://cdn.ecobite.example/restaurantes/verde-bistro.jpg'
+                    tag: Envases biodegradables
                     zone:
                       id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
                       name: Palermo
@@ -174,6 +177,9 @@ paths:
                 name: Verde Bistró
                 category: Comida saludable
                 isEco: true
+                description: Cocina de estación con envases compostables
+                imageUrl: 'https://cdn.ecobite.example/restaurantes/verde-bistro.jpg'
+                tag: Envases biodegradables
                 zone:
                   id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
                   name: Palermo
@@ -245,6 +251,9 @@ paths:
                   email: contacto@verdebistro.test
                   category: Comida saludable
                   isEco: true
+                  description: Cocina de estación con envases compostables
+                  imageUrl: 'https://cdn.ecobite.example/restaurantes/verde-bistro.jpg'
+                  tag: Envases biodegradables
                   active: true
                   zone:
                     id: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
@@ -842,8 +851,8 @@ paths:
                     transportType: BICICLETA
                     total: 36800.00
                     impact:
-                      distanceKm: 4.78
-                      co2SavedKg: 0.382
+                      distanceKm: 0.50
+                      co2SavedKg: 0.040
                       containersAvoided: 5
                       plasticAvoidedG: 68.00
                     items:
@@ -916,9 +925,13 @@ paths:
         (`400`). Fórmulas (constantes del DER, `CO2_KG_POR_KM = 0.08`):
 
         - `total` = Σ `quantity × unitPrice` (precio actual del producto).
-        - `impact.distanceKm` = `distancia_promedio_km` de la zona destino.
+        - `impact.distanceKm` = distancia en línea recta (Haversine) entre el
+          centroide de la zona del restaurante y el de la zona destino
+          (centroides GCBA de barrios.geojson), 2 decimales; `0.50` km cuando
+          ambas zonas son la misma. Los pedidos importados conservan la
+          `distancia_promedio_km` histórica de su zona destino.
         - `impact.co2SavedKg` = `distanceKm × 0.08`, redondeado a 3 decimales.
-          Palermo (4.78 km) → `0.382` kg.
+          Palermo → Belgrano (3.32 km) → `0.266` kg.
         - `impact.containersAvoided` = Σ `quantity × envasesPorUnidad` del producto.
         - `impact.plasticAvoidedG` = Σ `quantity × envasesPorUnidad × gramos_plastico_evitados`.
 
@@ -1695,6 +1708,7 @@ paths:
               category: COMIDA_SALUDABLE
               zoneId: 5c1e0c8a-2f4d-4e3a-9b1a-7d6f0e9c2b31
               address: Av. Santa Fe 1234
+              description: Cocina de estación con envases compostables
               email: contacto@verdebistro.test
               commitmentAccepted: true
       responses:
@@ -1716,6 +1730,7 @@ paths:
                   restaurant:
                     name: Verde Bistró
                     address: Av. Santa Fe 1234
+                    description: Cocina de estación con envases compostables
                     email: contacto@verdebistro.test
                     category: Comida saludable
                   zone:
@@ -1739,7 +1754,7 @@ paths:
                 camposAdicionales:
                   summary: Campo no permitido (incluye `status` o `usuarioId`)
                   value:
-                    error: Solo se permiten los campos name, category, zoneId, address, email y commitmentAccepted.
+                    error: Solo se permiten los campos name, category, zoneId, address, description, email y commitmentAccepted.
                 nombreInvalido:
                   summary: Nombre vacío, con controles o mayor a 120 caracteres
                   value:
@@ -1874,6 +1889,7 @@ paths:
                       restaurant:
                         name: Verde Bistró
                         address: Av. Santa Fe 1234
+                        description: Cocina de estación con envases compostables
                         email: contacto@verdebistro.test
                         category: Comida saludable
                       zone:
@@ -2059,6 +2075,7 @@ paths:
                     restaurant:
                       name: Verde Bistró
                       address: Av. Santa Fe 1234
+                      description: Cocina de estación con envases compostables
                       email: contacto@verdebistro.test
                       category: Comida saludable
                     zone:
@@ -2170,6 +2187,7 @@ paths:
                   restaurant:
                     name: Verde Bistró
                     address: Av. Santa Fe 1234
+                    description: Cocina de estación con envases compostables
                     email: contacto@verdebistro.test
                     category: Comida saludable
                   zone:
@@ -2522,8 +2540,8 @@ components:
           transportType: BICICLETA
           total: 36800.00
           impact:
-            distanceKm: 4.78
-            co2SavedKg: 0.382
+            distanceKm: 0.50
+            co2SavedKg: 0.040
             containersAvoided: 5
             plasticAvoidedG: 68.00
           items:
@@ -2661,6 +2679,9 @@ components:
         - name
         - category
         - isEco
+        - description
+        - imageUrl
+        - tag
         - zone
       properties:
         id:
@@ -2682,6 +2703,24 @@ components:
           type: boolean
           const: true
           description: Siempre `true` en esta API (solo se exponen restaurantes eco-friendly).
+        description:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Descripción comercial del restaurante; `null` cuando el local no cargó una.
+          examples: [Cocina de estación con envases compostables]
+        imageUrl:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Imagen de portada del restaurante (URL https); `null` cuando no hay.
+          examples: ['https://cdn.ecobite.example/restaurantes/verde-bistro.jpg']
+        tag:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Insignia derivada; `Envases biodegradables` cuando `isEco` es `true`, si no `null`.
+          examples: [Envases biodegradables]
         zone:
           $ref: '#/components/schemas/Zone'
       additionalProperties: false
@@ -2939,6 +2978,9 @@ components:
         - name
         - category
         - isEco
+        - description
+        - imageUrl
+        - tag
         - zone
         - products
       properties:
@@ -2961,6 +3003,24 @@ components:
           type: boolean
           const: true
           description: Siempre `true` en esta API (solo se exponen restaurantes eco-friendly).
+        description:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Descripción comercial del restaurante; `null` cuando el local no cargó una.
+          examples: [Cocina de estación con envases compostables]
+        imageUrl:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Imagen de portada del restaurante (URL https); `null` cuando no hay.
+          examples: ['https://cdn.ecobite.example/restaurantes/verde-bistro.jpg']
+        tag:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Insignia derivada; `Envases biodegradables` cuando `isEco` es `true`, si no `null`.
+          examples: [Envases biodegradables]
         zone:
           $ref: '#/components/schemas/Zone'
         products:
@@ -2982,6 +3042,9 @@ components:
         - email
         - category
         - isEco
+        - description
+        - imageUrl
+        - tag
         - active
         - zone
         - createdAt
@@ -3013,6 +3076,24 @@ components:
         isEco:
           type: boolean
           description: Si el restaurante opera como 100% eco-friendly.
+        description:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Descripción comercial del restaurante; `null` cuando el local no cargó una.
+          examples: [Cocina de estación con envases compostables]
+        imageUrl:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Imagen de portada del restaurante (URL https); `null` cuando no hay.
+          examples: ['https://cdn.ecobite.example/restaurantes/verde-bistro.jpg']
+        tag:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Insignia derivada; `Envases biodegradables` cuando `isEco` es `true`, si no `null`.
+          examples: [Envases biodegradables]
         active:
           type: boolean
           description: '`false` cuando el local está pendiente o inhabilitado; este endpoint lo devuelve igual.'
@@ -3141,8 +3222,13 @@ components:
       properties:
         distanceKm:
           type: number
-          description: Copia de `distancia_promedio_km` de la zona destino.
-          examples: [4.78]
+          description: |
+            Distancia en línea recta (Haversine) entre el centroide de la zona
+            del restaurante y el de la zona destino (centroides GCBA de
+            barrios.geojson), 2 decimales; `0.50` km si ambas son la misma
+            zona. Solo los pedidos nuevos la calculan así: los pedidos
+            importados conservan la `distancia_promedio_km` histórica.
+          examples: [3.32]
         co2SavedKg:
           type: number
           description: '`distanceKm × 0.08` (CO2_KG_POR_KM del DER), 3 decimales.'
@@ -3675,6 +3761,13 @@ components:
           pattern: '^[^\u0000-\u001f\u007f]+$'
           description: Dirección del local; se recorta; sin caracteres de control.
           examples: [Av. Santa Fe 1234]
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+          pattern: '^[^\u0000-\u001f\u007f]+$'
+          description: Descripción comercial opcional; se recorta; sin caracteres de control. Se copia al restaurante al aprobar.
+          examples: [Cocina de estación con envases compostables]
         email:
           type: string
           format: email
@@ -3717,6 +3810,7 @@ components:
           required:
             - name
             - address
+            - description
             - email
             - category
           properties:
@@ -3726,6 +3820,12 @@ components:
             address:
               type: string
               examples: [Av. Santa Fe 1234]
+            description:
+              anyOf:
+                - type: string
+                - type: 'null'
+              description: Descripción comercial enviada por el solicitante; `null` cuando no la incluyó.
+              examples: [Cocina de estación con envases compostables]
             email:
               type: string
               format: email
@@ -3784,6 +3884,7 @@ components:
           required:
             - name
             - address
+            - description
             - email
             - category
           properties:
@@ -3793,6 +3894,12 @@ components:
             address:
               type: string
               examples: [Av. Santa Fe 1234]
+            description:
+              anyOf:
+                - type: string
+                - type: 'null'
+              description: Descripción comercial enviada por el solicitante; `null` cuando no la incluyó.
+              examples: [Cocina de estación con envases compostables]
             email:
               type: string
               format: email

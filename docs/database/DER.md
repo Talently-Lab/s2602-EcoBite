@@ -16,6 +16,10 @@ Actualización S6 wave 2 (migración `restaurante_onboarding`): enums
 `restaurantes.password_hash`. La fuente canónica del DER es
 `docs/database/ecobite.dbml`.
 
+Actualización data wave (migración `zone_centroids_restaurant_fields`):
+`zona.latitud`/`longitud` (centroide del barrio, GCBA barrios.geojson WGS84),
+`restaurantes.descripcion`/`imagen_url` y `solicitud_restaurante.descripcion`.
+
 ```mermaid
 erDiagram
     USUARIO }o--o| ZONA : "habita en"
@@ -55,12 +59,16 @@ erDiagram
         varchar codigo_postal "10"
         boolean activo_zona
         decimal distancia_promedio_km "(5,2)"
+        decimal latitud "(9,6) — centroide GCBA"
+        decimal longitud "(9,6) — centroide GCBA"
     }
 
     RESTAURANTES {
         uuid id_restaurante PK
         string nombre_restaurante
         string direccion
+        string descripcion
+        string imagen_url
         enum categoria "COMIDA_SALUDABLE | COMIDA_DE_ESTACION | COMIDA_VEGANA | COMIDA_CASERA"
         boolean es_100_eco
         boolean activo_restaurante
@@ -87,7 +95,7 @@ erDiagram
         uuid id_restaurante FK
         string direccion_entrega
         decimal monto_total "(10,2)"
-        decimal distancia_estimada_km "(5,2) — copia de zona destino"
+        decimal distancia_estimada_km "(5,2) — Haversine centroide→centroide"
         enum tipo_transporte "BICICLETA | VEHICULO_ELECTRICO"
         int total_envases_evitados "calculado"
         decimal co2_ahorrado_kg "(6,3) — calculado"
@@ -131,6 +139,7 @@ erDiagram
         uuid id_usuario FK
         string nombre_restaurante
         string direccion
+        string descripcion
         string email UK
         enum categoria "COMIDA_SALUDABLE | COMIDA_DE_ESTACION | COMIDA_VEGANA | COMIDA_CASERA"
         enum estado_solicitud "PENDIENTE | APROBADA | RECHAZADA"
@@ -160,10 +169,10 @@ Constante: `CO2_KG_POR_KM = 0.08`.
 | `empaques.gramos_plastico_evitados` | `peso_base_g - peso_ecobite_g` |
 | `detalle.envases_item` | `cantidad × SUM(envases_por_unidad)` del producto |
 | `detalle.gramos_plastico_evitados_item` | `cantidad × SUM(envases_por_unidad × gramos_plastico_evitados)` |
-| `pedidos.distancia_estimada_km` | copia de `zona.distancia_promedio_km` de la zona destino |
+| `pedidos.distancia_estimada_km` | Haversine entre el centroide de la zona del restaurante y el de la zona destino (2 decimales); `0.50` km si son la misma zona. Los pedidos importados conservan `zona.distancia_promedio_km` |
 | `pedidos.co2_ahorrado_kg` | `distancia_estimada_km × 0.08` |
 | `pedidos.total_envases_evitados` | `SUM(detalle.envases_item)` |
 | `pedidos.gramos_plastico_evitados_total` | `SUM(detalle.gramos_plastico_evitados_item)` |
 | `pedidos.monto_total` | `SUM(cantidad × precio_unitario)` (sin costo de envío por ahora) |
 
-Ejemplo de control: Palermo (4.78 km) → `co2_ahorrado_kg = 0.382`.
+Ejemplo de control: Palermo → Belgrano (3.32 km por centroides) → `co2_ahorrado_kg = 0.266`.

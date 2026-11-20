@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { promisify } from 'node:util';
 import { EstadoPedido, RolUsuario } from '../src/generated/prisma/enums';
+import { Prisma } from '../src/generated/prisma/client';
+import type { PrismaClient } from '../src/generated/prisma/client';
 import { ImportValidationError, loadDataset, parseCsv, validateDataset, type Dataset, type Sheet } from '../scripts/analyst-csv';
 import { prepareImport, sourceId } from '../scripts/analyst-plan';
 import { importDataset, safeDatabaseFailure } from '../scripts/import-analyst-data';
@@ -30,12 +32,13 @@ function fixture(): Dataset {
       id_usuario: `USR-${i + 1}`, nombre_completo: 'Demo', email: `demo-${i}@example.test`,
       telefono: '', direccion_habitual: '', fecha_registro: timestamp, fecha_edicion: edited,
       activo_usuario: 'TRUE', password_hash: hash, rol, id_zona_habitual: '1',
+      id_restaurante: rol === 'RESTAURANTE_ADMIN' ? 'RES-1' : '',
     })),
     Restaurantes: [{
       id_restaurante: 'RES-1', nombre_restaurante: 'Local demo', direccion: 'Direccion demo',
       categoria: 'Comida saludable',
       es_100_eco: 'TRUE', activo_restaurante: 'TRUE', id_zona: '1', email: 'local@example.test',
-      password_hash: hash, fecha_creacion: timestamp, fecha_edicion: edited,
+      fecha_creacion: timestamp, fecha_edicion: edited,
     }],
     Producto: [{
       id_producto: 'PRD-1', id_restaurante: 'RES-1', nombre_producto: 'Comida',
@@ -108,16 +111,17 @@ test('validation rejects malformed fields without exposing their values', () => 
   assert.throws(() => validateDataset(missing), ImportValidationError);
 });
 
-test('all ten foreign keys and unique keys are validated before writes', () => {
-  const references: [Sheet, string][] = [
-    ['Usuarios', 'id_zona_habitual'], ['Restaurantes', 'id_zona'], ['Producto', 'id_restaurante'],
-    ['Pedidos', 'id_usuario'], ['Pedidos', 'id_restaurante'], ['Pedidos', 'id_zona_destino'],
-    ['Detalle', 'id_pedido'], ['Detalle', 'id_producto'],
-    ['Producto_Empaque', 'id_producto'], ['Producto_Empaque', 'id_empaque'],
+test('all eleven foreign keys and unique keys are validated before writes', () => {
+  const references: [Sheet, string, number][] = [
+    ['Usuarios', 'id_zona_habitual', 0], ['Usuarios', 'id_restaurante', 2],
+    ['Restaurantes', 'id_zona', 0], ['Producto', 'id_restaurante', 0],
+    ['Pedidos', 'id_usuario', 0], ['Pedidos', 'id_restaurante', 0], ['Pedidos', 'id_zona_destino', 0],
+    ['Detalle', 'id_pedido', 0], ['Detalle', 'id_producto', 0],
+    ['Producto_Empaque', 'id_producto', 0], ['Producto_Empaque', 'id_empaque', 0],
   ];
-  for (const [sheet, field] of references) {
+  for (const [sheet, field, index] of references) {
     const data = fixture();
-    data[sheet][0][field] = data[sheet][0][field].replace(/\d+$/, '999');
+    data[sheet][index][field] = data[sheet][index][field].replace(/\d+$/, '999');
     assert.throws(() => validateDataset(data), ImportValidationError);
   }
   for (const sheet of ['Usuarios', 'Detalle', 'Producto_Empaque'] as const) {
@@ -177,6 +181,62 @@ test('legacy Restaurantes exports without the direccion column import with an em
   assert.equal(plan.restaurantes[0].direccion, '');
 });
 
+test('older Restaurantes exports with password_hash still validate; descripcion/imagen_url map or stay null', () => {
+  const data = fixture();
+  data.Restaurantes[0].password_hash = hash;
+  data.Restaurantes[0].descripcion = 'Desc valida';
+  data.Restaurantes[0].imagen_url = 'https://cdn.example.test/local.jpg';
+  const plan = prepareImport(validateDataset(data).data,
+    new Map([['Retiro', 'zone-uuid']]), new Map([[packName, 'pack-uuid']]));
+  assert.equal(plan.restaurantes[0].descripcion, 'Desc valida');
+  assert.equal(plan.restaurantes[0].imagenUrl, 'https://cdn.example.test/local.jpg');
+
+  const empty = prepareImport(validateDataset(fixture()).data,
+    new Map([['Retiro', 'zone-uuid']]), new Map([[packName, 'pack-uuid']]));
+  assert.equal(empty.restaurantes[0].descripcion, null);
+  assert.equal(empty.restaurantes[0].imagenUrl, null);
+});
+
+test('Usuarios.id_restaurante links only RESTAURANTE_ADMIN and only existing restaurants', () => {
+  const badRole = fixture();
+  badRole.Usuarios[0].id_restaurante = 'RES-1';
+  assert.throws(() => validateDataset(badRole), (error: unknown) => {
+    assert.ok(error instanceof ImportValidationError);
+    assert.ok(error.issues.some((issue) => issue.includes('RESTAURANTE_ADMIN')));
+    return true;
+  });
+  const missing = fixture();
+  missing.Usuarios[2].id_restaurante = 'RES-99';
+  assert.throws(() => validateDataset(missing), (error: unknown) => {
+    assert.ok(error instanceof ImportValidationError);
+    assert.ok(error.issues.some((issue) => issue.includes('id_restaurante')));
+    return true;
+  });
+  const { data } = validateDataset(fixture());
+  const plan = prepareImport(data, new Map([['Retiro', 'zone-uuid']]), new Map([[packName, 'pack-uuid']]));
+  assert.equal(plan.usuarios[0].restauranteId, null);
+  assert.equal(plan.usuarios[2].restauranteId, sourceId('restaurante', 'RES-1'));
+});
+
+test('loadDataset skips fully blank rows that workbook exports may emit', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ecobite-import-blank-'));
+  try {
+    for (const [sheet, rows] of Object.entries(fixture())) {
+      const columns = Object.keys(rows[0]);
+      const csv = [columns.join(','),
+        ...rows.map((row) => columns.map((column) => `"${row[column].replaceAll('"', '""')}"`).join(',')),
+        columns.map(() => '').join(','),
+      ].join('\r\n');
+      writeFileSync(join(directory, `${sheet}.csv`), csv, 'utf8');
+    }
+    const data = loadDataset(directory);
+    assert.equal(data.Usuarios.length, 4);
+    assert.equal(data.Restaurantes.length, 1);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
 test('KPI validation catches inconsistent amounts, packaging, CO2, transport and restaurant links', () => {
   const mutations: ((data: Dataset) => void)[] = [
     (data) => { data.Pedidos[0].monto_total = '999'; },
@@ -215,6 +275,125 @@ test('cancelled zero-total orders may have no details; current product price is 
   assert.throws(() => validateDataset(data), ImportValidationError);
   data.Pedidos[0].pedido_estado = 'CANCELADO';
   assert.doesNotThrow(() => validateDataset(data));
+});
+
+test('importDataset inserts restaurantes before usuarios (id_restaurante FK)', async () => {
+  const calls: string[] = [];
+  const findMany = (name: string) => async () => {
+    calls.push(`${name}.findMany`);
+    if (name === 'zona') return [{ id: 'zone-uuid', nombreBarrio: 'Retiro', distanciaPromedioKm: new Prisma.Decimal('1.36') }];
+    if (name === 'empaque') return [{ id: 'pack-uuid', nombreEnvase: packName, gramosPlasticoEvitados: new Prisma.Decimal('25') }];
+    return [];
+  };
+  const createMany = (name: string) => async (input: any) => {
+    calls.push(`${name}.createMany`);
+    return { count: input.data.length };
+  };
+  const tx: any = {
+    zona: { findMany: findMany('zona') },
+    empaque: { findMany: findMany('empaque') },
+    usuario: { findMany: findMany('usuario'), createMany: createMany('usuario') },
+    restaurante: { findMany: findMany('restaurante'), createMany: createMany('restaurante') },
+    producto: { findMany: findMany('producto'), createMany: createMany('producto') },
+    pedido: { findMany: findMany('pedido'), createMany: createMany('pedido') },
+    detalle: { findMany: findMany('detalle'), createMany: createMany('detalle') },
+    productoEmpaque: { findMany: findMany('productoEmpaque'), createMany: createMany('productoEmpaque') },
+  };
+  const db = { $transaction: (fn: any) => fn(tx) };
+  const counts = await importDataset(db as unknown as PrismaClient, fixture());
+  assert.deepEqual(counts, {
+    restaurantes: 1, usuarios: 3, productos: 1, pedidos: 1, detalles: 1, productoEmpaque: 1,
+  });
+  assert.ok(
+    calls.indexOf('restaurante.createMany') < calls.indexOf('usuario.createMany'),
+    calls.join(', '),
+  );
+});
+
+// Double distinguishes the insertMissing id-only lookup from the reconcile fetch by select.
+function prismaDouble(existingUsuarios: { id: string; rol: string; restauranteId: string | null }[]) {
+  const calls: string[] = [];
+  const updates: any[] = [];
+  const findMany = (name: string) => async (input: any) => {
+    calls.push(`${name}.findMany`);
+    if (name === 'zona') return [{ id: 'zone-uuid', nombreBarrio: 'Retiro', distanciaPromedioKm: new Prisma.Decimal('1.36') }];
+    if (name === 'empaque') return [{ id: 'pack-uuid', nombreEnvase: packName, gramosPlasticoEvitados: new Prisma.Decimal('25') }];
+    if (name === 'usuario') {
+      return input?.select?.restauranteId ? existingUsuarios : existingUsuarios.map((row) => ({ id: row.id }));
+    }
+    return [];
+  };
+  const createMany = (name: string) => async (input: any) => {
+    calls.push(`${name}.createMany`);
+    return { count: input.data.length };
+  };
+  const tx: any = {
+    zona: { findMany: findMany('zona') },
+    empaque: { findMany: findMany('empaque') },
+    usuario: {
+      findMany: findMany('usuario'),
+      createMany: createMany('usuario'),
+      updateMany: async (input: any) => {
+        calls.push('usuario.updateMany');
+        updates.push(input);
+        return { count: 1 };
+      },
+    },
+    restaurante: { findMany: findMany('restaurante'), createMany: createMany('restaurante') },
+    producto: { findMany: findMany('producto'), createMany: createMany('producto') },
+    pedido: { findMany: findMany('pedido'), createMany: createMany('pedido') },
+    detalle: { findMany: findMany('detalle'), createMany: createMany('detalle') },
+    productoEmpaque: { findMany: findMany('productoEmpaque'), createMany: createMany('productoEmpaque') },
+  };
+  return { db: { $transaction: (fn: any) => fn(tx) } as unknown as PrismaClient, calls, updates };
+}
+
+test('reconcile updates rol and restauranteId only on differing dataset accounts', async () => {
+  const { db, updates } = prismaDouble([
+    { id: sourceId('usuario', 'USR-1'), rol: 'CLIENTE', restauranteId: null },           // already matches CSV
+    { id: sourceId('usuario', 'USR-2'), rol: 'CLIENTE', restauranteId: null },           // stale rol
+    { id: sourceId('usuario', 'USR-3'), rol: 'RESTAURANTE_ADMIN', restauranteId: null }, // missing RES-1 link
+  ]);
+  const counts = await importDataset(db, fixture(), true);
+  assert.deepEqual(counts, {
+    restaurantes: 1, usuarios: 0, productos: 1, pedidos: 1, detalles: 1,
+    productoEmpaque: 1, usuariosReconciliados: 2,
+  });
+  assert.deepEqual(updates, [
+    { where: { id: sourceId('usuario', 'USR-2') }, data: { rol: 'ADMIN_PLATAFORMA', restauranteId: null } },
+    { where: { id: sourceId('usuario', 'USR-3') }, data: { rol: 'RESTAURANTE_ADMIN', restauranteId: sourceId('restaurante', 'RES-1') } },
+  ]);
+});
+
+test('reconcile skips dataset accounts whose stored values already match the CSV', async () => {
+  const { db, calls, updates } = prismaDouble([
+    { id: sourceId('usuario', 'USR-1'), rol: 'CLIENTE', restauranteId: null },
+    { id: sourceId('usuario', 'USR-2'), rol: 'ADMIN_PLATAFORMA', restauranteId: null },
+    { id: sourceId('usuario', 'USR-3'), rol: 'RESTAURANTE_ADMIN', restauranteId: sourceId('restaurante', 'RES-1') },
+  ]);
+  const counts = await importDataset(db, fixture(), true);
+  assert.equal(counts.usuariosReconciliados, 0);
+  assert.equal(updates.length, 0);
+  assert.ok(!calls.includes('usuario.updateMany'));
+});
+
+test('without reconcile the import never issues usuario.updateMany', async () => {
+  const { db, calls } = prismaDouble([
+    { id: sourceId('usuario', 'USR-2'), rol: 'CLIENTE', restauranteId: null },
+  ]);
+  const counts = await importDataset(db, fixture());
+  assert.ok(!('usuariosReconciliados' in counts));
+  assert.ok(!calls.includes('usuario.updateMany'));
+});
+
+test('--reconcile is rejected without --apply, alone or with --dry-run', async () => {
+  const run = promisify(execFile);
+  const script = join(__dirname, '../scripts/import-analyst-data.ts');
+  const env = { ...process.env, DATABASE_URL: '', DOTENV_CONFIG_PATH: 'not-a-real-env-file' };
+  for (const args of [['--reconcile'], ['--dry-run', '--reconcile']]) {
+    await assert.rejects(run(process.execPath, ['--import', 'tsx', script, ...args], { env }),
+      (error: unknown) => error instanceof Error && 'stderr' in error && String(error.stderr).includes('--reconcile'));
+  }
 });
 
 test('CLI defaults to offline validation and rejects ambiguous file selection', async () => {

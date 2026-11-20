@@ -10,7 +10,8 @@ import { isUuid } from '../lib/validation';
 import type { validateRequestStatus, validateRestaurantRequest } from '../lib/validation';
 
 const requestSelect = {
-  id: true, estado: true, nombreRestaurante: true, direccion: true, email: true, categoria: true,
+  id: true, estado: true, nombreRestaurante: true, direccion: true, descripcion: true,
+  email: true, categoria: true,
   fechaAceptacionCompromiso: true, fechaSolicitud: true, fechaRevision: true,
   zona: { select: { id: true, nombreBarrio: true } },
 } satisfies Prisma.SolicitudRestauranteSelect;
@@ -33,6 +34,7 @@ function toRequestResponse(row: RequestRow) {
     restaurant: {
       name: row.nombreRestaurante,
       address: row.direccion,
+      description: row.descripcion,
       email: row.email,
       category: categoriaLabels[row.categoria],
     },
@@ -103,6 +105,7 @@ export function createRestaurantRequestService(
               usuarioId: userId,
               nombreRestaurante: input.name,
               direccion: input.address,
+              descripcion: input.description,
               email: input.email,
               categoria: input.category,
               zonaId: input.zoneId,
@@ -168,7 +171,7 @@ export function createRestaurantRequestService(
           where: { id },
           select: {
             id: true, usuarioId: true, nombreRestaurante: true, direccion: true,
-            email: true, categoria: true, zonaId: true,
+            descripcion: true, email: true, categoria: true, zonaId: true,
           },
         });
         if (!solicitud) throw new HttpError(404, 'Solicitud no encontrada.');
@@ -191,6 +194,7 @@ export function createRestaurantRequestService(
             data: {
               nombre: solicitud.nombreRestaurante,
               direccion: solicitud.direccion,
+              descripcion: solicitud.descripcion,
               categoria: solicitud.categoria,
               zonaId: solicitud.zonaId,
               email: solicitud.email,

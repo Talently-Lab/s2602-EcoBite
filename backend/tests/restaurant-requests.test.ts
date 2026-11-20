@@ -297,11 +297,23 @@ test('POST /restaurant-requests validates the body before touching the database'
       requestBody({ status: 'APROBADA' }),
       requestBody({ category: 'COMIDA_RAPIDA' }),
       requestBody({ zoneId: 'no-es-uuid' }),
+      requestBody({ description: '' }),
+      requestBody({ description: 'x'.repeat(501) }),
       { name: 'Solo nombre' },
     ]) {
       const response = await post(`${url}/restaurant-requests`, body, applicantToken());
       assert.equal(response.status, 400, JSON.stringify(body));
     }
+    const tooLong = await post(
+      `${url}/restaurant-requests`, requestBody({ description: 'x'.repeat(501) }), applicantToken());
+    assert.deepEqual(await tooLong.json(), {
+      error: 'La descripción debe tener como máximo 500 caracteres.',
+    });
+    const unknown = await post(
+      `${url}/restaurant-requests`, requestBody({ status: 'APROBADA' }), applicantToken());
+    assert.deepEqual(await unknown.json(), {
+      error: 'Solo se permiten los campos name, category, zoneId, address, description, email y commitmentAccepted.',
+    });
     assert.equal(data.calls.filter((call) => call.method.startsWith('solicitudRestaurante.')).length, 0);
   });
 });
@@ -317,12 +329,15 @@ test('POST /restaurant-requests rejects an inactive zone with 400', async () => 
 
 test('POST /restaurant-requests creates a PENDIENTE request owned by the token user', async () => {
   await serve(async (url, data) => {
-    const response = await post(`${url}/restaurant-requests`, requestBody(), applicantToken());
+    const response = await post(`${url}/restaurant-requests`, requestBody({
+      description: '  Cocina de estación con envases compostables  ',
+    }), applicantToken());
     assert.equal(response.status, 201);
     const body = await response.json();
     assert.equal(body.request.status, 'PENDIENTE');
     assert.equal(body.request.restaurant.name, 'Verde Bistró');
     assert.equal(body.request.restaurant.address, 'Av. Santa Fe 1234');
+    assert.equal(body.request.restaurant.description, 'Cocina de estación con envases compostables');
     assert.equal(body.request.restaurant.email, 'contacto@verdebistro.test');
     assert.equal(body.request.restaurant.category, 'Comida saludable');
     assert.deepEqual(body.request.zone, { id: zone.id, name: 'Palermo' });
@@ -331,11 +346,25 @@ test('POST /restaurant-requests creates a PENDIENTE request owned by the token u
     assert.equal(body.request.reviewedAt, null);
     const create = data.calls.find((call) => call.method === 'solicitudRestaurante.create');
     assert.equal(create.input.data.usuarioId, applicantId);
+    assert.equal(create.input.data.descripcion, 'Cocina de estación con envases compostables');
     assert.equal(create.input.data.estado, 'PENDIENTE');
     assert.ok(create.input.data.fechaAceptacionCompromiso instanceof Date);
     assert.ok(data.calls.some((call) => call.method === 'executeRaw'));
     assert.equal(JSON.stringify(body).includes('hash-must-not-leak'), false);
     assert.equal(JSON.stringify(body).includes('passwordHash'), false);
+  });
+});
+
+test('a request without description stores null and approves with a null description', async () => {
+  await serve(async (url, data) => {
+    const created = await post(`${url}/restaurant-requests`, requestBody(), applicantToken());
+    assert.equal(created.status, 201);
+    const { request } = await created.json();
+    assert.equal(request.restaurant.description, null);
+    const approved = await post(
+      `${url}/admin/restaurant-requests/${request.id}/approve`, {}, adminToken());
+    assert.equal(approved.status, 200);
+    assert.equal(data.restaurantes[0].descripcion, null);
   });
 });
 
@@ -496,7 +525,7 @@ test('GET /admin/restaurant-requests/:id returns the detail or 404', async () =>
 test('POST /admin/restaurant-requests/:id/approve creates the restaurant and promotes the user', async () => {
   await serve(async (url, data) => {
     const created = await (await post(
-      `${url}/restaurant-requests`, requestBody(), applicantToken())).json();
+      `${url}/restaurant-requests`, requestBody({ description: 'Aliado eco del barrio' }), applicantToken())).json();
     const approved = await post(
       `${url}/admin/restaurant-requests/${created.request.id}/approve`, {}, adminToken());
     assert.equal(approved.status, 200);
@@ -513,6 +542,7 @@ test('POST /admin/restaurant-requests/:id/approve creates the restaurant and pro
     const local = data.restaurantes[0];
     assert.equal(local.nombre, 'Verde Bistró');
     assert.equal(local.direccion, 'Av. Santa Fe 1234');
+    assert.equal(local.descripcion, 'Aliado eco del barrio');
     assert.equal(local.categoria, 'COMIDA_SALUDABLE');
     assert.equal(local.zonaId, zone.id);
     assert.equal(local.email, 'contacto@verdebistro.test');

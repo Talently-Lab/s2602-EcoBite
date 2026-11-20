@@ -1,5 +1,6 @@
 import { Prisma } from '../generated/prisma/client';
 import type { PrismaClient } from '../generated/prisma/client';
+import { haversineKm, SAME_ZONE_DISTANCE_KM } from '../lib/distance';
 import { HttpError } from '../lib/http-error';
 import { paginationArgs, paginationMeta, type Pagination } from '../lib/pagination';
 import { isUuid } from '../lib/validation';
@@ -75,12 +76,15 @@ export function createOrderService(
         await requireActiveUser(tx, userId);
         const restaurant = await tx.restaurante.findFirst({
           where: { id: input.restaurantId, activo: true, esEco: true },
-          select: { id: true, nombre: true },
+          select: {
+            id: true, nombre: true,
+            zona: { select: { id: true, latitud: true, longitud: true } },
+          },
         });
         if (!restaurant) throw new HttpError(404, 'Restaurante no encontrado.');
         const zone = await tx.zona.findFirst({
           where: { id: input.destinationZoneId, activo: true },
-          select: { id: true, nombreBarrio: true, distanciaPromedioKm: true },
+          select: { id: true, nombreBarrio: true, latitud: true, longitud: true },
         });
         if (!zone) throw new HttpError(400, 'La zona de destino no está disponible.');
         const products = await tx.producto.findMany({
@@ -127,7 +131,9 @@ export function createOrderService(
         const totalEnvasesEvitados = items.reduce((sum, item) => sum + item.envasesItem, 0);
         const gramosPlasticoEvitadosTotal = items.reduce(
           (sum, item) => sum.add(item.gramosPlasticoEvitadosItem), new Prisma.Decimal(0));
-        const distanciaEstimadaKm = zone.distanciaPromedioKm;
+        const distanciaEstimadaKm = restaurant.zona.id === zone.id
+          ? SAME_ZONE_DISTANCE_KM
+          : haversineKm(restaurant.zona, zone);
         const co2AhorradoKg = distanciaEstimadaKm.mul(CO2_KG_POR_KM).toDecimalPlaces(3);
         const candidates = await tx.pedido.findMany({
           where: {

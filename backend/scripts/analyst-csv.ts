@@ -69,6 +69,14 @@ const oneOf = (values: string[]): Rule => (value) => values.includes(value);
 const code = (prefix: string): Rule => (value) => new RegExp(`^${prefix}-\\d+$`).test(value);
 const email: Rule = (value) => value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const hash: Rule = (value) => /^[a-f0-9]{64}$/i.test(value) || /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
+const httpsUrl: Rule = (value) => {
+  if (value.length > 2048) return false;
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 const date: Rule = (value) => {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) return false;
   const parsed = new Date(value.replace(' ', 'T') + 'Z');
@@ -90,11 +98,13 @@ const fields: Record<Sheet, Record<string, Rule>> = {
     direccion_habitual: optional(text()), fecha_registro: date, fecha_edicion: date,
     activo_usuario: boolean, password_hash: hash,
     rol: oneOf([...Object.values(RolUsuario), 'REPARTIDOR']), id_zona_habitual: optional(integer(1)),
+    id_restaurante: optional(code('RES')),
   },
   Restaurantes: {
     id_restaurante: code('RES'), nombre_restaurante: text(), direccion: optional(text()),
+    descripcion: optional(text(500)), imagen_url: optional(httpsUrl),
     categoria, es_100_eco: boolean, activo_restaurante: boolean, id_zona: integer(1),
-    email, password_hash: hash, fecha_creacion: date, fecha_edicion: date,
+    email, password_hash: optional(hash), fecha_creacion: date, fecha_edicion: date,
   },
   Producto: {
     id_producto: code('PRD'), id_restaurante: code('RES'), nombre_producto: text(),
@@ -127,7 +137,8 @@ export function loadDataset(directory: string): Dataset {
     let rows: Row[];
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(join(directory, matches[0])));
-      rows = parseCsv(text);
+      rows = parseCsv(text)
+        .filter((row) => Object.values(row).some((value) => value !== ''));
     } catch (error) {
       const issues = error instanceof ImportValidationError ? error.issues : ['unreadable file or invalid UTF-8'];
       throw new ImportValidationError(issues.map((issue) => `${sheet}: ${issue}`));
@@ -152,7 +163,10 @@ function duplicateIssues(rows: Row[], columns: string[], label: string, issues: 
 }
 
 // Columns a legacy export may omit entirely; prepareImport defaults them to ''.
-const absentOk = new Set(['Restaurantes.direccion']);
+const absentOk = new Set([
+  'Restaurantes.direccion', 'Restaurantes.descripcion', 'Restaurantes.imagen_url',
+  'Restaurantes.password_hash', 'Usuarios.id_restaurante',
+]);
 
 export function validateDataset(source: Dataset): { data: Dataset; excludedCouriers: number } {
   const issues: string[] = [];
@@ -184,6 +198,7 @@ export function validateDataset(source: Dataset): { data: Dataset; excludedCouri
   duplicateIssues(data.Producto_Empaque, ['id_producto', 'id_empaque'], 'Producto_Empaque', issues);
   const relations: [Sheet, string, Sheet, string][] = [
     ['Usuarios', 'id_zona_habitual', 'Zonas', 'id_zona'],
+    ['Usuarios', 'id_restaurante', 'Restaurantes', 'id_restaurante'],
     ['Restaurantes', 'id_zona', 'Zonas', 'id_zona'],
     ['Producto', 'id_restaurante', 'Restaurantes', 'id_restaurante'],
     ['Pedidos', 'id_usuario', 'Usuarios', 'id_usuario'],
@@ -197,11 +212,16 @@ export function validateDataset(source: Dataset): { data: Dataset; excludedCouri
   for (const [sheet, field, target, key] of relations) {
     const ids = new Set(data[target].map((row) => row[key]));
     data[sheet].forEach((row, i) => {
-      if (!(sheet === 'Usuarios' && row[field] === '') && !ids.has(row[field])) {
+      if (!(sheet === 'Usuarios' && !row[field]) && !ids.has(row[field])) {
         issues.push(`${sheet} row ${i + 2}: missing ${field} reference (possibly an excluded courier)`);
       }
     });
   }
+  data.Usuarios.forEach((row, i) => {
+    if (row.id_restaurante && row.rol !== 'RESTAURANTE_ADMIN') {
+      issues.push(`Usuarios row ${i + 2}: id_restaurante requires rol RESTAURANTE_ADMIN`);
+    }
+  });
   if (issues.length) throw new ImportValidationError(issues);
   validateCalculations(data, issues);
   if (issues.length) throw new ImportValidationError(issues);

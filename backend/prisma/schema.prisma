@@ -79,6 +79,8 @@ model Zona {
   codigoPostal        String        @map("codigo_postal") @db.VarChar(10)
   activo              Boolean       @default(true) @map("activo_zona")
   distanciaPromedioKm Decimal       @map("distancia_promedio_km") @db.Decimal(5, 2)
+  latitud             Decimal       @map("latitud") @db.Decimal(9, 6)
+  longitud            Decimal       @map("longitud") @db.Decimal(9, 6)
   usuarios            Usuario[]     @relation("ZonaHabitual")
   restaurantes        Restaurante[]
   pedidosDestino      Pedido[]      @relation("ZonaDestino")
@@ -91,6 +93,8 @@ model Restaurante {
   id            String     @id @default(uuid()) @map("id_restaurante") @db.Uuid
   nombre        String     @map("nombre_restaurante")
   direccion     String
+  descripcion   String?
+  imagenUrl     String?    @map("imagen_url")
   categoria     CategoriaRestaurante
   esEco         Boolean    @default(true) @map("es_100_eco")
   activo        Boolean    @default(true) @map("activo_restaurante")
@@ -175,6 +179,7 @@ model SolicitudRestaurante {
   usuarioId                 String               @map("id_usuario") @db.Uuid
   nombreRestaurante         String               @map("nombre_restaurante")
   direccion                 String
+  descripcion               String?
   email                     String               @unique
   categoria                 CategoriaRestaurante
   estado                    EstadoSolicitud      @default(PENDIENTE) @map("estado_solicitud")

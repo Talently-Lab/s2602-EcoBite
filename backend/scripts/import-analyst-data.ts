@@ -14,7 +14,13 @@ async function insertMissing<T extends { id?: string }>(
   return pending.length ? (await insert(pending)).count : 0;
 }
 
-export async function importDataset(db: PrismaClient, source: Dataset) {
+export type ImportCounts = {
+  restaurantes: number; usuarios: number; productos: number;
+  pedidos: number; detalles: number; productoEmpaque: number;
+  usuariosReconciliados?: number;
+};
+
+export async function importDataset(db: PrismaClient, source: Dataset, reconcile = false) {
   const { data } = validateDataset(source);
   // All reference resolution, inserts and uniqueness checks share one rollback boundary.
   return db.$transaction(async (tx) => {
@@ -36,13 +42,14 @@ export async function importDataset(db: PrismaClient, source: Dataset) {
         throw new ImportValidationError(['Empaques: seeded grams differ from CSV; review references before import']);
       }
     }
-    const counts = {
-      usuarios: await insertMissing(plan.usuarios,
-        (ids) => tx.usuario.findMany({ where: { id: { in: ids } }, select: { id: true } }),
-        (rows) => tx.usuario.createMany({ data: rows })),
+    // usuario.id_restaurante is an FK, so restaurantes must land first.
+    const counts: ImportCounts = {
       restaurantes: await insertMissing(plan.restaurantes,
         (ids) => tx.restaurante.findMany({ where: { id: { in: ids } }, select: { id: true } }),
         (rows) => tx.restaurante.createMany({ data: rows })),
+      usuarios: await insertMissing(plan.usuarios,
+        (ids) => tx.usuario.findMany({ where: { id: { in: ids } }, select: { id: true } }),
+        (rows) => tx.usuario.createMany({ data: rows })),
       productos: await insertMissing(plan.productos,
         (ids) => tx.producto.findMany({ where: { id: { in: ids } }, select: { id: true } }),
         (rows) => tx.producto.createMany({ data: rows })),
@@ -61,18 +68,38 @@ export async function importDataset(db: PrismaClient, source: Dataset) {
     const pairs = new Set(existing.map((row) => `${row.productoId}/${row.empaqueId}`));
     const pending = plan.productoEmpaque.filter((row) => !pairs.has(`${row.productoId}/${row.empaqueId}`));
     if (pending.length) counts.productoEmpaque = (await tx.productoEmpaque.createMany({ data: pending })).count;
-    return counts;
+    if (!reconcile) return counts;
+    // Dataset UUIDs are deterministic (sourceId), so a registered account can
+    // never be in this set; reconcile only fixes rol/restauranteId on those rows.
+    const planned = new Map(plan.usuarios.map((row) => [row.id!, row]));
+    let usuariosReconciliados = 0;
+    for (const row of await tx.usuario.findMany({
+      where: { id: { in: [...planned.keys()] } },
+      select: { id: true, rol: true, restauranteId: true },
+    })) {
+      const target = planned.get(row.id)!;
+      const restauranteId = target.restauranteId ?? null;
+      if (row.rol === target.rol && row.restauranteId === restauranteId) continue;
+      usuariosReconciliados += (await tx.usuario.updateMany({
+        where: { id: row.id },
+        data: { rol: target.rol, restauranteId },
+      })).count;
+    }
+    return { ...counts, usuariosReconciliados };
   }, { timeout: 120000, isolationLevel: 'Serializable' });
 }
 
 export async function main(args = process.argv.slice(2)) {
   const flags = args.filter((arg) => arg !== '--');
-  if (flags.some((arg) => !['--dry-run', '--apply', '--help'].includes(arg)) ||
+  if (flags.some((arg) => !['--dry-run', '--apply', '--reconcile', '--help'].includes(arg)) ||
       (flags.includes('--apply') && flags.includes('--dry-run'))) {
-    throw new ImportValidationError(['Usage: data:import [--dry-run | --apply]; default is validation only']);
+    throw new ImportValidationError(['Usage: data:import [--dry-run | --apply [--reconcile]]; default is validation only']);
+  }
+  if (flags.includes('--reconcile') && !flags.includes('--apply')) {
+    throw new ImportValidationError(['--reconcile requires --apply: it writes rol/id_restaurante fixes on dataset accounts']);
   }
   if (flags.includes('--help')) {
-    console.log('data:import [--dry-run | --apply]; ANALYST_DATA_DIR overrides backend/prisma/data');
+    console.log('data:import [--dry-run | --apply [--reconcile]]; ANALYST_DATA_DIR overrides backend/prisma/data');
     return;
   }
   const source = loadDataset(resolve(process.env.ANALYST_DATA_DIR ?? resolve(__dirname, '../prisma/data')));
@@ -86,8 +113,9 @@ export async function main(args = process.argv.slice(2)) {
   }
   const { prisma } = await import('../src/lib/prisma.js');
   try {
-    const counts = await importDataset(prisma, source);
+    const counts = await importDataset(prisma, source, flags.includes('--reconcile'));
     console.log('Committed inserts (existing IDs are left unchanged):', JSON.stringify(counts));
+    if ('usuariosReconciliados' in counts) console.log(`usuarios reconciliados: ${counts.usuariosReconciliados}`);
   } finally {
     await prisma.$disconnect();
   }

@@ -47,6 +47,7 @@ export async function checkDeployment(baseUrl, { auth = false, requireData = fal
   const restaurants = restaurantsPage.data;
   expect(restaurants.every((row) => row && typeof row.id === 'string' && typeof row.name === 'string'
     && row.isEco === true && typeof row.zone?.name === 'string'
+    && 'description' in row && 'imageUrl' in row && 'tag' in row
     && !('passwordHash' in row) && !('email' in row)), 'Unexpected restaurant contract or exposed credentials.');
   expect(!requireData || restaurants.length > 0,
     'No visible restaurants: import approved analyst data and check activo/esEco before the meeting.');
