@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { useSearchParams } from "react-router-dom";
+import { MainLayout } from "@/pages/layout/MainLayout";
 import { LoginForm } from "@/components/LoginForm";
 import { RegisterForm } from "@/components/RegisterForm";
 
@@ -16,32 +18,36 @@ const VISUALS: Record<AuthMode, { src: string; alt: string }> = {
 };
 
 const Auth = () => {
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode: AuthMode = searchParams.get("mode") === "register" ? "register" : "login";
+  const setMode = (nextMode: AuthMode) => setSearchParams(nextMode === "register" ? { mode: nextMode } : {});
   const visual = VISUALS[mode];
 
   return (
-    <section className="flex min-h-screen items-center justify-center bg-[#FFFFFF] px-4 py-10 text-foreground">
-      <div className="grid w-full max-w-5xl items-start gap-6 md:grid-cols-[420px_1fr]">
-        {mode === "login" ? (
-          <LoginForm onSwitchToRegister={() => setMode("register")} />
-        ) : (
-          <RegisterForm onSwitchToLogin={() => setMode("login")} />
-        )}
+    <MainLayout>
+      <section className="flex items-center justify-center bg-white px-4 py-10 text-foreground">
+        <div className="grid w-full max-w-[1200px] items-start gap-6 lg:grid-cols-[minmax(0,486fr)_minmax(0,688fr)]">
+          {mode === "login" ? (
+            <LoginForm onSwitchToRegister={() => setMode("register")} />
+          ) : (
+            <RegisterForm onSwitchToLogin={() => setMode("login")} />
+          )}
 
-        {/* Panel visual */}
-        <section className="flex w-full flex-col items-center">
-          <img
-            src={visual.src}
-            alt={visual.alt}
-            className="block max-h-135.5 w-full object-cover"
-          />
-          <h2 className="mt-8 text-center text-[#000000] text-2xl font-extrabold tracking-tight sm:text-3xl">
-            El sabor del impacto
-          </h2>
-          <p className="text-[#00733D] text-lg">Lorem Ipsum is simply </p>
-        </section>
-      </div>
-    </section>
+          {/* Panel visual */}
+          <section className={cn("flex w-full flex-col items-center", mode === "register" && "lg:pt-1")}>
+            <img
+              src={visual.src}
+              alt={visual.alt}
+              className="block w-full object-cover"
+            />
+            <h2 className={cn("mt-8 text-center text-3xl font-bold leading-tight tracking-tight text-black lg:text-[40px]", mode === "register" && "lg:mt-14")}>
+              El sabor del impacto
+            </h2>
+            <p className="text-xl leading-tight text-[#00733D] lg:text-[26px]">Cada pedido cuenta.</p>
+          </section>
+        </div>
+      </section>
+    </MainLayout>
   );
 };
 

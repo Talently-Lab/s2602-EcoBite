@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronsLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordField } from "@/components/PasswordField";
@@ -6,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLogin } from "@/hooks/useAuth";
 import { loginSchema, type Login } from "@/schemas/auth.schema";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 type props = {
   onSwitchToRegister: () => void;
@@ -47,16 +48,19 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
   };
 
   return (
-    <section className="min-h-153.25 flex flex-col justify-center w-full rounded-lg border border-[#00733D]/40 bg-[#FFFFFF] px-6 py-8 shadow-xs sm:px-12">
-      <p className="text-[17px] font-medium text-[#00733D]">¿Ya tenés cuenta?</p>
-      <h1 className="text-[#000000] mt-3 text-2xl font-bold leading-tight tracking-tight">
+    <section className="relative flex min-h-[740px] w-full flex-col rounded-lg border border-[#00733D]/50 bg-white px-6 pt-16 pb-16 shadow-[0_0_48px_0_#00000008] sm:px-[77px] sm:pt-25 sm:pb-26">
+      <Link to="/home" aria-label="Volver al inicio" className="mb-4 w-fit rounded-sm text-[#008647] focus-visible:outline-2 focus-visible:outline-offset-4 sm:absolute sm:top-[60px] sm:left-6 sm:mb-0">
+        <ChevronsLeft aria-hidden="true" className="size-6" />
+      </Link>
+      <p className="text-[26px] leading-8 text-[#00733D]">¿Ya tenés cuenta?</p>
+      <h1 className="mt-4 text-[32px] font-bold leading-[48px] tracking-tight text-black sm:text-[40px]">
         Iniciá sesión
       </h1>
-      <p className="text-xs font-bold text-[#026129]">
-        Iniciá sesión y seguí descubriendo opciones para comer rico y elegir mejor.
+      <p className="text-sm font-bold leading-[17px] text-[#026129]">
+        Comé rico. Elegí mejor.
       </p>
       <form
-        className="mt-6 flex flex-col gap-4"
+        className="mt-12 flex flex-col gap-5 [&_label]:text-sm [&_input:not([type=checkbox])]:h-[50px] [&_input:not([type=checkbox])]:rounded-md [&_input:not([type=checkbox])]:px-5"
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
@@ -66,7 +70,7 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
           </p>
         )}
         <div>
-          <label htmlFor="login-username" className="mb-1.5 block text-xs font-bold text-[#000000]">
+          <label htmlFor="login-username" className="mb-2 block text-sm font-bold text-[#000000]">
             Email
           </label>
           <Input
@@ -93,10 +97,10 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
           {...register("password")}
         />
 
-        <div className="mt-4 mb-10 flex items-center justify-between text-xs">
+        <div className="mt-3 mb-10 flex flex-wrap items-center justify-between gap-3 text-[13px]">
           <label
             htmlFor="login-remembered"
-            className="flex cursor-pointer items-center gap-1.5 font-medium text-[#000000]"
+            className="flex cursor-pointer items-center gap-4 text-[13px]! font-normal text-[#000000]"
           >
             <input
               id="login-remembered"
@@ -104,7 +108,7 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
               type="checkbox"
               checked={remembered}
               onChange={(e) => setRemembered(e.target.checked)}
-              className="size-4 shrink-0 cursor-pointer appearance-none rounded-lg border-2 border-[#00733D]/50 bg-[#FFFFFF] bg-center bg-no-repeat transition-colors hover:border-[#009951] focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:outline-none checked:border-[#009951] checked:bg-[#009951] checked:bg-size-[70%] checked:bg-[url(data:image/svg+xml,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M20%206%209%2017l-5-5%22%2F%3E%3C%2Fsvg%3E)]"
+              className="size-3 shrink-0 cursor-pointer appearance-none rounded-none border border-[#00733D]/50 bg-[#FFFFFF] bg-center bg-no-repeat transition-colors hover:border-[#009951] focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:outline-none checked:border-[#009951] checked:bg-[#009951] checked:bg-size-[70%] checked:bg-[url(data:image/svg+xml,%3Csvg%20xmlns=%22http:%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M20%206%209%2017l-5-5%22%2F%3E%3C%2Fsvg%3E)]"
             />
             Recordarme
           </label>
@@ -119,18 +123,18 @@ export const LoginForm = ({ onSwitchToRegister }: props) => {
         <Button
           type="submit"
           disabled={login.isPending}
-          className="h-10 w-full rounded-md font-semibold bg-[#009951]! text-[#FFFFFF]!"
+          className="h-9 w-full rounded-lg bg-[#009951]! text-sm font-bold text-white!"
         >
           {login.isPending ? "Iniciando sesión…" : "Iniciá sesión"}
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-[#4D4D4D]">
-        ¿No tenés cuenta?{" "}
+      <p className="mt-3 text-center text-sm font-bold text-[#808080]">
+        ¿Todavía no tenés cuenta?{" "}
         <button
           type="button"
           onClick={onSwitchToRegister}
-          className="cursor-pointer font-bold text-[#00733D] underline-offset-4"
+          className="cursor-pointer font-bold text-[#808080] underline-offset-4 hover:underline"
         >
           Creá la tuya.
         </button>
