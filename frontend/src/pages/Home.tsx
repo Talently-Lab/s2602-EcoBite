@@ -1,4 +1,4 @@
-import { Bike, Leaf, Recycle } from "lucide-react";
+import { Bike, Leaf } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/pages/layout/MainLayout";
@@ -15,13 +15,13 @@ const FEATURES = [
   {
     id: "delivery",
     icon: Bike,
-    title: "Envases 100% biodegradables",
-    description: "Menos residuos y menor impacto ambiental.",
+    title: "Envíos amigables con el ambiente",
+    description: "Comida sana y sustentable.",
   },
   {
     id: "waste",
-    icon: Recycle,
-    title: "Envases 100% biodegradables",
+    icon: Leaf,
+    title: "Comida sana y sustentable",
     description: "Menos residuos y menor impacto ambiental.",
   },
 ];
@@ -31,24 +31,24 @@ const Home = () => {
   const { restaurants, loading, error, refetch } = useRestaurants();
 
   return (
-    <MainLayout>
+    <MainLayout spacious>
       {/* Hero */}
-      <section className="grid items-center gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-8 mt-3">
-        <div className="w-full">
-          <h1 className="text-2xl font-normal leading-8 tracking-tight text-balance sm:text-3xl text-[#2C2C2A]">
+      <section className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,460fr)_minmax(0,690fr)] lg:gap-[50px]">
+        <div className="flex w-full flex-col items-start">
+          <h1 className="text-[28px] font-normal leading-[1.2] sm:text-[32px] text-[#2C2C2A]">
             Pedí comida.
             <br />
             Generá menos impacto.
           </h1>
-          <p className="mt-3 text-lg leading-6 text-[#545454] font-light sm:text-xl md:max-w-80">
-            Restaurantes sustentables, platos deliciosos y un planeta más sano.
+          <p className="mt-4 max-w-[460px] text-lg leading-6 text-[#545454] sm:text-xl">
+            Disfrutá platos ricos de restaurantes comprometidos con el ambiente. Elegí opciones sustentables y sumate al cambio.
           </p>
           <Button
             type="button"
-            onClick={() => navigate("/catalog")}
-            className="mt-5 p-5 bg-[#009951]! text-[#FFFFFF]!"
+            onClick={() => navigate("/auth?mode=register")}
+            className="mt-10 h-10 whitespace-normal rounded-lg bg-[#009951]! px-6 text-sm font-bold text-[#FFFFFF]!"
           >
-            Explorar Restaurantes
+            Registrate y sumate al cambio
           </Button>
         </div>
         <picture>
@@ -56,20 +56,21 @@ const Home = () => {
           <img
             src="/images/image-home-02.png"
             alt="Persona disfrutando un plato sustentable"
-            className="w-full rounded-2xl object-cover"
+            fetchPriority="high"
+            className="h-60 w-full rounded-2xl object-cover lg:h-full lg:min-h-60"
           />
         </picture>
       </section>
 
       {/* Diferenciales */}
-      <section className="grid grid-cols-1 gap-6 divide-y my-10 divide-[#B5B5B5] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <section className="my-10 grid grid-cols-1 divide-y divide-[#b5b5b5] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {FEATURES.map((feature) => (
-          <div key={feature.id} className="flex flex-col items-center px-4 text-center py-6">
-            <span className="flex size-10 items-center justify-center rounded-full bg-[#04E762] text-[#003D29]">
-              <feature.icon size={18} aria-hidden="true" className="fill-[#003D29]" />
+          <div key={feature.id} className="flex min-h-[185px] flex-col items-center justify-center px-6 py-4 text-center">
+            <span className="flex size-9 items-center justify-center rounded-full bg-[#04E762] text-[#003D29]">
+              <feature.icon size={22} className={feature.icon === Leaf ? "fill-current" : undefined} aria-hidden="true" />
             </span>
-            <h2 className="mt-2 mb-3 text-lg max-w-37.5 font-bold leading-snug text-[#2C2C2A]">{feature.title}</h2>
-            <p className="max-w-55 text-xs leading-relaxed text-[#2C2C2A]">
+            <h2 className="mt-4 mb-4 max-w-72 text-xl font-bold leading-6 text-[#2C2C2A]">{feature.title}</h2>
+            <p className="max-w-64 text-sm leading-[18px] text-[#2C2C2A]">
               {feature.description}
             </p>
           </div>
@@ -77,12 +78,12 @@ const Home = () => {
       </section>
 
       {/* Restaurantes */}
-      <section className="py-8">
-        <h2 className="text-sm font-bold text-[#2C2C2A]">
+      <section>
+        <h2 className="text-sm font-bold leading-5 text-[#2C2C2A]">
           Encontrá restaurantes y conocé qué prácticas ambientales implementan.
         </h2>
         {loading && (
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-3.5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-80 animate-pulse rounded-2xl bg-[#2C2C2A]/30" />
             ))}
@@ -94,7 +95,7 @@ const Home = () => {
             role="alert"
             className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#AEACAC] bg-white p-6 text-center sm:flex-row sm:justify-between sm:text-left"
           >
-            <p className="text-sm text-destructive">ERROR</p>
+            <p className="text-sm text-destructive">No pudimos cargar los restaurantes. Intentá nuevamente.</p>
             <Button type="button" onClick={() => refetch()} className="cursor-pointer bg-[#009951]! text-[#FFFFFF]!">
               Reintentar
             </Button>
@@ -108,12 +109,16 @@ const Home = () => {
         )}
 
         {!loading && restaurants.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {restaurants.map((restaurant) => (
+          <div className="mt-3.5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {restaurants.slice(0, 4).map((restaurant, index) => (
               <RestaurantCard
                 key={restaurant.id}
                 name={restaurant.name}
                 description={restaurant.category}
+                isEco={restaurant.isEco}
+                featured
+                imageAlt={index === 3 ? "Plato de comida saludable" : "Personas compartiendo una comida en un restaurante"}
+                imageSrc={["/images/image-restaurant-02.png", "/images/image-restaurant-03.png", "/images/image-restaurant.png", "/images/image-dish.png"][index]}
                 onView={() => navigate(`/catalog/${restaurant.id}`)}
               />
             ))}
