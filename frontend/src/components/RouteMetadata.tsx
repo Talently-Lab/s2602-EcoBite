@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useLocation, useMatch } from "react-router-dom";
+import { Outlet, ScrollRestoration, useLocation, useMatch } from "react-router-dom";
 import { useRestaurantById } from "@/hooks/useRestaurants";
 
 const SITE_URL = "https://s2602-ecobite.netlify.app";
@@ -57,5 +57,5 @@ export function RouteMetadata() {
     document.head.querySelector('link[rel="canonical"]')?.setAttribute("href", canonical);
   }, [title, socialTitle, description, robots, canonical]);
 
-  return <Outlet />;
+  return <><Outlet /><ScrollRestoration /></>;
 }
