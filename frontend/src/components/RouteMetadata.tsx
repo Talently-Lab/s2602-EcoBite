@@ -30,7 +30,7 @@ export function RouteMetadata() {
     indexable = true;
   } else if (detail) {
     title = restaurant ? `Menú de ${restaurant.name} | EcoBite` : "Menú del restaurante | EcoBite";
-    description = restaurant ? `Explorá el menú de ${restaurant.name}, ${restaurant.category.toLowerCase()} en ${restaurant.zone.name}, CABA. Elegí tus productos y armá tu pedido en EcoBite.` : CATALOG_DESCRIPTION;
+    description = restaurant ? (restaurant.description?.trim() ? `Explorá el menú de ${restaurant.name}. ${restaurant.description.trim()}` : `Explorá el menú de ${restaurant.name}, ${restaurant.category.toLowerCase()} en ${restaurant.zone.name}, CABA. Elegí tus productos y armá tu pedido en EcoBite.`) : CATALOG_DESCRIPTION;
     indexable = !error;
   } else if (path === "/auth") {
     title = new URLSearchParams(search).get("mode") === "register" ? "Crear cuenta | EcoBite" : "Iniciar sesión | EcoBite";

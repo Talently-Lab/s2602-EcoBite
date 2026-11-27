@@ -19,7 +19,8 @@ Si cambia, actualizar `frontend/index.html`, `frontend/src/components/RouteMetad
 
 `index.html` contiene título, descripción, canonical, Open Graph y Twitter Card
 para el catálogo. `RouteMetadata` actualiza título, descripción y canonical al
-navegar, incluyendo nombre, categoría y barrio cuando carga un restaurante.
+navegar, incluyendo nombre y descripción comercial cuando carga un restaurante.
+Si no hay descripción, utiliza la categoría y el barrio como alternativa.
 
 Los títulos priorizan el contenido y mantienen la marca al final: "Menú de
 [restaurante] | EcoBite", "Carrito de compras | EcoBite" y "Entrega y pago | EcoBite".
