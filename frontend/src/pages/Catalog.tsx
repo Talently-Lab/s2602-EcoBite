@@ -34,11 +34,12 @@ const Catalog = () => {
   const [search, setSearch] = useState("");
   const [cuisine, setCuisine] = useState<string | null>(null);
   const [tag, setTag] = useState<string | null>(null);
+  const tags = [...new Set(restaurants.filter((restaurant) => restaurant.isEco).map((restaurant) => restaurant.tag?.trim() || "Sustentable"))];
   const filteredRestaurants = restaurants.filter(
     (restaurant) =>
       restaurant.name.toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) &&
       (!cuisine || cuisine === "Todos" || restaurant.category === cuisine) &&
-      (!tag || tag === "Todas" || restaurant.isEco),
+      (!tag || tag === "Todas" || (restaurant.isEco && (restaurant.tag?.trim() || "Sustentable") === tag)),
   );
 
   return (
@@ -78,7 +79,7 @@ const Catalog = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Todas">Todas las etiquetas</SelectItem>
-                  <SelectItem value="Sustentable">Sustentable</SelectItem>
+                  {tags.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -107,11 +108,12 @@ const Catalog = () => {
                 <RestaurantCard
                   key={restaurant.id}
                   name={restaurant.name}
-                  description={restaurant.category}
+                  description={restaurant.description?.trim() || restaurant.category}
                   isEco={restaurant.isEco}
+                  tag={restaurant.tag}
                   featured
-                  imageSrc={restaurantImages[restaurants.indexOf(restaurant) % restaurantImages.length]}
-                  imageAlt="Imagen ilustrativa del restaurante"
+                  imageSrc={restaurant.imageUrl?.trim() || restaurantImages[restaurants.indexOf(restaurant) % restaurantImages.length]}
+                  imageAlt={restaurant.imageUrl?.trim() ? restaurant.name : "Imagen ilustrativa del restaurante"}
                   onView={() => navigate(`/catalog/${restaurant.id}`)}
                 />
               ))}

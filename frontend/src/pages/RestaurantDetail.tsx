@@ -44,14 +44,19 @@ const RestaurantDetail = () => {
       </nav>
 
       <section className="mt-6 grid items-stretch gap-6 bg-white md:grid-cols-2 md:gap-8">
-        <img src="/images/image-restaurant-03.webp" alt="Imagen ilustrativa del restaurante" fetchPriority="high" className="h-64 w-full rounded-xl object-cover md:h-[290px]" />
+        <img src={restaurant.imageUrl?.trim() || "/images/image-restaurant-03.webp"} alt={restaurant.imageUrl?.trim() ? restaurant.name : "Imagen ilustrativa del restaurante"} fetchPriority="high" className="h-64 w-full rounded-xl object-cover md:h-[290px]" onError={({ currentTarget }) => {
+          const fallback = "/images/image-restaurant-03.webp";
+          if (currentTarget.getAttribute("src") === fallback) return;
+          currentTarget.src = fallback;
+          currentTarget.alt = "Imagen ilustrativa del restaurante";
+        }} />
         <div>
           <h1 className="text-4xl font-extrabold leading-tight text-black lg:text-5xl">{restaurant.name}</h1>
           <p className="mt-3 text-xl text-[#777]">{restaurant.category}</p>
-          <p className="mt-6 text-xl leading-6 text-[#2c2c2a]">Elegí tu próximo plato: bowls frescos, recetas de estación y algo dulce para terminar.</p>
+          <p className="mt-6 text-xl leading-6 text-[#2c2c2a]">{restaurant.description?.trim() || "Elegí tu próximo plato: bowls frescos, recetas de estación y algo dulce para terminar."}</p>
           {restaurant.isEco && (
             <span className="mt-9 flex w-fit items-center gap-1 rounded-full bg-[#e6fdef] px-2 py-1 text-xs font-bold text-[#00733d]">
-              <span aria-hidden="true" className="size-2.5 rounded-full bg-white" />Sustentable
+              <span aria-hidden="true" className="size-2.5 rounded-full bg-white" />{restaurant.tag?.trim() || "Sustentable"}
             </span>
           )}
         </div>

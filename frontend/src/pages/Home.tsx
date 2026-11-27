@@ -114,11 +114,12 @@ const Home = () => {
               <RestaurantCard
                 key={restaurant.id}
                 name={restaurant.name}
-                description={restaurant.category}
+                description={restaurant.description?.trim() || restaurant.category}
                 isEco={restaurant.isEco}
+                tag={restaurant.tag}
                 featured
-                imageAlt={index === 3 ? "Plato de comida saludable" : "Personas compartiendo una comida en un restaurante"}
-                imageSrc={["/images/image-restaurant-02.webp", "/images/image-restaurant-03.webp", "/images/image-restaurant.webp", "/images/image-dish.webp"][index]}
+                imageAlt={restaurant.imageUrl?.trim() ? restaurant.name : "Imagen ilustrativa del restaurante"}
+                imageSrc={restaurant.imageUrl?.trim() || ["/images/image-restaurant-02.webp", "/images/image-restaurant-03.webp", "/images/image-restaurant.webp", "/images/image-dish.webp"][index]}
                 onView={() => navigate(`/catalog/${restaurant.id}`)}
               />
             ))}

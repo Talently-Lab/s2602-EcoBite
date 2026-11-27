@@ -6,6 +6,7 @@ type RestaurantCardProps = {
   name?: string;
   description?: string;
   isEco?: boolean;
+  tag?: string | null;
   featured?: boolean;
   imageSrc?: string;
   imageAlt?: string;
@@ -17,6 +18,7 @@ export const RestaurantCard = ({
   name = "Nombre del Restaurante",
   description = "Comida saludable",
   isEco = false,
+  tag,
   featured = false,
   imageSrc = "/images/image-restaurant-02.webp",
   imageAlt = "Interior del restaurante",
@@ -36,18 +38,24 @@ export const RestaurantCard = ({
           src={imageSrc}
           alt={imageAlt}
           loading="lazy"
+          onError={({ currentTarget }) => {
+            const fallback = "/images/image-restaurant-02.webp";
+            if (currentTarget.getAttribute("src") === fallback) return;
+            currentTarget.src = fallback;
+            currentTarget.alt = "Imagen ilustrativa del restaurante";
+          }}
           className="h-40 w-full object-cover rounded-[8px]"
         />
         {isEco && (
           <span className="mt-3 flex items-center gap-1 rounded-full bg-[#e6fdef] px-2 py-1 text-xs font-bold text-[#00733d]">
             <span aria-hidden="true" className="size-2.5 rounded-full bg-white" />
-            Sustentable
+            {tag?.trim() || "Sustentable"}
           </span>
         )}
         <CardTitle className={cn("mt-2 text-xl font-extrabold tracking-[0.010em] text-black", featured && "mt-3 text-[32px] leading-9")}>
           {name}
         </CardTitle>
-        <p className={cn("mt-1.5 text-xs text-[#6B6B6B]", featured && "mt-3 text-sm")}>
+        <p className={cn("mt-1.5 line-clamp-3 text-xs text-[#6B6B6B]", featured && "mt-3 text-sm")}>
           {description}
         </p>
         <Button
