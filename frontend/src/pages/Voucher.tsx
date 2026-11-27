@@ -1,8 +1,10 @@
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoucherReceipt } from "@/components/VoucherReceipt";
 import { useCartStore } from "@/context/cart-store";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { voucherSchema } from "@/schemas/voucher.schema";
+import "./Voucher.css";
 
 const formatPrice = (amount: number) =>
   new Intl.NumberFormat("es-AR", {
@@ -44,8 +46,8 @@ export default function Voucher() {
   ];
 
   return (
-    <main className="flex min-h-screen justify-center bg-[#FFFFFF] px-4 py-7 text-foreground">
-      <div className="w-full max-w-85">
+    <main className="voucher-page flex min-h-screen justify-center bg-[#FFFFFF] px-4 py-7 text-foreground">
+      <div className="voucher-screen-only w-full max-w-85">
         <h1 className="text-lg text-center font-bold text-[#000000]">Pedido Realizado con éxito</h1>
         <img src="/images/Logo_Eb-circle-green.png" alt="EcoBite" width={96} height={96} className="mx-auto mt-8 size-24 object-contain" />
         <section className="mt-4 rounded-lg border border-[#E8E8E8] bg-white px-4 py-4 shadow-[0_2px_6px_rgba(0,0,0,0.05)]">
@@ -63,7 +65,7 @@ export default function Voucher() {
         </section>
         <div className="mt-4 flex flex-col items-center gap-2">
           <Button type="button" size="xs" onClick={() => { clearCart(); navigate("/catalog"); }} className="text-xs p-4 bg-[#009951]! text-[#FFFFFF]!">Finalizar</Button>
-          <button type="button" className="cursor-pointer text-[10px] text-[#6B6B6B] underline-offset-2 hover:underline">Descargar PDF</button>
+          <button type="button" onClick={() => window.print()} className="cursor-pointer text-[10px] text-[#6B6B6B] underline-offset-2 hover:underline">Descargar PDF</button>
         </div>
         <p className="mt-4 text-center text-base font-bold text-[#009951] sm:text-lg">¡Gracias por ser parte del cambio!</p>
         <footer className="mt-8 flex flex-col items-center text-center">
@@ -72,6 +74,7 @@ export default function Voucher() {
           <p className="mt-1 text-[10px] text-[#545454]">Menores emisiones y menos residuos</p>
         </footer>
       </div>
+      <div className="voucher-print-only"><VoucherReceipt receipt={receipt} /></div>
     </main>
   );
 }
