@@ -8,7 +8,7 @@ import { MainLayout } from "@/pages/layout/MainLayout";
 import { Link, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useAuth";
 import { useDeliveryZones } from "@/hooks/useCheckout";
-import { getMobilePhoneRules, PHONE_CODES } from "@/lib/checkout-phone";
+import { ARGENTINA_MOBILE } from "@/lib/checkout-phone";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const PAYMENT_METHODS = [
@@ -67,18 +67,18 @@ export default function Checkout() {
   const destinationZoneId = editedZoneId ?? profile.data?.habitualZone?.id ?? "";
   const [editedAddress, setEditedAddress] = useState<string>();
   const direccion = editedAddress ?? profile.data?.address ?? "";
-  const [countryCode, setCountryCode] = useState("+54");
-  const [customCode, setCustomCode] = useState("");
-  const phoneCode = countryCode === "other" ? customCode : countryCode;
+  const phoneCode = "+54";
   const [celular, setCelular] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [metodoPago, setMetodoPago] = useState<PaymentMethod | null>(null);
   const [showSummary, setShowSummary] = useState(false);
-  const phoneRules = getMobilePhoneRules(phoneCode);
+  const phoneRules = ARGENTINA_MOBILE;
+  const phoneValid = new RegExp(`^(?:${phoneRules.pattern})$`).test(celular);
   const canContinue = Boolean(
     direccion.trim() && direccion.length <= 200 &&
     zones.data?.some((zone) => zone.id === destinationZoneId) &&
     /^\+[1-9][0-9]{0,2}$/.test(phoneCode) &&
-    new RegExp(`^(?:${phoneRules.pattern})$`).test(celular) && metodoPago
+    phoneValid && metodoPago
   );
 
   if (showSummary) {
@@ -105,7 +105,7 @@ export default function Checkout() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (!canContinue || !event.currentTarget.reportValidity()) return;
+            if (!event.currentTarget.reportValidity() || !canContinue) return;
             setEditedAddress(direccion.trim());
             setShowSummary(true);
           }}
@@ -160,33 +160,7 @@ export default function Checkout() {
               Celular
             </label>
             <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-              <Select required name="phoneCountry" items={PHONE_CODES} value={countryCode} onValueChange={(value) => {
-                if (value && value !== countryCode) {
-                  setCountryCode(value);
-                  setCelular("");
-                }
-              }}>
-                <SelectTrigger aria-label="País del celular" className="h-10 max-w-full"><SelectValue /></SelectTrigger>
-                <SelectContent className="w-max min-w-(--anchor-width) max-w-(--available-width)">
-                  {PHONE_CODES.map(({ value, label }) => <SelectItem key={value} value={value} className="[&>span]:min-w-0 [&>span]:shrink [&>span]:whitespace-normal">{label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {countryCode === "other" && <Input
-                type="tel"
-                aria-label="Código internacional"
-                autoComplete="tel-country-code"
-                placeholder="+ código"
-                required
-                pattern="\+[1-9][0-9]{0,2}"
-                maxLength={4}
-                title="Ingresá + seguido del código de país, por ejemplo +51."
-                value={customCode}
-                onChange={(event) => {
-                  setCustomCode(event.target.value);
-                  if (event.target.value !== customCode) setCelular("");
-                }}
-                className="h-10 w-24"
-              />}
+              <span className="flex h-10 shrink-0 items-center rounded-md border border-[#B5B5B5] bg-white px-3 text-sm text-[#2C2C2A]" aria-label="País del celular: Argentina, código +54">Argentina (+54)</span>
               <Input
                 id="checkout-phone"
                 type="tel"
@@ -198,12 +172,20 @@ export default function Checkout() {
                 pattern={phoneRules.pattern}
                 maxLength={phoneRules.maxLength}
                 title={phoneRules.help}
-                aria-describedby="checkout-phone-help"
+                aria-invalid={phoneTouched && !phoneValid ? true : undefined}
+                aria-describedby={phoneTouched && !phoneValid ? "checkout-phone-help checkout-phone-error" : "checkout-phone-help"}
+                onBlur={() => setPhoneTouched(true)}
+                onInvalid={() => setPhoneTouched(true)}
                 onChange={(event) => setCelular(event.target.value.replace(/\D/g, ""))}
                 className="h-10 min-w-40 flex-1"
               />
             </div>
             <p id="checkout-phone-help" className="mt-1 text-xs text-[#545454]">{phoneRules.help}</p>
+            {phoneTouched && !phoneValid && (
+              <p id="checkout-phone-error" role="alert" className="mt-1 text-xs text-destructive">
+                El celular debe tener 11 dígitos y empezar con 9. Por ejemplo: 91123456789, sin el +54.
+              </p>
+            )}
           </section>
 
           <section aria-labelledby="medio-pago" className="mt-9">
