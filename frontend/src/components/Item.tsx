@@ -69,7 +69,7 @@ export const Item = ({ ...product }: ItemProps) => {
 
   return (
     <Card className={cardClassName}>
-      <CardContent className="flex min-h-[415px] flex-1 flex-col items-start gap-0 p-4">
+      <CardContent className="flex flex-1 flex-col items-start gap-0 p-4">
         <img
           src={product.imageSrc ?? "/images/image-dish.png"}
           alt={product.imageAlt ?? `Imagen ilustrativa de ${product.name}`}
@@ -81,7 +81,7 @@ export const Item = ({ ...product }: ItemProps) => {
           {product.name}
         </CardTitle>
         {product.description && <p className="mt-3 mb-4 text-sm leading-5 text-[#6b6b6b]">{product.description}</p>}
-        <div className="mt-auto flex w-full items-center justify-between gap-3">
+        <div className="mt-auto flex w-full items-center justify-between gap-3 pt-4">
           <span className="text-sm font-bold text-[#00733d]">
             {priceFormat.format(product.price)}
           </span>
