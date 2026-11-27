@@ -21,10 +21,10 @@ const categoryOptions = [
   "Comida casera",
 ];
 const restaurantImages = [
-  "/images/image-restaurant-02.png",
-  "/images/image-restaurant-03.png",
-  "/images/image-restaurant.png",
-  "/images/image-dish.png",
+  "/images/image-restaurant-02.webp",
+  "/images/image-restaurant-03.webp",
+  "/images/image-restaurant.webp",
+  "/images/image-dish.webp",
 ];
 const filterClass = "mt-1.5 w-full rounded-lg border-[#545454] px-4 text-sm shadow-none data-[size=default]:h-10";
 

@@ -18,7 +18,7 @@ export const RestaurantCard = ({
   description = "Comida saludable",
   isEco = false,
   featured = false,
-  imageSrc = "/images/image-restaurant-02.png",
+  imageSrc = "/images/image-restaurant-02.webp",
   imageAlt = "Interior del restaurante",
   className,
   onView,

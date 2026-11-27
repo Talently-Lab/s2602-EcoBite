@@ -26,7 +26,7 @@ export const Item = ({ ...product }: ItemProps) => {
       restaurantName: product.restaurantName,
       name: product.name,
       price: product.price,
-      image: product.imageSrc ?? "/images/image-dish.png",
+      image: product.imageSrc ?? "/images/image-dish.webp",
     });
   };
 
@@ -41,7 +41,7 @@ export const Item = ({ ...product }: ItemProps) => {
         <CardContent className="flex min-h-[174px] flex-col justify-center gap-4 p-4 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
             <img
-              src={product.imageSrc ?? "/images/image-dish.png"}
+              src={product.imageSrc ?? "/images/image-dish.webp"}
               alt={product.imageAlt ?? `Imagen ilustrativa de ${product.name}`}
               loading="lazy"
               className="size-20 shrink-0 rounded-lg object-cover sm:size-22"
@@ -73,7 +73,7 @@ export const Item = ({ ...product }: ItemProps) => {
     <Card className={cardClassName}>
       <CardContent className="flex flex-1 flex-col items-start gap-0 p-4">
         <img
-          src={product.imageSrc ?? "/images/image-dish.png"}
+          src={product.imageSrc ?? "/images/image-dish.webp"}
           alt={product.imageAlt ?? `Imagen ilustrativa de ${product.name}`}
           loading="lazy"
           className="h-44 w-full object-cover rounded-[8px]"

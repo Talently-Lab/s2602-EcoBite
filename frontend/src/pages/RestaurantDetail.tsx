@@ -44,7 +44,7 @@ const RestaurantDetail = () => {
       </nav>
 
       <section className="mt-6 grid items-stretch gap-6 bg-white md:grid-cols-2 md:gap-8">
-        <img src="/images/image-restaurant-03.png" alt="Imagen ilustrativa del restaurante" fetchPriority="high" className="h-64 w-full rounded-xl object-cover md:h-[290px]" />
+        <img src="/images/image-restaurant-03.webp" alt="Imagen ilustrativa del restaurante" fetchPriority="high" className="h-64 w-full rounded-xl object-cover md:h-[290px]" />
         <div>
           <h1 className="text-4xl font-extrabold leading-tight text-black lg:text-5xl">{restaurant.name}</h1>
           <p className="mt-3 text-xl text-[#777]">{restaurant.category}</p>

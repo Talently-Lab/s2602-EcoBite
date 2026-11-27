@@ -8,11 +8,11 @@ type AuthMode = "login" | "register";
 
 const VISUALS: Record<AuthMode, { src: string; alt: string }> = {
   login: {
-    src: "/images/image-login.png",
+    src: "/images/image-login.webp",
     alt: "Repartidor sosteniendo cajas y café",
   },
   register: {
-    src: "/images/image-register.png",
+    src: "/images/image-register.webp",
     alt: "Repartidor en bicicleta entregando una bolsa de papel",
   },
 };

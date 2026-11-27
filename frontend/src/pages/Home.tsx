@@ -52,9 +52,9 @@ const Home = () => {
           </Button>
         </div>
         <picture>
-          <source media="(min-width: 1024px)" srcSet="/images/image-home.png" />
+          <source media="(min-width: 1024px)" srcSet="/images/image-home.webp" />
           <img
-            src="/images/image-home-02.png"
+            src="/images/image-home-02.webp"
             alt="Persona disfrutando un plato sustentable"
             fetchPriority="high"
             className="h-60 w-full rounded-2xl object-cover lg:h-full lg:min-h-60"
@@ -118,7 +118,7 @@ const Home = () => {
                 isEco={restaurant.isEco}
                 featured
                 imageAlt={index === 3 ? "Plato de comida saludable" : "Personas compartiendo una comida en un restaurante"}
-                imageSrc={["/images/image-restaurant-02.png", "/images/image-restaurant-03.png", "/images/image-restaurant.png", "/images/image-dish.png"][index]}
+                imageSrc={["/images/image-restaurant-02.webp", "/images/image-restaurant-03.webp", "/images/image-restaurant.webp", "/images/image-dish.webp"][index]}
                 onView={() => navigate(`/catalog/${restaurant.id}`)}
               />
             ))}
