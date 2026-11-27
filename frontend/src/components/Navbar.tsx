@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Menu as DropdownMenu } from "@base-ui/react/menu";
 import { ChevronDown, Menu, UserRound, X, ShoppingCart } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,17 +28,14 @@ function NavigationMenu({ label, children }: { label: ReactNode; children: React
   );
 }
 
-export const Navbar = ({ compact = false }: { compact?: boolean }) => {
+export const Navbar = () => {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const catalog = pathname.startsWith("/catalog") || pathname === "/cart";
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const menuToggle = useRef<HTMLButtonElement>(null);
   const session = useAuthStore((s) => s.session);
   const clearSession = useAuthStore((s) => s.clearSession);
   const signedIn = session !== null;
-  const reducedNavigation = compact || session?.user.role === "RESTAURANTE_ADMIN" || session?.user.role === "ADMIN_PLATAFORMA";
 
   useEffect(() => {
     if (!session) return;
@@ -89,53 +86,21 @@ export const Navbar = ({ compact = false }: { compact?: boolean }) => {
           }
         }} className={cn("w-full flex-col gap-2 border-t border-white/30 pt-4 xl:flex xl:w-auto xl:flex-1 xl:flex-row xl:items-center xl:gap-5 xl:border-0 xl:pt-0", open ? "flex" : "hidden")}>
           <li><NavLink to="/home" onClick={closeMenu} className={navigationClass}>Inicio</NavLink></li>
-          {reducedNavigation ? (
-            <>
-              <li className="xl:ml-40">
-                <button type="button" disabled title="La solicitud de alta de restaurantes estará disponible próximamente" className={cn(navigationClass, "cursor-not-allowed")}>
-                  Agregá tu restaurante <span className="sr-only">(próximamente)</span>
-                </button>
-              </li>
-              {signedIn && <li className="xl:absolute xl:right-6 xl:bottom-3"><button type="button" onClick={logout} className={cn(navigationClass, "cursor-pointer")}>Cerrar sesión</button></li>}
-            </>
-          ) : (
-            <>
-              <li>
-                {catalog ? (
-                  <NavLink to="/catalog" onClick={closeMenu} className={cn(navigationClass, "underline decoration-1 underline-offset-8")}>Restaurantes</NavLink>
-                ) : <NavigationMenu label="Restaurante">
-                  <DropdownMenu.LinkItem closeOnClick render={<NavLink to="/catalog" onClick={closeMenu} />} className={menuItemClass}>Ver restaurantes</DropdownMenu.LinkItem>
-                  {!signedIn && authLinks}
-                </NavigationMenu>}
-              </li>
-              <li><NavLink to="/orders" onClick={closeMenu} className={navigationClass}>Pedidos</NavLink></li>
-              <li><NavLink to="/my-impact" onClick={closeMenu} className={navigationClass}>Mi impacto</NavLink></li>
-              {catalog && signedIn ? <li><NavLink to="/auth" onClick={closeMenu} className={navigationClass}>¿Sos admin?</NavLink></li> : !signedIn && <li><NavigationMenu label="¿Sos admin?">{authLinks}</NavigationMenu></li>}
-              <li className="xl:ml-auto">
-                {catalog && signedIn ? (
-                  <div className="flex flex-col items-center">
-                    <span role="img" aria-label="Sesión iniciada" className="flex min-h-11 items-center justify-center px-2"><UserRound aria-hidden="true" className="size-7" /></span>
-                    <button type="button" onClick={logout} className={cn(navigationClass, "min-h-8 cursor-pointer")}>Cerrar sesión</button>
-                  </div>
-                ) : <NavigationMenu label={<span className="flex items-center gap-2"><UserRound aria-hidden="true" className="size-7" />Mi perfil</span>}>
-                  {signedIn ? (
-                    <>
-                      <DropdownMenu.LinkItem closeOnClick render={<NavLink to="/orders" onClick={closeMenu} />} className={menuItemClass}>Mis pedidos</DropdownMenu.LinkItem>
-                      <DropdownMenu.LinkItem closeOnClick render={<NavLink to="/my-impact" onClick={closeMenu} />} className={menuItemClass}>Mi impacto</DropdownMenu.LinkItem>
-                      <DropdownMenu.Item onClick={logout} className={cn(menuItemClass, "w-full")}>Cerrar sesión</DropdownMenu.Item>
-                    </>
-                  ) : authLinks}
-                </NavigationMenu>}
-              </li>
-              {totalItems > 0 && <li className={cn(catalog && signedIn && "xl:self-start")}>
-                <NavLink to="/cart" onClick={closeMenu} aria-label={totalItems > 0 ? `Mi carrito, ${totalItems} productos` : "Mi carrito"} className={cn(navigationClass, "relative justify-center")}>
-                  <ShoppingCart aria-hidden="true" className="size-6" />
-                  <span className="xl:sr-only">Mi carrito</span>
-                  {totalItems > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-white px-1 text-xs font-bold text-[#003d29]">{totalItems}</span>}
-                </NavLink>
-              </li>}
-            </>
-          )}
+          <li><NavLink to="/catalog" onClick={closeMenu} className={navigationClass}>Restaurante</NavLink></li>
+          <li className="xl:ml-auto">
+            <NavigationMenu label={<span className="flex items-center gap-2"><UserRound aria-hidden="true" className="size-7" />Mi perfil</span>}>
+              {signedIn ? (
+                <DropdownMenu.Item onClick={logout} className={cn(menuItemClass, "w-full")}>Cerrar sesión</DropdownMenu.Item>
+              ) : authLinks}
+            </NavigationMenu>
+          </li>
+          <li>
+            <NavLink to="/cart" onClick={closeMenu} aria-label={totalItems > 0 ? `Mi carrito, ${totalItems} productos` : "Mi carrito"} className={cn(navigationClass, "relative justify-center")}>
+              <ShoppingCart aria-hidden="true" className="size-6" />
+              <span className="xl:sr-only">Mi carrito</span>
+              {totalItems > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-white px-1 text-xs font-bold text-[#003d29]">{totalItems}</span>}
+            </NavLink>
+          </li>
         </ul>
       </nav>
     </header>
