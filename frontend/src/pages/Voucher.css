@@ -1,0 +1,77 @@
+.voucher-print-only { display: none; }
+.voucher-receipt {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 148mm;
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid #dfe8e2;
+  border-top: 5px solid #009951;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 32px #003d290a;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.receipt-header, .receipt-brand, .receipt-total, .receipt-payment { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.receipt-brand { justify-content: flex-start; gap: 10px; color: #003d29; font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+.receipt-brand img { width: 48px; height: 48px; flex-shrink: 0; object-fit: contain; }
+.receipt-brand span { white-space: nowrap; }
+.receipt-date { text-align: right; color: #53645a; font-size: 10px; }
+.receipt-heading { margin: 24px 0; }
+.receipt-heading h2 { margin: 0 0 4px; color: #003d29; font-size: 23px; font-weight: 750; letter-spacing: -.5px; }
+.receipt-heading > p { color: #53645a; font-size: 10px; }
+.receipt-details { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 18px 0; border-top: 1px solid #dfe8e2; border-bottom: 1px solid #dfe8e2; }
+.voucher-receipt h3 { margin: 0 0 4px; color: #53645a; font-size: 10px; font-weight: 650; letter-spacing: .6px; text-transform: uppercase; }
+.receipt-details h3:not(:first-child) { margin-top: 14px; }
+.receipt-strong { font-weight: 650; }
+.receipt-products { width: 100%; margin: 24px 0 18px; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.receipt-products caption { padding-bottom: 10px; text-align: left; color: #003d29; font-size: 13px; font-weight: 700; }
+.receipt-quantity { width: 9%; }
+.receipt-price { width: 23%; }
+.receipt-products th { padding: 9px 4px; background: #f0f6f2; color: #365342; font-size: 10px; font-weight: 650; text-align: left; }
+.receipt-products td { padding: 12px 4px; border-bottom: 1px solid #e6ece8; vertical-align: top; }
+.receipt-products th:first-child, .receipt-products td:first-child { text-align: center; }
+.receipt-products th:nth-child(n+3), .receipt-products td:nth-child(n+3) { text-align: right; }
+.receipt-products td:last-child { font-weight: 650; }
+.receipt-total { padding: 16px; border: 1px solid #ccebd9; border-radius: 10px; background: #e6fdef; color: #003d29; font-weight: 650; }
+.receipt-total strong { font-size: 26px; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.receipt-payment { margin-top: 20px; }
+.receipt-status { padding: 5px 9px; border: 1px solid #ccebd9; border-radius: 6px; color: #00733d; font-size: 10px; font-weight: 650; text-align: center; }
+.receipt-thanks { margin-top: 28px; text-align: center; color: #00733d; font-size: 13px; font-weight: 700; }
+.receipt-tagline { margin-top: 4px; text-align: center; color: #53645a; font-size: 10px; }
+
+@media (max-width: 420px) {
+  .voucher-receipt { padding: 20px 14px; font-size: 11px; }
+  .receipt-header { align-items: flex-start; gap: 10px; }
+  .receipt-brand { gap: 6px; font-size: 23px; }
+  .receipt-brand img { width: 36px; height: 36px; }
+  .receipt-date { max-width: 110px; }
+  .receipt-heading h2 { font-size: 20px; }
+  .receipt-details { gap: 14px; }
+  .receipt-total { gap: 8px; padding: 12px; }
+  .receipt-total strong { font-size: 22px; }
+}
+
+@page { size: A5 portrait; margin: 10mm; }
+
+@media print {
+  body:has(.voucher-page) { margin: 0; background: white; }
+  body:has(.voucher-page) > :not(#root) { display: none !important; }
+  body:has(.voucher-page) #root > :not(.voucher-page) { display: none !important; }
+  .voucher-page { display: block; min-height: 0; padding: 0; background: white; color: #243b30; }
+  .voucher-screen-only { display: none !important; }
+  .voucher-print-only { display: block; }
+  .voucher-receipt { max-width: none; margin: 0; padding: 0; border: 0; border-top: 1.2mm solid #009951; border-radius: 0; box-shadow: none; font-size: 10.5px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .receipt-header { padding-top: 5mm; }
+  .receipt-heading { margin: 5mm 0; }
+  .receipt-details { padding: 12px 0; break-inside: avoid; }
+  .receipt-products { margin: 18px 0 14px; }
+  .receipt-products td { padding: 9px 4px; }
+  .receipt-products thead { display: table-header-group; }
+  .receipt-products tr { break-inside: avoid; }
+  .receipt-footer { break-inside: avoid; }
+  .receipt-total { padding: 12px; }
+  .receipt-thanks { margin-top: 18px; }
+}

@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 type RestaurantCardProps = {
   name?: string;
   description?: string;
+  isEco?: boolean;
+  tag?: string | null;
+  featured?: boolean;
   imageSrc?: string;
   imageAlt?: string;
   className?: string;
@@ -14,7 +17,10 @@ type RestaurantCardProps = {
 export const RestaurantCard = ({
   name = "Nombre del Restaurante",
   description = "Comida saludable",
-  imageSrc = "/images/image-restaurant-02.png",
+  isEco = false,
+  tag,
+  featured = false,
+  imageSrc = "/images/image-restaurant-02.webp",
   imageAlt = "Interior del restaurante",
   className,
   onView,
@@ -23,30 +29,39 @@ export const RestaurantCard = ({
     <Card
       className={cn(
         "gap-0 overflow-hidden py-0 border border-[#E8E8E8]! bg-[#FFFFFF]!",
+        featured && "min-h-[360px] rounded-2xl ring-0 shadow-sm",
         className
       )}
     >
-      <CardContent className="flex flex-col items-start gap-0 px-3 py-3">
+      <CardContent className={cn("flex h-full flex-col items-start gap-0 px-3 py-3", featured && "p-4")}>
         <img
           src={imageSrc}
           alt={imageAlt}
           loading="lazy"
+          onError={({ currentTarget }) => {
+            const fallback = "/images/image-restaurant-02.webp";
+            if (currentTarget.getAttribute("src") === fallback) return;
+            currentTarget.src = fallback;
+            currentTarget.alt = "Imagen ilustrativa del restaurante";
+          }}
           className="h-40 w-full object-cover rounded-[8px]"
         />
-        {/* <span className="flex items-center gap-1 rounded-full bg-[#E6FDEF] text-[#009951] px-2 py-1 text-[11px] font-bold mt-3">
-          <span className="h-2 w-2 rounded-full bg-[#FFFFFFCC] block"/>
-          {tag}
-        </span> */}
-        <CardTitle className="text-[#000000] text-xl mt-2 font-extrabold tracking-[0.010em]">
+        {isEco && (
+          <span className="mt-3 flex items-center gap-1 rounded-full bg-[#e6fdef] px-2 py-1 text-xs font-bold text-[#00733d]">
+            <span aria-hidden="true" className="size-2.5 rounded-full bg-white" />
+            {tag?.trim() || "Sustentable"}
+          </span>
+        )}
+        <CardTitle className={cn("mt-2 text-xl font-extrabold tracking-[0.010em] text-black", featured && "mt-3 text-[32px] leading-9")}>
           {name}
         </CardTitle>
-        <p className="mt-1.5 text-xs text-[#6B6B6B]">
+        <p className={cn("mt-1.5 line-clamp-3 text-xs text-[#6B6B6B]", featured && "mt-3 text-sm")}>
           {description}
         </p>
         <Button
           type="button"
           onClick={onView}
-          className="ml-auto mt-3 px-5 py-3 text-sm rounded-[8px] bg-[#009951]! text-[#FFFFFF]!"
+          className={cn("ml-auto mt-3 rounded-lg bg-[#009951]! px-5 py-3 text-sm text-white!", featured && "h-10 font-bold")}
         >
           Ver restaurante
         </Button>

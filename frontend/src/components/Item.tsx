@@ -5,6 +5,7 @@ import { useCartStore } from "@/context/cart-store";
 import type { RestaurantProduct } from "@/types/restaurant";
 
 type ItemProps = RestaurantProduct & {
+  restaurantName: string;
   description?: string;
   imageSrc?: string;
   imageAlt?: string;
@@ -13,52 +14,55 @@ type ItemProps = RestaurantProduct & {
   className?: string;
 };
 
+const priceFormat = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
+
 export const Item = ({ ...product }: ItemProps) => {
   const addItem = useCartStore((s) => s.addItem);
 
   const handleAddToCart = () => {
+    if (!product.available) return;
     addItem({
       productId: product.id,
+      restaurantName: product.restaurantName,
       name: product.name,
       price: product.price,
-      image: product.imageSrc ?? "/images/image-dish.png",
+      image: product.imageSrc ?? "/images/image-dish.webp",
     });
   };
 
   const cardClassName = cn(
-    "gap-0 overflow-hidden py-0 border border-[#E8E8E8]! bg-[#FFFFFF]!",
+    "gap-0 overflow-hidden rounded-2xl border border-[#e8e8e8]! bg-white! py-0 ring-0 shadow-sm",
     product.className
   );
 
   if (product.layout === "horizontal") {
     return (
       <Card className={cardClassName}>
-        <CardContent className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:gap-4">
+        <CardContent className="flex min-h-[174px] flex-col justify-center gap-4 p-4 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
             <img
-              src={'/images/image-dish.png'}
-              alt={'Bowl saludable con garbanzos, palta y vegetales frescos'}
+              src={product.imageSrc ?? "/images/image-dish.webp"}
+              alt={product.imageAlt ?? `Imagen ilustrativa de ${product.name}`}
               loading="lazy"
-              className="h-20 w-20 shrink-0 rounded-lg object-cover sm:h-24 sm:w-24"
+              className="size-20 shrink-0 rounded-lg object-cover sm:size-22"
             />
             <div className="flex min-w-0 flex-1 flex-col">
-              <CardTitle className="text-[#000000] text-base font-extrabold tracking-[0.010em] sm:text-lg">
+              <CardTitle className="text-xl font-bold leading-6 text-[#2c2c2a]">
                 {product.name}
               </CardTitle>
-              <p className="mt-1 text-sm text-[#6B6B6B]">
-                {product.description}
-              </p>
-              <span className="mt-2 text-base font-extrabold text-[#009951]">
-                $ {product.price}
+              {product.description && <p className="mt-1 text-sm text-[#6b6b6b]">{product.description}</p>}
+              <span className="mt-3 text-sm font-bold text-[#00733d]">
+                {priceFormat.format(product.price)}
               </span>
             </div>
           </div>
           <Button
             type="button"
             onClick={handleAddToCart}
-            className="w-full py-3 text-sm rounded-[8px] bg-[#009951]! text-[#FFFFFF]! sm:w-auto sm:shrink-0 sm:px-5"
+            disabled={!product.available}
+            className="h-10 w-full rounded-lg bg-[#009951]! text-sm font-bold text-white! sm:w-auto sm:shrink-0 sm:px-6"
           >
-            Agregar
+            {product.available ? "Agregar" : "No disponible"}
           </Button>
         </CardContent>
       </Card>
@@ -67,33 +71,29 @@ export const Item = ({ ...product }: ItemProps) => {
 
   return (
     <Card className={cardClassName}>
-      <CardContent className="flex-1 flex flex-col items-start gap-0 px-3 py-3">
+      <CardContent className="flex flex-1 flex-col items-start gap-0 p-4">
         <img
-          src={'/images/image-dish.png'}
-          alt={'Bowl saludable con garbanzos, palta y vegetales frescos'}
+          src={product.imageSrc ?? "/images/image-dish.webp"}
+          alt={product.imageAlt ?? `Imagen ilustrativa de ${product.name}`}
           loading="lazy"
           className="h-44 w-full object-cover rounded-[8px]"
         />
-        <span className="flex items-center gap-1 rounded-full bg-[#E6FDEF] text-[#009951] px-2 py-1 text-[11px] font-bold mt-3">
-          <span className="h-2 w-2 rounded-full bg-[#FFFFFFCC] block" />
-          {product.tag}
-        </span>
-        <CardTitle className="text-[#000000] text-lg md:text-xl font-extrabold tracking-[0.010em]">
+        {product.tag && <span className="mt-3 rounded-full bg-[#ffdbb2] px-2 py-1 text-sm font-bold text-black">{product.tag}</span>}
+        <CardTitle className="mt-3 text-xl font-bold leading-6 text-black">
           {product.name}
         </CardTitle>
-        <p className="my-1.5 text-xs text-[#6B6B6B]">
-          {product.description || "Sin descripción"}
-        </p>
-        <div className="mt-auto flex w-full items-center justify-between gap-3">
-          <span className="text-lg font-extrabold text-[#2C2C2A]">
-            $ {product.price}
+        {product.description && <p className="mt-3 mb-4 text-sm leading-5 text-[#6b6b6b]">{product.description}</p>}
+        <div className="mt-auto flex w-full items-center justify-between gap-3 pt-4">
+          <span className="text-sm font-bold text-[#00733d]">
+            {priceFormat.format(product.price)}
           </span>
           <Button
             type="button"
             onClick={handleAddToCart}
-            className="px-5 py-3 text-sm rounded-[8px] bg-[#009951]! text-[#FFFFFF]!"
+            disabled={!product.available}
+            className="h-10 rounded-lg bg-[#009951]! px-6 text-sm font-bold text-white!"
           >
-            Agregar
+            {product.available ? "Agregar" : "No disponible"}
           </Button>
         </div>
       </CardContent>

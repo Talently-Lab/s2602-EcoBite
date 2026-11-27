@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -10,78 +12,74 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRestaurants } from "@/hooks/useRestaurants";
-import { useZones } from "@/hooks/useFilters";
 import { MainLayout } from "@/pages/layout/MainLayout";
 
 const categoryOptions = [
-  { value: "COMIDA_SALUDABLE", label: "Comida saludable" },
-  { value: "COMIDA_DE_ESTACION", label: "Cocina de estación" },
-  { value: "COMIDA_VEGANA", label: "Comida vegana" },
-  { value: "COMIDA_CASERA", label: "Comida casera" },
+  "Comida saludable",
+  "Comida de estación",
+  "Comida vegana",
+  "Comida casera",
 ];
+const restaurantImages = [
+  "/images/image-restaurant-02.webp",
+  "/images/image-restaurant-03.webp",
+  "/images/image-restaurant.webp",
+  "/images/image-dish.webp",
+];
+const filterClass = "mt-1.5 w-full rounded-lg border-[#545454] px-4 text-sm shadow-none data-[size=default]:h-10";
 
 const Catalog = () => {
   const { restaurants, loading, error, refetch } = useRestaurants();
-  const { zones } = useZones();
   const navigate = useNavigate();
-  const [cuisine, setCuisine] = useState("Todos");
-  const [zone, setZone] = useState("Todos");
-
+  const [search, setSearch] = useState("");
+  const [cuisine, setCuisine] = useState<string | null>(null);
+  const [tag, setTag] = useState<string | null>(null);
+  const tags = [...new Set(restaurants.filter((restaurant) => restaurant.isEco).map((restaurant) => restaurant.tag?.trim() || "Sustentable"))];
   const filteredRestaurants = restaurants.filter(
     (restaurant) =>
-      (zone === "Todos" || restaurant.zone.name === zone) &&
-      (cuisine === "Todos" || restaurant.category === cuisine),
+      restaurant.name.toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) &&
+      (!cuisine || cuisine === "Todos" || restaurant.category === cuisine) &&
+      (!tag || tag === "Todas" || (restaurant.isEco && (restaurant.tag?.trim() || "Sustentable") === tag)),
   );
 
   return (
-    <MainLayout>
+    <MainLayout spacious>
       <section>
-        <h1 className="text-3xl font-bold tracking-tight text-[#2C2C2A]">Restaurantes</h1>
-        <p className="mt-1 text-[#2C2C2A]">
-          Encontrá restaurantes y conocé qué prácticas ambientales implementan.
+        <h1 className="text-[32px] font-bold leading-10 text-[#2c2c2a]">Restaurantes</h1>
+        <p className="mt-2 text-xl leading-7 text-[#2c2c2a]">
+          Encontrá restaurantes y comé saludable.
         </p>
-        <div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 mt-4">
+
+        <div className="relative mt-8">
+          <label htmlFor="restaurant-search" className="sr-only">Buscar restaurantes por nombre</label>
+          <Search aria-hidden="true" className="pointer-events-none absolute top-3 left-4 size-4 text-[#8c8c8c]" />
+          <Input id="restaurant-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Escribí acá..." className="h-10 rounded-lg border-[#545454] pl-10 text-sm placeholder:text-sm" />
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-sm font-bold text-[#2c2c2a]">Filtrá por:</h2>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:w-[588px]">
             <div>
-              <label htmlFor="filter-category" className="text-[13px] text-[#0A0D0A]">
-                Categoria
-              </label>
-              <Select
-                value={cuisine}
-                onValueChange={(value) => setCuisine(value ?? "Todos")}
-              >
-                <SelectTrigger id="filter-category" className="rounded-lg w-full mt-1">
-                  <SelectValue placeholder="Selecciona aqui..." />
+              <label htmlFor="filter-category" className="text-sm text-[#2c2c2a]">Categoría</label>
+              <Select value={cuisine} onValueChange={setCuisine}>
+                <SelectTrigger id="filter-category" className={filterClass}>
+                  <SelectValue placeholder="Escribí acá..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {categoryOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.label}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="Todos">Todas las categorías</SelectItem>
+                  {categoryOptions.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
-              <label htmlFor="filter-zone" className="text-[13px] text-[#0A0D0A]">
-                Zona
-              </label>
-              <Select
-                value={zone}
-                onValueChange={(value) => setZone(value ?? "Todos")}
-              >
-                <SelectTrigger id="filter-zone" className="rounded-lg w-full mt-1">
-                  <SelectValue placeholder="Selecciona aqui..." />
+              <label htmlFor="filter-tag" className="text-sm text-[#2c2c2a]">Etiqueta</label>
+              <Select value={tag} onValueChange={setTag}>
+                <SelectTrigger id="filter-tag" className={filterClass}>
+                  <SelectValue placeholder="Escribí acá..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {zones.map((opt) => (
-                    <SelectItem key={opt.id} value={opt.name}>
-                      {opt.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="Todas">Todas las etiquetas</SelectItem>
+                  {tags.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -89,41 +87,33 @@ const Catalog = () => {
         </div>
 
         <div className="mt-8">
-          <h2 className="text-2xl font-normal tracking-tight text-[#2C2C2A]">Restaurantes destacados</h2>
-
+          <h2 className="text-[26px] font-normal leading-8 text-[#2c2c2a]">Restaurantes destacados</h2>
           {loading && (
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-80 animate-pulse rounded-2xl bg-[#2C2C2A]/30" />
-              ))}
+            <div role="status" aria-label="Cargando restaurantes" className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-90 animate-pulse rounded-2xl bg-[#2c2c2a]/10" />)}
             </div>
           )}
-
           {error && (
-            <div
-              role="alert"
-              className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#AEACAC] bg-white p-6 text-center sm:flex-row sm:justify-between sm:text-left"
-            >
-              <p className="text-sm text-destructive">ERROR</p>
-              <Button type="button" onClick={() => refetch()} className="cursor-pointer bg-[#009951]! text-[#FFFFFF]!">
-                Reintentar
-              </Button>
+            <div role="alert" className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-[#aeacac] bg-white p-6 text-center sm:flex-row sm:justify-between sm:text-left">
+              <p className="text-sm text-destructive">No pudimos cargar los restaurantes. Intentá nuevamente.</p>
+              <Button type="button" onClick={() => refetch()} className="bg-[#009951]! text-white!">Reintentar</Button>
             </div>
           )}
-
           {!error && !loading && filteredRestaurants.length === 0 && (
-            <p className="my-24 text-center text-sm text-[#545454]">
-              No se encontraron restaurantes.
-            </p>
+            <p role="status" className="my-24 text-center text-sm text-[#545454]">No se encontraron restaurantes.</p>
           )}
-
-          {!loading && filteredRestaurants.length > 0 && (
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {!error && !loading && filteredRestaurants.length > 0 && (
+            <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
               {filteredRestaurants.map((restaurant) => (
                 <RestaurantCard
                   key={restaurant.id}
                   name={restaurant.name}
-                  description={restaurant.category}
+                  description={restaurant.description?.trim() || restaurant.category}
+                  isEco={restaurant.isEco}
+                  tag={restaurant.tag}
+                  featured
+                  imageSrc={restaurant.imageUrl?.trim() || restaurantImages[restaurants.indexOf(restaurant) % restaurantImages.length]}
+                  imageAlt={restaurant.imageUrl?.trim() ? restaurant.name : "Imagen ilustrativa del restaurante"}
                   onView={() => navigate(`/catalog/${restaurant.id}`)}
                 />
               ))}

@@ -1,164 +1,108 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Menu, User, X, ShoppingCart } from "lucide-react";
+import { Menu as DropdownMenu } from "@base-ui/react/menu";
+import { ChevronDown, Menu, UserRound, X, ShoppingCart } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/context/cart-store";
+import { useAuthStore } from "@/context/auth-store";
 
-const links = [
-  { to: "/home", label: "Inicio" },
-  { to: "/catalog", label: "Restaurantes" },
-  // { to: "/orders", label: "Pedidos" },
-  // { to: "/my-impact", label: "Mi impacto" },
-];
+const navigationClass = "flex min-h-11 items-center gap-2 rounded-sm px-2 text-base font-bold text-white hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white";
+const menuItemClass = "block cursor-pointer px-5 py-2 text-center text-sm text-[#161616] outline-none hover:bg-black/10 data-highlighted:bg-black/10";
+
+function NavigationMenu({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <DropdownMenu.Root modal={false}>
+      <DropdownMenu.Trigger openOnHover className={cn(navigationClass, "group w-full cursor-pointer justify-between")}>
+        {label}
+        <ChevronDown aria-hidden="true" className="size-5 transition-transform group-data-popup-open:rotate-180" />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Positioner sideOffset={0} align="start" className="z-60">
+          <DropdownMenu.Popup className="min-w-36 bg-[#e8e8e8] py-1 shadow-sm outline-none">
+            {children}
+          </DropdownMenu.Popup>
+        </DropdownMenu.Positioner>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
 
 export const Navbar = () => {
   const navigate = useNavigate();
-  const [open, setOpen] = useState<boolean>(false);
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const menuToggle = useRef<HTMLButtonElement>(null);
+  const session = useAuthStore((s) => s.session);
+  const clearSession = useAuthStore((s) => s.clearSession);
+  const signedIn = session !== null;
+
+  useEffect(() => {
+    if (!session) return;
+    const remaining = session.expiresAt - Date.now();
+    if (remaining <= 0) {
+      clearSession();
+      return;
+    }
+    const timeout = window.setTimeout(clearSession, remaining);
+    return () => window.clearTimeout(timeout);
+  }, [session, clearSession]);
   const totalItems = useCartStore((s) =>
     s.items.reduce((acc, item) => acc + item.quantity, 0)
   );
+  const closeMenu = () => setOpen(false);
+  const logout = () => {
+    clearSession();
+    queryClient.clear();
+    closeMenu();
+    navigate("/home");
+  };
+  const authLinks = (
+    <>
+      <DropdownMenu.LinkItem closeOnClick render={<NavLink to="/auth" onClick={closeMenu} />} className={menuItemClass}>
+        Iniciá sesión
+      </DropdownMenu.LinkItem>
+      <DropdownMenu.LinkItem closeOnClick render={<NavLink to="/auth?mode=register" onClick={closeMenu} />} className={menuItemClass}>
+        Registrate
+      </DropdownMenu.LinkItem>
+    </>
+  );
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#009951] border border-b-white">
-      <nav
-        aria-label="Navegación principal"
-        className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
-      >
-        {/* Izquierda: logo + links desktop */}
-        <div className="flex min-w-0 items-center gap-8">
-          <NavLink to="/home" className="flex shrink-0 items-center" aria-label="EcoBite - inicio">
-            <img
-              src="/images/logo-eco-02.png"
-              alt="EcoBite"
-              width={454}
-              height={115}
-              fetchPriority="high"
-              className="h-8 w-auto object-contain"
-            />
-          </NavLink>
+    <header className="sticky top-0 z-50 w-full bg-[#009951] text-white">
+      <nav aria-label="Navegación principal" className="relative mx-auto flex min-h-24 max-w-[1248px] flex-wrap items-center justify-between gap-x-8 px-5 py-5 sm:px-6 xl:min-h-29 xl:flex-nowrap xl:gap-x-12">
+        <NavLink to="/home" onClick={closeMenu} className="shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" aria-label="EcoBite - inicio">
+          <img src="/images/logo-eco-02.png" alt="EcoBite" width={454} height={115} fetchPriority="high" className="h-auto w-42 object-contain" />
+        </NavLink>
 
-          <ul className="hidden items-center gap-7 lg:flex">
-            {links.map((link) => (
-              <li key={link.label}>
-                <NavLink
-                  to={link.to}
-                  className={({ isActive }) =>
-                    cn(
-                      "relative pb-1 text-sm font-medium text-[#FFFFFF] transition-colors hover:text-[#FFFFFF]",
-                      isActive && "text-[#FFFFFF] after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-[#FFFFFF]"
-                    )
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <button ref={menuToggle} type="button" onClick={() => setOpen((value) => !value)} aria-controls="main-navigation" aria-expanded={open} aria-label={open ? "Cerrar menú" : "Abrir menú"} className={cn(navigationClass, "cursor-pointer xl:hidden")}>
+          {open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+        </button>
 
-        {/* Derecha desktop */}
-        <div className="hidden items-center gap-5 lg:flex text-[#FFFFFF]">
-          <button
-            type="button"
-            aria-label={
-              totalItems > 0
-                ? `Mi carrito, ${totalItems} productos`
-                : "Mi carrito"
-            }
-            onClick={() => navigate("/cart")}
-            className="relative grid size-9 place-items-center rounded-md transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
-          >
-            <ShoppingCart className="size-6 font-bold" color="white" aria-hidden="true" />
-            {totalItems > 0 && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-[#FFFFFF] px-1 py-0.5 text-[10px] font-bold leading-none text-[#003D29] tabular-nums"
-              >
-                {totalItems}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            aria-label="Mi cuenta"
-            onClick={() => navigate('/auth')}
-            className="grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
-          >
-            <User className="size-6 font-bold" color="#FFFFFF" aria-hidden="true" />
-          </button>
-        </div>
-
-        {/* Botón hamburguesa */}
-        <Button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          className="bg-transparent! cursor-pointer grid size-10 place-items-center rounded-md text-[#FFFFFF]! transition-colors lg:hidden"
-        >
-          {open ? <X className="size-6" aria-hidden="true" /> : <Menu className="size-8" aria-hidden="true" />}
-        </Button>
+        <ul id="main-navigation" onKeyDown={(event) => {
+          if (event.key === "Escape" && open && !event.defaultPrevented) {
+            closeMenu();
+            menuToggle.current?.focus();
+          }
+        }} className={cn("w-full flex-col gap-2 border-t border-white/30 pt-4 xl:flex xl:w-auto xl:flex-1 xl:flex-row xl:items-center xl:gap-5 xl:border-0 xl:pt-0", open ? "flex" : "hidden")}>
+          <li><NavLink to="/home" onClick={closeMenu} className={navigationClass}>Inicio</NavLink></li>
+          <li><NavLink to="/catalog" onClick={closeMenu} className={navigationClass}>Restaurante</NavLink></li>
+          <li className="xl:ml-auto">
+            <NavigationMenu label={<span className="flex items-center gap-2"><UserRound aria-hidden="true" className="size-7" />Mi perfil</span>}>
+              {signedIn ? (
+                <DropdownMenu.Item onClick={logout} className={cn(menuItemClass, "w-full")}>Cerrar sesión</DropdownMenu.Item>
+              ) : authLinks}
+            </NavigationMenu>
+          </li>
+          <li>
+            <NavLink to="/cart" onClick={closeMenu} aria-label={totalItems > 0 ? `Mi carrito, ${totalItems} productos` : "Mi carrito"} className={cn(navigationClass, "relative justify-center")}>
+              <ShoppingCart aria-hidden="true" className="size-6" />
+              <span className="xl:sr-only">Mi carrito</span>
+              {totalItems > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-white px-1 text-xs font-bold text-[#003d29]">{totalItems}</span>}
+            </NavLink>
+          </li>
+        </ul>
       </nav>
-
-      {/* Panel mobile */}
-      <div
-        className={cn(
-          "grid overflow-hidden border-[#FFFFFF]/60 transition-[grid-template-rows,border] duration-300 lg:hidden",
-          open ? "grid-rows-[1fr] border-t" : "grid-rows-[0fr] border-t-0"
-        )}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <ul className="space-y-1 px-4 py-4 sm:px-6">
-            {links.map((link) => (
-              <li key={link.label}>
-                <NavLink
-                  to={link.to}
-                  onClick={() => setOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      "block rounded-md px-3 py-2.5 text-sm font-medium text-white transition-colors",
-                      isActive && "bg-[#FFFFFF]/20 text-white"
-                    )
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              </li>
-            ))}
-            <li className="flex items-center justify-end gap-3 px-3 pt-3">
-              <button
-                type="button"
-                aria-label={
-                  totalItems > 0
-                    ? `Mi carrito, ${totalItems} productos`
-                    : "Mi carrito"
-                }
-                onClick={() => navigate('/cart')}
-                className="relative grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
-              >
-                <ShoppingCart className="size-6 font-bold" color="white" aria-hidden="true" />
-                {totalItems > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-[#FFFFFF] px-1 py-0.5 text-[10px] font-bold leading-none text-[#003D29] tabular-nums"
-                  >
-                    {totalItems}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                aria-label="Mi cuenta"
-                onClick={() => navigate('/auth')}
-                className="grid size-9 place-items-center rounded-full transition-colors hover:bg-[#FFFFFF]/20 cursor-pointer"
-              >
-                <User className="size-6 font-bold" color="white" aria-hidden="true" />
-              </button>
-            </li>
-          </ul>
-        </div>
-      </div>
     </header>
   );
 };

@@ -14,6 +14,9 @@ export type AllRestaurants = {
   name: string;
   category: string;
   isEco: boolean;
+  description: string | null;
+  imageUrl: string | null;
+  tag: string | null;
   zone: Zone;
 };
 
@@ -35,11 +38,6 @@ export type RestaurantProduct = {
   available: boolean;
 };
 
-export type RestaurantDetail = {
-  id: string;
-  name: string;
-  category: string;
-  isEco: boolean;
-  zone: Zone;
+export type RestaurantDetail = AllRestaurants & {
   products: RestaurantProduct[];
 };

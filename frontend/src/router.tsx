@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy } from "react";
+import { RouteMetadata } from "@/components/RouteMetadata";
 
 const Home = lazy(() => import("@/pages/Home"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -13,15 +14,20 @@ const Checkout = lazy(() => import('@/pages/Checkout'))
 const Voucher = lazy(() => import('@/pages/Voucher'))
 
 export const mainRouter = createBrowserRouter([
-  { path: "/", element: <Navigate to="/catalog" replace /> },
-  { path: "/home", element: <Home /> },
-  { path: "/catalog", element: <Catalog /> },
-  { path: "/catalog/:id", element: <RestaurantDetail /> },
-  { path: "/auth", element: <Auth /> },
-  { path: "/orders", element: <Orders /> },
-  { path: "/my-impact", element: <MyImpact /> },
-  { path: "/cart", element: <ShoppingCart /> },
-  { path: "/checkout", element: <Checkout /> },
-  { path: "/voucher/:id", element: <Voucher /> },
-  { path: "*", element: <NotFound /> }
+  {
+    element: <RouteMetadata />,
+    children: [
+      { path: "/", element: <Navigate to="/catalog" replace /> },
+      { path: "/home", element: <Home /> },
+      { path: "/catalog", element: <Catalog /> },
+      { path: "/catalog/:id", element: <RestaurantDetail /> },
+      { path: "/auth", element: <Auth /> },
+      { path: "/orders", element: <Orders /> },
+      { path: "/my-impact", element: <MyImpact /> },
+      { path: "/cart", element: <ShoppingCart /> },
+      { path: "/checkout", element: <Checkout /> },
+      { path: "/voucher/:id", element: <Voucher /> },
+      { path: "*", element: <NotFound /> }
+    ],
+  },
 ])

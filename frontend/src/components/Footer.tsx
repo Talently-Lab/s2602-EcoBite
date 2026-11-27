@@ -1,48 +1,50 @@
+import { Link } from "react-router-dom";
+
 type FooterLink = {
   label: string;
-  href: string;
+  href?: string;
 };
 
 const productos: FooterLink[] = [
-  { label: "Global Payroll", href: "#" },
-  { label: "Employer of Record", href: "#" },
-  { label: "PEO (US)", href: "#" },
-  { label: "Contractor Management", href: "#" },
+  { label: "Restaurantes", href: "/catalog" },
+  { label: "Mis pedidos", href: "/orders" },
+  { label: "Mi impacto", href: "/my-impact" },
+  { label: "Opciones sustentables", href: "/catalog" },
 ];
 
 const recursos: FooterLink[] = [
-  { label: "Blog", href: "#" },
-  { label: "Help center", href: "#" },
-  { label: "Security", href: "#" },
-  { label: "Changelog", href: "#" },
+  { label: "Blog" },
+  { label: "Ayuda" },
+  { label: "Seguridad" },
+  { label: "Novedades" },
 ];
 
-const developers: FooterLink[] = [
-  { label: "API Reference", href: "#" },
-  { label: "MCP Server", href: "#" },
-  { label: "CLI", href: "#" },
-  { label: "Status", href: "#" },
+const comunidad: FooterLink[] = [
+  { label: "Restaurantes", href: "/catalog" },
+  { label: "Repartidores" },
+  { label: "Aliados" },
+  { label: "Estado" },
 ];
 
 const compania: FooterLink[] = [
-  { label: "About", href: "#" },
-  { label: "Careers", href: "#" },
-  { label: "Newsroom", href: "#" },
-  { label: "Contact", href: "#" },
+  { label: "Nosotros" },
+  { label: "Sumate" },
+  { label: "Novedades" },
+  { label: "Contacto" },
 ];
 
 const soluciones: FooterLink[] = [
-  { label: "Startups", href: "#" },
-  { label: "Mid-Market", href: "#" },
-  { label: "Enterprise", href: "#" },
-  { label: "Partners", href: "#" },
+  { label: "Envases" },
+  { label: "Envíos" },
+  { label: "Impacto", href: "/my-impact" },
+  { label: "Alianzas" },
 ];
 
 const legal: FooterLink[] = [
-  { label: "Privacy policy", href: "#" },
-  { label: "Cookie Policy", href: "#" },
-  { label: "Terms of Use", href: "#" },
-  { label: "Disclaimer", href: "#" },
+  { label: "Privacidad" },
+  { label: "Cookies" },
+  { label: "Términos" },
+  { label: "Legales" },
 ];
 
 const socials = [
@@ -66,17 +68,17 @@ const socials = [
 
 const FooterGroup = ({ title, links }: { title: string; links: FooterLink[] }) => (
   <div>
-    <h3 className="text-base font-bold text-[#B9FFE9] sm:text-lg">{title}</h3>
-    <ul className="mt-2 space-y-2">
+    <h3 className="text-2xl font-bold text-[#B9FFE9] lg:text-[28px]">{title}</h3>
+    <ul className="mt-6 space-y-4 lg:mt-10 lg:space-y-5">
       {links.map((link) => (
         <li key={link.label}>
-          <a
-            href={link.href}
-            onClick={(event) => event.preventDefault()}
-            className="font-semibold text-sm text-[#B9FFE9] transition-colors hover:text-[#8AD9B4]"
-          >
-            {link.label}
-          </a>
+          {link.href ? (
+            <Link to={link.href} className="text-base font-medium text-[#b9ffe9] lg:text-[22px] lg:leading-7 underline-offset-4 hover:underline focus-visible:underline">
+              {link.label}
+            </Link>
+          ) : (
+            <span title="Próximamente" className="text-base font-medium text-[#b9ffe9] lg:text-[22px] lg:leading-7">{link.label}</span>
+          )}
         </li>
       ))}
     </ul>
@@ -86,74 +88,69 @@ const FooterGroup = ({ title, links }: { title: string; links: FooterLink[] }) =
 export const Footer = () => {
   return (
     <footer className="w-full bg-[#00361C]! text-white">
-      <div className="mx-auto w-full max-w-7xl px-4 pt-10 pb-6 sm:px-6 sm:pt-12 sm:pb-8">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-3">
-          <div className="space-y-9 sm:space-y-10">
+      <div className="mx-auto w-full max-w-[1248px] px-4 pt-12 pb-16 sm:px-6 lg:pt-14 lg:pb-28">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-[1.4fr_1fr_2.2fr] lg:gap-x-0">
+          <div className="space-y-12">
             <FooterGroup title="Productos" links={productos} />
             <FooterGroup title="Recursos" links={recursos} />
           </div>
 
-          <div className="space-y-9 sm:space-y-10">
-            <FooterGroup title="Developers" links={developers} />
+          <div className="space-y-12">
+            <FooterGroup title="Comunidad" links={comunidad} />
             <FooterGroup title="Compañía" links={compania} />
           </div>
 
-          <div className="col-span-2 grid grid-cols-2 gap-x-6 gap-y-9 sm:gap-x-8 sm:gap-y-10 lg:col-span-1 lg:block lg:space-y-10">
+          <div className="col-span-2 grid grid-cols-2 gap-x-6 gap-y-9 sm:gap-x-8 sm:gap-y-10 lg:col-span-1 lg:block lg:space-y-12">
             <FooterGroup title="Soluciones" links={soluciones} />
 
             <div>
-              <h3 className="text-base font-bold text-[#B9FFE9] sm:text-lg">Socials</h3>
-              <div className="mt-4 flex items-center gap-3 sm:mt-5 sm:gap-5">
+              <h3 className="text-2xl font-bold text-[#B9FFE9] lg:text-[28px]">Redes</h3>
+              <div className="mt-8 flex items-center gap-5 lg:mt-14 lg:gap-8">
                 {socials.map((social) => (
-                  <a
+                  <span
                     key={social.label}
-                    href="#"
-                    aria-label={social.label}
-                    onClick={(event) => event.preventDefault()}
+                    role="img"
+                    aria-label={`${social.label} (próximamente)`}
+                    title="Próximamente"
                     className="text-[#57B58C] transition-colors hover:text-[#8AD9B4]"
                   >
                     <svg
                       viewBox="0 0 24 24"
                       fill="#B9FFE9"
                       aria-hidden="true"
-                      className="size-6 sm:size-8"
+                      className="size-8 lg:size-12"
                     >
                       <path d={social.path} />
                     </svg>
-                  </a>
+                  </span>
                 ))}
               </div>
 
               <nav
                 aria-label="Legal"
-                className="mt-5 flex flex-wrap gap-x-4 gap-y-2 sm:mt-7 sm:gap-x-5"
+                className="mt-10 flex flex-wrap justify-between gap-x-4 gap-y-3 lg:mt-16"
               >
                 {legal.map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    onClick={(event) => event.preventDefault()}
-                    className="text-xs text-[#B9FFE9E5]/90 transition-colors hover:text-[#8AD9B4] sm:text-sm"
-                  >
+                  <span key={link.label} title="Próximamente" className="text-sm text-[#b9ffe9] lg:text-xl">
                     {link.label}
-                  </a>
+                  </span>
                 ))}
               </nav>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center sm:mt-14">
+        <div className="mt-16 flex flex-col items-center lg:mt-24">
           <img
             src="/images/logo-eco-dark.png"
             alt="EcoBite"
             width={1201}
             height={215}
             loading="lazy"
-            className="w-full max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-5xl"
+            className="w-full"
           />
-          <p className="mt-2 text-center text-sm font-semibold text-[#4FAF86] sm:text-lg">
-            © 2026 ecobite Inc. All rights reserved
+          <p className="mt-6 text-center text-base font-semibold text-[#65b695] lg:text-[30px]">
+            © 2026 ecobite. Derechos reservados
           </p>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import { ChevronsLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordField } from "@/components/PasswordField";
@@ -43,15 +45,18 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
   };
 
   return (
-    <section className="min-h-153.25 w-full rounded-lg border border-[#00733D]/40 bg-[#FFFFFF] px-6 py-8 shadow-xs sm:px-12">
-      <p className="text-xs font-bold text-[#00733D] max-w-70">
+    <section className="relative flex min-h-[740px] w-full flex-col rounded-lg border border-[#00733D]/50 bg-white px-6 py-10 shadow-[0_0_48px_0_#00000008] sm:px-[77px] sm:py-14">
+      <Link to="/home" aria-label="Volver al inicio" className="mb-4 w-fit rounded-sm text-[#008647] focus-visible:outline-2 focus-visible:outline-offset-4 sm:absolute sm:top-[60px] sm:left-6 sm:mb-0">
+        <ChevronsLeft aria-hidden="true" className="size-6" />
+      </Link>
+      <p className="max-w-[330px] text-sm leading-[17px] text-[#00733D]">
         Creá tu cuenta y descubrí restaurantes locales con opciones de delivery de menor impacto ambiental.
       </p>
-      <h1 className="mt-2 text-2xl text-[#000000] font-bold leading-tight tracking-tight">
+      <h1 className="mt-1 text-[32px] font-bold leading-[48px] tracking-tight text-black sm:text-[40px]">
         Crear mi cuenta
       </h1>
       <form
-        className="mt-6 flex flex-col gap-4"
+        className="mt-10 flex flex-1 flex-col gap-6 sm:mt-12 [&_label]:text-sm [&_input]:h-12 [&_input]:rounded-md [&_input]:px-5"
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
@@ -61,7 +66,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
           </p>
         )}
         <div>
-          <label htmlFor="register-email" className="mb-1.5 block text-xs font-bold text-[#000000]">
+          <label htmlFor="register-email" className="mb-2 block text-sm font-bold text-[#000000]">
             Email
           </label>
           <Input
@@ -81,13 +86,13 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
         </div>
 
         <div>
-          <label htmlFor="register-username" className="mb-1.5 block text-xs font-bold text-[#000000]">
-            Usuario
+          <label htmlFor="register-username" className="mb-2 block text-sm font-bold text-[#000000]">
+            Nombre
           </label>
           <Input
             id="register-username"
             type="text"
-            autoComplete="username"
+            autoComplete="name"
             placeholder="¿Cómo te llamás?"
             aria-invalid={errors.name ? true : undefined}
             className="h-10 border-[#00733D]/50 bg-[#FFFFFF]"
@@ -102,6 +107,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
 
         <PasswordField
           id="register-password"
+          className="h-12"
           label="Contraseña"
           autoComplete="new-password"
           placeholder="Mínimo 8 caracteres"
@@ -111,6 +117,7 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
 
         <PasswordField
           id="register-confirm-password"
+          className="h-12"
           label="Confirmar contraseña"
           autoComplete="new-password"
           placeholder="Mínimo 8 caracteres"
@@ -121,20 +128,20 @@ export const RegisterForm = ({ onSwitchToLogin }: props) => {
         <Button
           type="submit"
           disabled={registerHook.isPending}
-          className="mt-6 h-10 w-full rounded-md font-semibold bg-[#009951]! text-[#FFFFFF]!"
+          className="mt-auto h-8 w-full rounded-lg bg-[#009951]! text-sm font-bold text-white!"
         >
-          {registerHook.isPending ? "Creando cuenta…" : "Crear cuenta"}
+          {registerHook.isPending ? "Creando cuenta…" : "Registrarme"}
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-[#4D4D4D]">
+      <p className="mt-8 text-center text-sm text-black">
         ¿Ya tenés cuenta?{" "}
         <button
           type="button"
           onClick={onSwitchToLogin}
           className="cursor-pointer font-bold text-[#00733D] underline-offset-4"
         >
-          Creá la tuya.
+          Iniciá sesión
         </button>
       </p>
     </section>
