@@ -21,7 +21,6 @@ const ShoppingCart = () => {
   const decrease = useCartStore((s) => s.decrease);
   const removeItem = useCartStore((s) => s.removeItem);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = items.length > 0 ? 1479 : 0;
 
   return (
     <MainLayout spacious>
@@ -31,24 +30,7 @@ const ShoppingCart = () => {
         <span aria-current="page" className="font-bold">Carrito</span>
       </nav>
 
-      <section aria-labelledby="impact-heading" className="mt-8">
-        <Card className="rounded-2xl border border-[#e8e8e8] bg-white! p-6 ring-0 shadow-sm">
-          <CardContent className="flex min-h-[240px] flex-row items-end justify-between gap-4 p-0">
-            <div className="min-w-0 flex-1">
-              <h1 id="impact-heading" className="text-2xl font-bold leading-tight text-black sm:text-[32px]">Tu impacto ambiental</h1>
-              <div className="mt-10 space-y-5 text-xl text-black sm:text-2xl">
-                <p>12,4 kg</p>
-                <p>CO₂ ahorrado</p>
-                <p>¡Gracias por ser parte del cambio!</p>
-              </div>
-              <p className="mt-2 text-xs text-[#6b6b6b]">Valor ilustrativo.</p>
-            </div>
-            <span aria-hidden="true" className="mb-6 grid size-16 shrink-0 place-items-center rounded-full bg-[#04e762] text-[#003d29] sm:size-25">
-              <Leaf className="size-6 fill-current" />
-            </span>
-          </CardContent>
-        </Card>
-      </section>
+      <h1 className="sr-only">Carrito</h1>
 
       <section aria-label="Detalle del pedido" className="mt-8 grid items-start gap-8 pb-16 lg:grid-cols-[minmax(0,588fr)_minmax(0,564fr)] lg:gap-12">
         <div className="min-w-0">
@@ -87,9 +69,8 @@ const ShoppingCart = () => {
             <h2 id="cart-summary" className="text-2xl font-bold text-[#2c2c2a]">Resumen</h2>
             <dl className="mt-3 space-y-1 border-b border-[#b5b5b5] pb-3 text-xl text-[#2c2c2a]">
               <div className="flex justify-between gap-4"><dt>Productos</dt><dd>{formatPrice(subtotal)}</dd></div>
-              <div className="flex justify-between gap-4"><dt>Envío</dt><dd>{formatPrice(deliveryFee)}</dd></div>
             </dl>
-            <div className="mt-3 flex justify-between gap-4 text-xl font-bold text-[#2c2c2a]"><span>TOTAL</span><span>{formatPrice(subtotal + deliveryFee)}</span></div>
+            <div className="mt-3 flex justify-between gap-4 text-xl font-bold text-[#2c2c2a]"><span>TOTAL</span><span>{formatPrice(subtotal)}</span></div>
             <Button type="button" disabled={items.length === 0} onClick={() => {
               if (isAuthenticated()) {
                 navigate("/checkout");
