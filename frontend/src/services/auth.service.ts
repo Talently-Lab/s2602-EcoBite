@@ -1,7 +1,27 @@
 import type { Login, Register } from "@/schemas/auth.schema";
 import type { LoginResponse } from "@/types/auth";
+import { z } from "zod";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const profileSchema = z.object({
+  name: z.string(),
+  address: z.string().nullable(),
+  habitualZone: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+});
+
+export const getProfile = async (accessToken: string) => {
+  const response = await fetch(`${API_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error("No pudimos cargar tu dirección guardada. Podés escribirla manualmente.");
+  const data = await response.json();
+  const profile = profileSchema.safeParse(data.user);
+  if (!profile.success) {
+    throw new Error("No pudimos cargar tu dirección guardada. Podés escribirla manualmente.");
+  }
+  return profile.data;
+};
 
 export const register = async (payload: Register) => {
   try {

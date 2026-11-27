@@ -5,6 +5,7 @@ import { useCartStore } from "@/context/cart-store";
 import type { RestaurantProduct } from "@/types/restaurant";
 
 type ItemProps = RestaurantProduct & {
+  restaurantName: string;
   description?: string;
   imageSrc?: string;
   imageAlt?: string;
@@ -22,6 +23,7 @@ export const Item = ({ ...product }: ItemProps) => {
     if (!product.available) return;
     addItem({
       productId: product.id,
+      restaurantName: product.restaurantName,
       name: product.name,
       price: product.price,
       image: product.imageSrc ?? "/images/image-dish.png",

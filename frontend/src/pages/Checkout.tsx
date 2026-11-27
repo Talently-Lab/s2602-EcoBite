@@ -1,11 +1,15 @@
 import { useId, useState } from "react";
-import { BadgeCheck, BookUser, CreditCard } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckoutSummary } from "@/components/CheckoutSummary";
 import { cn } from "@/lib/utils";
 import { MainLayout } from "@/pages/layout/MainLayout";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useAuth";
+import { useDeliveryZones } from "@/hooks/useCheckout";
+import { getMobilePhoneRules, PHONE_CODES } from "@/lib/checkout-phone";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const PAYMENT_METHODS = [
   { id: "debito", title: "Débito", subtitle: "****6789", brands: true },
@@ -20,19 +24,6 @@ const PAYMENT_METHODS = [
 ] as const;
 
 type PaymentMethod = (typeof PAYMENT_METHODS)[number]["id"];
-
-const FieldIcons = () => (
-  <div className="flex shrink-0 items-center gap-1.5" aria-hidden="true">
-    {[BookUser, CreditCard, BadgeCheck].map((Icon, index) => (
-      <span
-        key={index}
-        className="grid size-4 place-items-center rounded-[3px] bg-[#009951] text-white"
-      >
-        <Icon className="size-2.5" strokeWidth={2.5} />
-      </span>
-    ))}
-  </div>
-);
 
 const CardBrands = () => {
   const clipId = `mc-${useId().replace(/:/g, "")}`;
@@ -70,20 +61,36 @@ const PayPalLogo = () => (
 
 export default function Checkout() {
   const navigate = useNavigate()
-  const [direccion, setDireccion] = useState("");
+  const profile = useProfile();
+  const zones = useDeliveryZones();
+  const [editedZoneId, setEditedZoneId] = useState<string>();
+  const destinationZoneId = editedZoneId ?? profile.data?.habitualZone?.id ?? "";
+  const [editedAddress, setEditedAddress] = useState<string>();
+  const direccion = editedAddress ?? profile.data?.address ?? "";
+  const [countryCode, setCountryCode] = useState("+54");
+  const [customCode, setCustomCode] = useState("");
+  const phoneCode = countryCode === "other" ? customCode : countryCode;
   const [celular, setCelular] = useState("");
   const [metodoPago, setMetodoPago] = useState<PaymentMethod | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const phoneRules = getMobilePhoneRules(phoneCode);
+  const canContinue = Boolean(
+    direccion.trim() && direccion.length <= 200 &&
+    zones.data?.some((zone) => zone.id === destinationZoneId) &&
+    /^\+[1-9][0-9]{0,2}$/.test(phoneCode) &&
+    new RegExp(`^(?:${phoneRules.pattern})$`).test(celular) && metodoPago
+  );
 
   if (showSummary) {
     return (
       <MainLayout>
         <CheckoutSummary
           direccion={direccion}
-          celular={celular}
+          celular={`${phoneCode} ${celular}`}
           metodoPago={metodoPago}
-          onEdit={() => setShowSummary(false)}
-          onPay={() => navigate(`/voucher/${1}`)}
+          destinationZoneId={destinationZoneId}
+          onBack={() => setShowSummary(false)}
+          onPay={(receipt) => navigate("/voucher/1", { state: receipt })}
         />
       </MainLayout>
     );
@@ -91,10 +98,15 @@ export default function Checkout() {
 
   return (
     <MainLayout>
-      <div className="mx-auto w-full max-w-140 py-2">
+      <div className="relative mx-auto w-full max-w-140 py-2">
+        <Link to="/cart" aria-label="Volver al carrito" title="Volver al carrito" className="mb-5 inline-flex size-11 items-center justify-center rounded-full text-[#00733d] hover:bg-[#e6fdef] focus-visible:outline-2 focus-visible:outline-offset-2 lg:absolute lg:top-0 lg:right-full lg:mr-6 lg:mb-0">
+          <ArrowLeft aria-hidden="true" className="size-6" />
+        </Link>
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            if (!canContinue || !event.currentTarget.reportValidity()) return;
+            setEditedAddress(direccion.trim());
             setShowSummary(true);
           }}
         >
@@ -105,10 +117,9 @@ export default function Checkout() {
             >
               Datos envío
             </h1>
+            <p className="mt-1 text-xs text-[#545454]">Todos los campos son obligatorios.</p>
 
-            <p className="mt-3 text-xs text-[#2C2C2A]">
-              Agrega tu dirección para el envío
-            </p>
+            <label htmlFor="checkout-address" className="mt-3 block text-xs text-[#2C2C2A]">Dirección de entrega</label>
             <div className="mt-1.5 flex items-center gap-2.5">
               <Input
                 id="checkout-address"
@@ -117,13 +128,30 @@ export default function Checkout() {
                 autoComplete="street-address"
                 placeholder="Dirección"
                 value={direccion}
-                disabled
-                onChange={(event) => setDireccion(event.target.value)}
+                required
+                maxLength={200}
+                pattern=".*\S.*"
+                title="Ingresá la dirección de entrega."
+                aria-describedby="checkout-address-help"
+                onChange={(event) => setEditedAddress(event.target.value)}
                 className="h-10 min-w-0 flex-1"
               />
-              <FieldIcons />
             </div>
-            <p className="mt-1 text-[11px] text-[#8C8C8C]">Texto de ayuda</p>
+            <p id="checkout-address-help" role="status" className="mt-1 text-xs text-[#545454]">
+              {profile.isFetching ? "Cargando tu dirección guardada…" : profile.isError ? "No pudimos cargar tu dirección guardada. Podés escribirla manualmente." : "Ingresá calle, número y, si corresponde, piso y departamento. Podés editar tu dirección guardada."}
+            </p>
+
+            <div className="mt-5">
+              <label id="checkout-zone-label" className="block text-xs font-semibold text-[#000000]">Barrio de entrega (CABA)</label>
+              <Select required name="destinationZoneId" items={(zones.data ?? []).map((zone) => ({ value: zone.id, label: zone.name }))} value={destinationZoneId || null} onValueChange={(value) => setEditedZoneId(value ?? "")}>
+                <SelectTrigger aria-labelledby="checkout-zone-label" className="mt-1.5 h-10 w-full"><SelectValue placeholder="Elegí el barrio para estimar el impacto" /></SelectTrigger>
+                <SelectContent>
+                  {(zones.data ?? []).map((zone) => <SelectItem key={zone.id} value={zone.id}>{zone.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p role="status" className="mt-1 text-xs text-[#545454]">{zones.isError ? "No pudimos cargar los barrios de entrega." : "Usamos el barrio de entrega para estimar el ahorro de CO₂."}</p>
+              {zones.isError && <button type="button" onClick={() => zones.refetch()} className="min-h-11 text-sm font-semibold text-[#00733d] underline">Reintentar</button>}
+            </div>
 
             <label
               htmlFor="checkout-phone"
@@ -131,21 +159,51 @@ export default function Checkout() {
             >
               Celular
             </label>
-            <div className="mt-1.5 flex items-center gap-2.5">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+              <Select required name="phoneCountry" items={PHONE_CODES} value={countryCode} onValueChange={(value) => {
+                if (value && value !== countryCode) {
+                  setCountryCode(value);
+                  setCelular("");
+                }
+              }}>
+                <SelectTrigger aria-label="País del celular" className="h-10 max-w-full"><SelectValue /></SelectTrigger>
+                <SelectContent className="w-max min-w-(--anchor-width) max-w-(--available-width)">
+                  {PHONE_CODES.map(({ value, label }) => <SelectItem key={value} value={value} className="[&>span]:min-w-0 [&>span]:shrink [&>span]:whitespace-normal">{label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {countryCode === "other" && <Input
+                type="tel"
+                aria-label="Código internacional"
+                autoComplete="tel-country-code"
+                placeholder="+ código"
+                required
+                pattern="\+[1-9][0-9]{0,2}"
+                maxLength={4}
+                title="Ingresá + seguido del código de país, por ejemplo +51."
+                value={customCode}
+                onChange={(event) => {
+                  setCustomCode(event.target.value);
+                  if (event.target.value !== customCode) setCelular("");
+                }}
+                className="h-10 w-24"
+              />}
               <Input
                 id="checkout-phone"
                 type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="+54 9 11 5555 5555"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                placeholder="Número sin código de país"
                 value={celular}
-                disabled
-                onChange={(event) => setCelular(event.target.value)}
-                className="h-10 min-w-0 flex-1"
+                required
+                pattern={phoneRules.pattern}
+                maxLength={phoneRules.maxLength}
+                title={phoneRules.help}
+                aria-describedby="checkout-phone-help"
+                onChange={(event) => setCelular(event.target.value.replace(/\D/g, ""))}
+                className="h-10 min-w-40 flex-1"
               />
-              <FieldIcons />
             </div>
-            <p className="mt-1 text-[11px] text-[#8C8C8C]">Texto de ayuda</p>
+            <p id="checkout-phone-help" className="mt-1 text-xs text-[#545454]">{phoneRules.help}</p>
           </section>
 
           <section aria-labelledby="medio-pago" className="mt-9">
@@ -155,13 +213,11 @@ export default function Checkout() {
             >
               Escoge tu medio de pago
             </h2>
-            <p className="mt-1 text-xs font-semibold text-[#000000]">
-              Simulación de pago
-            </p>
 
             <div
               role="radiogroup"
               aria-label="Medio de pago"
+              aria-required="true"
               className="mt-4 space-y-4"
             >
               {PAYMENT_METHODS.map((method) => (
@@ -176,6 +232,7 @@ export default function Checkout() {
                 >
                   <input
                     type="radio"
+                    required
                     name="metodo-pago"
                     value={method.id}
                     checked={metodoPago === method.id}
@@ -205,6 +262,7 @@ export default function Checkout() {
           <div className="mt-10 flex justify-center">
             <Button
               type="submit"
+              disabled={!canContinue}
               size="sm"
               className="w-full py-5 bg-[#009951]! px-4 text-[#FFFFFF]!"
             >

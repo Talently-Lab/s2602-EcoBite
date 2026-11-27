@@ -74,7 +74,7 @@ const RestaurantDetail = () => {
                 {categoryDescriptions[category] && <p className="mt-2 text-sm text-[#6b6b6b]">{categoryDescriptions[category]}</p>}
                 <div className={cn("mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2", index === 0 && "lg:grid-cols-4")}>
                   {restaurant.products.filter((product) => product.category === category).map((product) => (
-                    <Item key={product.id} {...product} layout={index === 0 ? "vertical" : "horizontal"} />
+                    <Item key={product.id} {...product} restaurantName={restaurant.name} layout={index === 0 ? "vertical" : "horizontal"} />
                   ))}
                 </div>
               </section>
