@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/pages/layout/MainLayout";
 import { LoginForm } from "@/components/LoginForm";
 import { RegisterForm } from "@/components/RegisterForm";
+import { useAuthStore } from "@/context/auth-store";
 
 type AuthMode = "login" | "register";
 
@@ -19,9 +20,12 @@ const VISUALS: Record<AuthMode, { src: string; alt: string }> = {
 
 const Auth = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const signedIn = useAuthStore((s) => s.session !== null);
   const mode: AuthMode = searchParams.get("mode") === "register" ? "register" : "login";
   const setMode = (nextMode: AuthMode) => setSearchParams(nextMode === "register" ? { mode: nextMode } : {});
   const visual = VISUALS[mode];
+
+  if (signedIn) return <Navigate to="/catalog" replace />;
 
   return (
     <MainLayout>

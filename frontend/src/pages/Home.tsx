@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/pages/layout/MainLayout";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { useRestaurants } from "@/hooks/useRestaurants";
+import { useAuthStore } from "@/context/auth-store";
 
 const FEATURES = [
   {
@@ -28,6 +29,7 @@ const FEATURES = [
 
 const Home = () => {
   const navigate = useNavigate();
+  const signedIn = useAuthStore((s) => s.session !== null);
   const { restaurants, loading, error, refetch } = useRestaurants();
 
   return (
@@ -45,10 +47,10 @@ const Home = () => {
           </p>
           <Button
             type="button"
-            onClick={() => navigate("/auth?mode=register")}
+            onClick={() => navigate(signedIn ? "/catalog" : "/auth?mode=register")}
             className="mt-10 h-10 whitespace-normal rounded-lg bg-[#009951]! px-6 text-sm font-bold text-[#FFFFFF]!"
           >
-            Registrate y sumate al cambio
+            {signedIn ? "Explorá restaurantes" : "Registrate y sumate al cambio"}
           </Button>
         </div>
         <picture>
