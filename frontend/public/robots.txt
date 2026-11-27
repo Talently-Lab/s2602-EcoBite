@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://s2602-ecobite.netlify.app/sitemap.xml
